@@ -44,16 +44,31 @@ jobs:
           # If standalone build exists, use it
           if [ -d ".next/standalone" ]; then
             echo "Using standalone build..."
+            # Create .next directory first
+            mkdir -p deploy/.next
+            # Copy standalone build contents
             cp -r .next/standalone/* deploy/
-            cp -r .next/static deploy/.next/static
-            cp -r public deploy/public
+            # Copy static files
+            if [ -d ".next/static" ]; then
+              cp -r .next/static deploy/.next/static
+            fi
+            # Copy public directory if it doesn't exist in standalone
+            if [ ! -d "deploy/public" ] && [ -d "public" ]; then
+              cp -r public deploy/public
+            fi
           else
             echo "Using standard build..."
             # Copy build output
             mkdir -p deploy/.next
-            cp -r .next/static deploy/.next/static
-            cp -r .next/server deploy/.next/server 2>/dev/null || true
-            cp -r .next/cache deploy/.next/cache 2>/dev/null || true
+            if [ -d ".next/static" ]; then
+              cp -r .next/static deploy/.next/static
+            fi
+            if [ -d ".next/server" ]; then
+              cp -r .next/server deploy/.next/server
+            fi
+            if [ -d ".next/cache" ]; then
+              cp -r .next/cache deploy/.next/cache
+            fi
             
             # Copy source files
             cp -r app deploy/app
