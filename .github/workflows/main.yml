@@ -1,0 +1,123 @@
+name: Deploy to cPanel
+
+on:
+  push:
+    branches:
+      - main
+      - master
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    name: Build and Deploy to cPanel
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build Next.js application
+        run: npm run build
+        env:
+          NODE_ENV: production
+
+      - name: Create deployment package
+        run: |
+          mkdir -p deploy
+          
+          # If standalone build exists, use it
+          if [ -d ".next/standalone" ]; then
+            echo "Using standalone build..."
+            cp -r .next/standalone/* deploy/
+            cp -r .next/static deploy/.next/static
+            cp -r public deploy/public
+          else
+            echo "Using standard build..."
+            # Copy build output
+            mkdir -p deploy/.next
+            cp -r .next/static deploy/.next/static
+            cp -r .next/server deploy/.next/server 2>/dev/null || true
+            cp -r .next/cache deploy/.next/cache 2>/dev/null || true
+            
+            # Copy source files
+            cp -r app deploy/app
+            cp -r components deploy/components
+            cp -r lib deploy/lib
+            cp -r hooks deploy/hooks
+            cp -r store deploy/store
+            cp -r types deploy/types
+            cp -r public deploy/public
+            
+            # Copy config files
+            cp package.json deploy/
+            cp package-lock.json deploy/
+            cp next.config.ts deploy/
+            cp tsconfig.json deploy/
+            cp postcss.config.mjs deploy/ 2>/dev/null || true
+          fi
+          
+          # Create .htaccess for Next.js routing (if using Apache)
+          cat > deploy/.htaccess << 'EOF'
+          RewriteEngine On
+          RewriteBase /
+          
+          # Handle Next.js routes
+          RewriteCond %{REQUEST_FILENAME} !-f
+          RewriteCond %{REQUEST_FILENAME} !-d
+          RewriteRule ^(.*)$ /index.html [L]
+          
+          # Security headers
+          <IfModule mod_headers.c>
+            Header set X-Content-Type-Options "nosniff"
+            Header set X-Frame-Options "DENY"
+            Header set X-XSS-Protection "1; mode=block"
+          </IfModule>
+          EOF
+          
+          # Create package.json for production if using standalone
+          if [ -d ".next/standalone" ]; then
+            echo "Standalone build ready for deployment"
+          fi
+
+      - name: Deploy to cPanel via SFTP
+        timeout-minutes: 600
+        continue-on-error: false
+        uses: milanmk/actions-file-deployer@master
+        with:
+          remote-protocol: "sftp"
+          remote-host: ${{ secrets.SFTP_HOST || secrets.FTP_SERVER }}
+          remote-user: ${{ secrets.SFTP_USERNAME || secrets.FTP_USERNAME }}
+          remote-password: ${{ secrets.SFTP_PASSWORD || secrets.FTP_PASSWORD }}
+          remote-port: ${{ secrets.SFTP_PORT || 22 }}
+          remote-path: ${{ secrets.DEPLOY_PATH || '/public_html/' }}
+          ssh-private-key: ${{ secrets.SFTP_KEY }}
+          delta-file-sync: false
+          mirror: false
+          exclude: |
+            **/.git*
+            **/node_modules
+            **/.next/cache
+            **/.env.local
+            **/.env.development
+            **/.env.test
+            **/README.md
+            **/.gitignore
+            **/tsconfig.json
+            **/eslint.config.mjs
+            **/next-env.d.ts
+            **/src_backup
+
+      - name: Deployment Summary
+        run: |
+          echo "✅ Deployment completed successfully!"
+          echo "📦 Application deployed to: ${{ secrets.DEPLOY_PATH || '/public_html/' }}"
+          echo "🌐 Your Next.js app should be live now!"
