@@ -182,7 +182,8 @@ export default function AdminUploadPage() {
             </div>
             <p className="mt-2 text-xs text-[#475467]">
               Required columns: id, name, Local Salary, OXO International Salary, Working Days, EPF 8%<br />
-              <span className="text-[#98A2B3]">Note: Full Salary will be calculated as Local Salary + OXO International Salary</span>
+              Optional columns: Allowances, Salary Advance/Deductions<br />
+              <span className="text-[#98A2B3]">Note: Total Salary = Local Salary + OXO International Salary + Allowances - Salary Advance/Deductions</span>
             </p>
           </div>
 
@@ -254,9 +255,15 @@ export default function AdminUploadPage() {
             <li><strong>Working Days</strong> - Format: "Available Dates, Leaves, Worked Days" or just "Worked Days"</li>
             <li><strong>EPF 8%</strong> - EPF deduction (8% of Local Salary)</li>
           </ul>
+          <p className="font-semibold text-[#344054] mt-4">Optional columns:</p>
+          <ul className="list-disc list-inside space-y-1 ml-4">
+            <li><strong>Allowances</strong> - Additional allowances/bonus (will be added to total earnings)</li>
+            <li><strong>Salary Advance/Deductions</strong> - Salary advances or other deductions (will be deducted from net salary)</li>
+          </ul>
           <p className="mt-3 text-sm text-[#475467]">
-            <strong>Note:</strong> Full Salary will be automatically calculated as <strong>Local Salary + OXO International Salary</strong>. 
-            If a Full Salary column exists in your Excel, it will be ignored.
+            <strong>Calculation:</strong> Total Earnings = Local Salary + OXO International Salary + Allowances<br />
+            <strong>Total Deductions:</strong> EPF 8% + Salary Advance/Deductions<br />
+            <strong>Net Salary:</strong> Total Earnings - Total Deductions
           </p>
           <p className="mt-4 text-xs text-[#98A2B3]">
             Note: The system will automatically match IDs with users and create salary slips for the selected month.

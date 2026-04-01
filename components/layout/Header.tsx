@@ -3,18 +3,21 @@
 import { useAuth } from '@/hooks/useAuth';
 import { useRouter } from 'next/navigation';
 import { useState, useRef, useEffect } from 'react';
-import { 
-  BellIcon, 
+import Link from 'next/link';
+import {
+  BellIcon,
   MagnifyingGlassIcon,
   ArrowRightOnRectangleIcon,
   UserCircleIcon,
   Cog6ToothIcon,
+  ChevronDownIcon,
 } from '@heroicons/react/24/outline';
 
 export default function Header() {
   const { user, logout } = useAuth();
   const router = useRouter();
   const [showDropdown, setShowDropdown] = useState(false);
+  const [searchFocused, setSearchFocused] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -23,7 +26,6 @@ export default function Header() {
         setShowDropdown(false);
       }
     };
-
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
@@ -36,91 +38,113 @@ export default function Header() {
   if (!user) return null;
 
   return (
-    <header className="sticky top-0 z-30 h-20 bg-white shadow-sm border-b border-gray-100">
-      <div className="flex h-full items-center justify-between px-8">
-        {/* Search Bar */}
+    <header className="sticky top-0 z-20 h-16 lg:h-[72px] flex items-center bg-[var(--card-bg)] border-b border-[var(--gray-200)] shadow-[var(--shadow-sm)]">
+      <div className="flex flex-1 items-center justify-between gap-4 px-4 lg:pl-6 lg:pr-8">
+        {/* Spacer for mobile menu button (same width as button so content aligns) */}
+        <div className="w-10 lg:hidden" />
+
+        {/* Search */}
         <div className="flex-1 max-w-xl">
-          <div className="relative">
-            <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-4">
-              <MagnifyingGlassIcon className="h-5 w-5 text-gray-400" />
+          <div
+            className={`
+              relative flex items-center rounded-xl border bg-[var(--gray-50)] transition-all duration-200
+              ${searchFocused ? 'border-[var(--primary)] ring-2 ring-[var(--primary-ring)] bg-[var(--card-bg)]' : 'border-[var(--gray-200)]'}
+            `}
+            style={searchFocused ? { ['--primary' as string]: 'var(--primary)' } : undefined}
+          >
+            <div className="pointer-events-none flex items-center pl-4">
+              <MagnifyingGlassIcon className="h-5 w-5 text-[var(--gray-400)]" />
             </div>
             <input
-              type="text"
+              type="search"
               placeholder="Search..."
-              className="block w-full rounded-lg border-0 bg-[#F9FAFB] py-2.5 pl-12 pr-4 text-sm text-[#101828] placeholder:text-[#98A2B3] focus:bg-white focus:ring-2 focus:ring-[#465FFF] transition-colors"
+              className="w-full rounded-xl border-0 bg-transparent py-2.5 pl-3 pr-4 text-sm text-[var(--foreground)] placeholder:text-[var(--gray-400)] focus:outline-none focus:ring-0"
+              onFocus={() => setSearchFocused(true)}
+              onBlur={() => setSearchFocused(false)}
+              aria-label="Search"
             />
           </div>
         </div>
 
-        {/* Right Section */}
-        <div className="flex items-center space-x-4">
+        {/* Right */}
+        <div className="flex items-center gap-1">
           {/* Notifications */}
-          <button className="relative rounded-lg p-2 text-[#475467] hover:bg-[#F9FAFB] hover:text-[#101828] transition-colors">
-            <BellIcon className="h-6 w-6" />
-            <span className="absolute top-1 right-1 flex h-2 w-2">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
+          <button
+            type="button"
+            className="relative p-2.5 rounded-xl text-[var(--gray-500)] hover:bg-[var(--gray-100)] hover:text-[var(--gray-700)] transition-colors duration-200"
+            aria-label="Notifications"
+          >
+            <BellIcon className="h-5 w-5" />
+            <span className="absolute top-1.5 right-1.5 flex h-2 w-2">
+              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-red-400 opacity-75" />
+              <span className="relative inline-flex h-2 w-2 rounded-full bg-red-500" />
             </span>
           </button>
 
-          {/* User Dropdown */}
+          {/* Profile dropdown */}
           <div className="relative" ref={dropdownRef}>
             <button
+              type="button"
               onClick={() => setShowDropdown(!showDropdown)}
-              className="flex items-center space-x-3 rounded-lg p-2 hover:bg-gray-100 transition-colors"
+              className="flex items-center gap-3 rounded-xl p-1.5 pr-3 hover:bg-[var(--gray-100)] transition-colors duration-200"
             >
-              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#465FFF] text-sm font-semibold text-white shadow-sm ring-2 ring-white">
-                {user.first_name?.[0]}{user.last_name?.[0]}
+              <div
+                className="flex h-9 w-9 items-center justify-center rounded-xl text-sm font-semibold text-white shadow-sm bg-[var(--primary)]"
+              >
+                {user.first_name?.[0]}
+                {user.last_name?.[0]}
               </div>
-              <div className="hidden md:block text-left">
-                <p className="text-sm font-medium text-[#101828]">
+              <div className="hidden text-left md:block">
+                <p className="text-sm font-semibold text-[var(--foreground)]">
                   {user.first_name} {user.last_name}
                 </p>
-                <p className="text-xs text-[#475467] capitalize">
+                <p className="text-xs text-[var(--gray-500)] capitalize">
                   {user.role.replace('_', ' ')}
                 </p>
               </div>
+              <ChevronDownIcon
+                className={`h-4 w-4 text-[var(--gray-400)] transition-transform duration-200 ${showDropdown ? 'rotate-180' : ''}`}
+              />
             </button>
 
-            {/* Dropdown Menu */}
             {showDropdown && (
-              <div className="absolute right-0 mt-2 w-56 origin-top-right rounded-xl bg-white shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none animate-fade-in">
-                <div className="p-2">
-                  <div className="px-4 py-3 border-b border-[#E4E7EC]">
-                    <p className="text-sm font-semibold text-[#101828]">
-                      {user.first_name} {user.last_name}
-                    </p>
-                    <p className="text-xs text-[#475467] truncate">{user.email}</p>
-                  </div>
-                  
-                  <div className="py-1">
-                    <a
-                      href="/profile"
-                      className="flex items-center space-x-3 px-4 py-2 text-sm text-[#344054] hover:bg-[#F9FAFB] rounded-lg transition-colors"
-                      onClick={() => setShowDropdown(false)}
-                    >
-                      <UserCircleIcon className="h-5 w-5 text-[#98A2B3]" />
-                      <span>My Profile</span>
-                    </a>
-                    <a
-                      href="/profile"
-                      className="flex items-center space-x-3 px-4 py-2 text-sm text-[#344054] hover:bg-[#F9FAFB] rounded-lg transition-colors"
-                      onClick={() => setShowDropdown(false)}
-                    >
-                      <Cog6ToothIcon className="h-5 w-5 text-[#98A2B3]" />
-                      <span>Settings</span>
-                    </a>
-                  </div>
-                  
-                  <div className="border-t border-[#E4E7EC] py-1">
-                    <button
-                      onClick={handleLogout}
-                      className="flex w-full items-center space-x-3 px-4 py-2 text-sm text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                    >
-                      <ArrowRightOnRectangleIcon className="h-5 w-5" />
-                      <span>Sign out</span>
-                    </button>
-                  </div>
+              <div
+                className="absolute right-0 mt-2 w-56 origin-top-right rounded-2xl bg-[var(--card-bg)] shadow-[var(--shadow-lg)] border border-[var(--gray-200)] py-2 animate-fade-in z-50"
+                role="menu"
+              >
+                <div className="px-4 py-3 border-b border-[var(--gray-200)]">
+                  <p className="text-sm font-semibold text-[var(--foreground)]">
+                    {user.first_name} {user.last_name}
+                  </p>
+                  <p className="text-xs text-[var(--gray-500)] truncate">{user.email}</p>
+                </div>
+                <div className="py-1">
+                  <Link
+                    href="/profile"
+                    className="flex items-center gap-3 px-4 py-2.5 text-sm text-[var(--gray-700)] hover:bg-[var(--gray-100)] transition-colors duration-200"
+                    onClick={() => setShowDropdown(false)}
+                  >
+                    <UserCircleIcon className="h-5 w-5 text-[var(--gray-400)]" />
+                    My Profile
+                  </Link>
+                  <Link
+                    href="/profile"
+                    className="flex items-center gap-3 px-4 py-2.5 text-sm text-[var(--gray-700)] hover:bg-[var(--gray-100)] transition-colors duration-200"
+                    onClick={() => setShowDropdown(false)}
+                  >
+                    <Cog6ToothIcon className="h-5 w-5 text-[var(--gray-400)]" />
+                    Settings
+                  </Link>
+                </div>
+                <div className="border-t border-[var(--gray-200)] py-1">
+                  <button
+                    type="button"
+                    onClick={handleLogout}
+                    className="flex w-full items-center gap-3 px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 rounded-lg mx-2 transition-colors duration-200"
+                  >
+                    <ArrowRightOnRectangleIcon className="h-5 w-5" />
+                    Sign out
+                  </button>
                 </div>
               </div>
             )}

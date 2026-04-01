@@ -12,7 +12,10 @@ import {
   DocumentArrowUpIcon,
   UserIcon,
 } from '@heroicons/react/24/outline';
-import { format } from 'date-fns';
+import { format, isWeekend, isSameDay, startOfDay, endOfDay } from 'date-fns';
+import DateRangePicker from '@/components/DateRangePicker';
+import DatePicker from 'react-datepicker';
+import 'react-datepicker/dist/react-datepicker.css';
 
 interface LeaveType {
   id: number;
@@ -80,8 +83,34 @@ export default function LeavesPage() {
   });
   const [attachment, setAttachment] = useState<File | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [startDatePicker, setStartDatePicker] = useState<Date | null>(null);
+  const [endDatePicker, setEndDatePicker] = useState<Date | null>(null);
+  const [holidays, setHolidays] = useState<any[]>([]);
+  const [openStartCalendar, setOpenStartCalendar] = useState(false);
+  const [openEndCalendar, setOpenEndCalendar] = useState(false);
   
-  // Calculate requested days
+  // Fetch holidays for calculation and date picker
+  useEffect(() => {
+    const fetchHolidays = async () => {
+      try {
+        // Fetch holidays for the current year to show in date pickers
+        const currentYear = new Date().getFullYear();
+        const startDate = new Date(currentYear, 0, 1);
+        const endDate = new Date(currentYear, 11, 31);
+        
+        const response = await api.get(
+          `/leave-calendar/range?startDate=${format(startDate, 'yyyy-MM-dd')}&endDate=${format(endDate, 'yyyy-MM-dd')}`
+        );
+        setHolidays(response.data.data || []);
+      } catch (err) {
+        console.error('Error fetching holidays:', err);
+      }
+    };
+    fetchHolidays();
+  }, []);
+  
+  // Calculate requested days (excluding weekends and holidays)
   const calculateDays = () => {
     if (!formData.start_date || !formData.end_date) return 0;
     
@@ -93,7 +122,33 @@ export default function LeavesPage() {
     const start = new Date(formData.start_date);
     const end = new Date(formData.end_date);
     if (end < start) return 0;
-    return Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+    
+    // Get all dates in the range manually
+    const dates: Date[] = [];
+    const current = new Date(start);
+    while (current <= end) {
+      dates.push(new Date(current));
+      current.setDate(current.getDate() + 1);
+    }
+    
+    // Filter out weekends and holidays
+    const workingDays = dates.filter(date => {
+      // Exclude weekends
+      if (isWeekend(date)) {
+        return false;
+      }
+      // Exclude custom holidays
+      const isHoliday = holidays.some(h => {
+        const holidayDate = new Date(h.date);
+        return isSameDay(holidayDate, date);
+      });
+      if (isHoliday) {
+        return false;
+      }
+      return true;
+    });
+    
+    return workingDays.length;
   };
   
   const requestedDays = calculateDays();
@@ -106,8 +161,80 @@ export default function LeavesPage() {
   useEffect(() => {
     if (formData.is_half_day && formData.start_date && formData.end_date !== formData.start_date) {
       setFormData(prev => ({ ...prev, end_date: prev.start_date }));
+      setEndDatePicker(startDatePicker);
     }
-  }, [formData.is_half_day, formData.start_date]);
+  }, [formData.is_half_day, formData.start_date, startDatePicker]);
+
+  // Sync date picker with form data
+  useEffect(() => {
+    if (formData.start_date) {
+      setStartDatePicker(new Date(formData.start_date));
+    } else {
+      setStartDatePicker(null);
+    }
+    if (formData.end_date && !formData.is_half_day) {
+      setEndDatePicker(new Date(formData.end_date));
+    } else {
+      setEndDatePicker(null);
+    }
+  }, [formData.start_date, formData.end_date, formData.is_half_day]);
+
+  // Day class name for calendar styling with range highlighting
+  const getDayClassName = (date: Date, isStartPicker: boolean = false) => {
+    const classes: string[] = [];
+    const isWeekendDay = isWeekend(date);
+    const isHoliday = holidays.some(h => {
+      const holidayDate = new Date(h.date);
+      return isSameDay(holidayDate, date);
+    });
+    
+    if (isWeekendDay) {
+      classes.push('react-datepicker__day--weekend');
+    }
+    if (isHoliday && !isWeekendDay) {
+      classes.push('holiday-day');
+    }
+
+    // Add range highlighting if both dates are selected (show full range including weekends/holidays)
+    if (startDatePicker && endDatePicker) {
+      const dateStart = startOfDay(date);
+      const rangeStart = startOfDay(startDatePicker);
+      const rangeEnd = endOfDay(endDatePicker);
+      
+      // Highlight all dates in range (including weekends and holidays for visual reference)
+      // Manual check if date is within interval
+      if (dateStart >= rangeStart && dateStart <= rangeEnd) {
+        classes.push('react-datepicker__day--in-range');
+      }
+      
+      if (isSameDay(date, startDatePicker)) {
+        classes.push('react-datepicker__day--range-start');
+      }
+      
+      if (isSameDay(date, endDatePicker)) {
+        classes.push('react-datepicker__day--range-end');
+      }
+    } else if (startDatePicker && !endDatePicker && isSameDay(date, startDatePicker)) {
+      classes.push('react-datepicker__day--range-start');
+    }
+    
+    return classes.join(' ');
+  };
+
+  // Handle date range change from picker
+  const handleDateRangeChange = (start: Date | null, end: Date | null) => {
+    setStartDatePicker(start);
+    setEndDatePicker(end);
+    if (start) {
+      setFormData(prev => ({ ...prev, start_date: format(start, 'yyyy-MM-dd') }));
+    }
+    if (end) {
+      setFormData(prev => ({ ...prev, end_date: format(end, 'yyyy-MM-dd') }));
+    } else if (start && formData.is_half_day) {
+      // For half-day, end date should be same as start
+      setFormData(prev => ({ ...prev, end_date: format(start, 'yyyy-MM-dd') }));
+    }
+  };
 
   useEffect(() => {
     fetchData();
@@ -162,13 +289,11 @@ export default function LeavesPage() {
         formDataToSend.append('half_day_period', formData.half_day_period);
       }
       if (attachment) {
-        formDataToSend.append('attachment', attachment);
+        formDataToSend.append('document', attachment);
       }
 
       const response = await api.post('/leaves', formDataToSend, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
+        // Do not set Content-Type: axios sets it with the correct boundary for FormData
       });
 
       setSuccess(response.data.message || 'Leave request submitted successfully');
@@ -413,35 +538,181 @@ export default function LeavesPage() {
                     </div>
                   </div>
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div>
-                    <label className="block text-sm font-semibold text-[#344054] mb-2">
-                      Start Date *
-                    </label>
-                    <input
-                      type="date"
-                      required
-                      value={formData.start_date}
-                      onChange={(e) => setFormData({ ...formData, start_date: e.target.value })}
-                      min={new Date().toISOString().split('T')[0]}
-                      className="block w-full px-3 py-2.5 border border-[#D0D5DD] rounded-lg text-sm text-[#101828] focus:outline-none focus:ring-2 focus:ring-[#465FFF] focus:border-transparent"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-semibold text-[#344054] mb-2">
-                      End Date {formData.is_half_day ? '' : '*'}
-                    </label>
-                    <input
-                      type="date"
-                      required={!formData.is_half_day}
-                      disabled={formData.is_half_day}
-                      value={formData.is_half_day ? formData.start_date : formData.end_date}
-                      onChange={(e) => setFormData({ ...formData, end_date: e.target.value })}
-                      min={formData.start_date || new Date().toISOString().split('T')[0]}
-                      className="block w-full px-3 py-2.5 border border-[#D0D5DD] rounded-lg text-sm text-[#101828] focus:outline-none focus:ring-2 focus:ring-[#465FFF] focus:border-transparent disabled:bg-[#F9FAFB] disabled:cursor-not-allowed disabled:text-[#98A2B3]"
-                    />
-                    {formData.is_half_day && (
-                      <p className="mt-1 text-xs text-[#475467]">End date is automatically set to start date for half-day leave</p>
+                <div>
+                  <label className="block text-sm font-semibold text-[#344054] mb-2">
+                    Leave Date Range {formData.is_half_day ? '(Half Day)' : '*'}
+                  </label>
+                  <div className="relative">
+                    {!showDatePicker ? (
+                      <div className="space-y-3">
+                        <div className="flex items-center gap-3">
+                          <div className="flex-1 relative">
+                            <label className="block text-xs text-[#667085] mb-1">Start Date</label>
+                            <div className="relative">
+                              <DatePicker
+                                selected={startDatePicker}
+                                onChange={(date: Date | null) => {
+                                  setStartDatePicker(date);
+                                  if (date) {
+                                    const dateStr = format(date, 'yyyy-MM-dd');
+                                    setFormData({ ...formData, start_date: dateStr });
+                                  }
+                                  setOpenStartCalendar(false);
+                                }}
+                                startDate={startDatePicker}
+                                endDate={endDatePicker}
+                                minDate={new Date()}
+                                filterDate={(date) => {
+                                  if (isWeekend(date)) return false;
+                                  const isHoliday = holidays.some(h => {
+                                    const holidayDate = new Date(h.date);
+                                    return isSameDay(holidayDate, date);
+                                  });
+                                  return !isHoliday;
+                                }}
+                                calendarClassName="holiday-calendar"
+                                dayClassName={(date) => getDayClassName(date, true)}
+                                dateFormat="yyyy-MM-dd"
+                                placeholderText="Select start date"
+                                open={openStartCalendar}
+                                onInputClick={() => setOpenStartCalendar(true)}
+                                onClickOutside={() => setOpenStartCalendar(false)}
+                                showMonthDropdown
+                                showYearDropdown
+                                dropdownMode="select"
+                                calendarStartDay={1}
+                                highlightDates={endDatePicker ? [endDatePicker] : []}
+                                customInput={
+                                  <input
+                                    type="text"
+                                    readOnly
+                                    value={formData.start_date || ''}
+                                    placeholder="Select start date"
+                                    className="block w-full px-3 py-2.5 pr-10 border border-[#D0D5DD] rounded-lg text-sm text-[#101828] focus:outline-none focus:ring-2 focus:ring-[#465FFF] focus:border-transparent cursor-pointer"
+                                    onClick={() => setOpenStartCalendar(true)}
+                                  />
+                                }
+                                popperContainer={({ children }) => (
+                                  <div className="z-50">{children}</div>
+                                )}
+                                popperPlacement="bottom-start"
+                              />
+                              <button
+                                type="button"
+                                onClick={() => setOpenStartCalendar(true)}
+                                className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-[#667085] hover:text-[#465FFF]"
+                              >
+                                <CalendarIcon className="h-5 w-5" />
+                              </button>
+                            </div>
+                          </div>
+                          <div className="flex-1 relative">
+                            <label className="block text-xs text-[#667085] mb-1">
+                              End Date {formData.is_half_day ? '(Auto)' : ''}
+                            </label>
+                            <div className="relative">
+                              <DatePicker
+                                selected={endDatePicker}
+                                onChange={(date: Date | null) => {
+                                  setEndDatePicker(date);
+                                  if (date) {
+                                    const dateStr = format(date, 'yyyy-MM-dd');
+                                    setFormData({ ...formData, end_date: dateStr });
+                                  }
+                                  setOpenEndCalendar(false);
+                                }}
+                                startDate={startDatePicker}
+                                endDate={endDatePicker}
+                                minDate={startDatePicker || new Date()}
+                                disabled={formData.is_half_day}
+                                filterDate={(date) => {
+                                  if (isWeekend(date)) return false;
+                                  const isHoliday = holidays.some(h => {
+                                    const holidayDate = new Date(h.date);
+                                    return isSameDay(holidayDate, date);
+                                  });
+                                  return !isHoliday;
+                                }}
+                                calendarClassName="holiday-calendar"
+                                dayClassName={(date) => getDayClassName(date, false)}
+                                dateFormat="yyyy-MM-dd"
+                                placeholderText="Select end date"
+                                open={openEndCalendar}
+                                onInputClick={() => !formData.is_half_day && setOpenEndCalendar(true)}
+                                onClickOutside={() => setOpenEndCalendar(false)}
+                                showMonthDropdown
+                                showYearDropdown
+                                dropdownMode="select"
+                                calendarStartDay={1}
+                                highlightDates={startDatePicker ? [startDatePicker] : []}
+                                customInput={
+                                  <input
+                                    type="text"
+                                    readOnly
+                                    value={formData.is_half_day ? formData.start_date : (formData.end_date || '')}
+                                    placeholder="Select end date"
+                                    disabled={formData.is_half_day}
+                                    className="block w-full px-3 py-2.5 pr-10 border border-[#D0D5DD] rounded-lg text-sm text-[#101828] focus:outline-none focus:ring-2 focus:ring-[#465FFF] focus:border-transparent disabled:bg-[#F9FAFB] disabled:cursor-not-allowed disabled:text-[#98A2B3] cursor-pointer"
+                                    onClick={() => !formData.is_half_day && setOpenEndCalendar(true)}
+                                  />
+                                }
+                                popperContainer={({ children }) => (
+                                  <div className="z-50">{children}</div>
+                                )}
+                                popperPlacement="bottom-start"
+                              />
+                              <button
+                                type="button"
+                                onClick={() => !formData.is_half_day && setOpenEndCalendar(true)}
+                                disabled={formData.is_half_day}
+                                className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-[#667085] hover:text-[#465FFF] disabled:text-[#98A2B3] disabled:cursor-not-allowed"
+                              >
+                                <CalendarIcon className="h-5 w-5" />
+                              </button>
+                            </div>
+                            {formData.is_half_day && (
+                              <p className="mt-1 text-xs text-[#475467]">End date is automatically set to start date for half-day leave</p>
+                            )}
+                          </div>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setShowDatePicker(true)}
+                          className="w-full px-4 py-2.5 border-2 border-dashed border-[#D0D5DD] rounded-lg text-sm font-medium text-[#465FFF] hover:border-[#465FFF] hover:bg-[#ECF3FF] transition-colors flex items-center justify-center gap-2"
+                        >
+                          <CalendarIcon className="h-5 w-5" />
+                          <span>Open Calendar Picker</span>
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="border border-[#D0D5DD] rounded-lg p-4 bg-white">
+                        <div className="flex items-center justify-between mb-3">
+                          <h3 className="text-sm font-semibold text-[#344054]">Select Date Range</h3>
+                          <button
+                            type="button"
+                            onClick={() => setShowDatePicker(false)}
+                            className="text-sm text-[#465FFF] hover:text-[#3641F5] font-medium"
+                          >
+                            Use Text Inputs
+                          </button>
+                        </div>
+                        <DateRangePicker
+                          startDate={startDatePicker}
+                          endDate={endDatePicker}
+                          onChange={handleDateRangeChange}
+                          selectsRange={!formData.is_half_day}
+                          inline={true}
+                          monthsShown={2}
+                          showHolidays={true}
+                          minDate={new Date()}
+                          disabled={formData.is_half_day}
+                        />
+                        {formData.is_half_day && (
+                          <p className="mt-2 text-xs text-[#475467] bg-amber-50 p-2 rounded">
+                            Half-day leave: End date is automatically set to start date
+                          </p>
+                        )}
+                      </div>
                     )}
                   </div>
                 </div>
@@ -486,8 +757,7 @@ export default function LeavesPage() {
                 </div>
                 {formData.start_date && (formData.end_date || formData.is_half_day) && (
                   <div className="p-4 bg-[#F9FAFB] border border-[#E4E7EC] rounded-lg">
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm font-semibold text-[#344054]">Requested Days:</span>
+                    <div className="flex items-center justify-between mb-2">
                       <span className={`text-lg font-bold ${hasInsufficientBalance ? 'text-[#F04438]' : 'text-[#465FFF]'}`}>
                         {requestedDays === 0.5 ? '0.5 day' : `${requestedDays} ${requestedDays === 1 ? 'day' : 'days'}`}
                         {formData.is_half_day && formData.half_day_period && (
@@ -497,6 +767,9 @@ export default function LeavesPage() {
                         )}
                       </span>
                     </div>
+                    <p className="text-xs text-[#667085] mt-2">
+                      * Weekends (Saturday/Sunday) and holidays are automatically excluded from the calculation
+                    </p>
                     {hasInsufficientBalance && selectedBalance && (
                       <div className="mt-2 p-3 bg-[#FEF3C7] border border-[#FCD34D] rounded-lg">
                         <p className="text-sm text-[#92400E]">

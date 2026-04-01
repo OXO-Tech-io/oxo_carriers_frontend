@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import api from '@/lib/api';
-import { ChartBarIcon, DocumentTextIcon, CalendarIcon, UserGroupIcon } from '@heroicons/react/24/outline';
+import { ChartBarIcon, DocumentTextIcon, CalendarIcon, UserGroupIcon, ArrowDownTrayIcon } from '@heroicons/react/24/outline';
 import { format } from 'date-fns';
 
 // Helper function to format currency with thousand separators
@@ -51,6 +51,71 @@ export default function ReportsPage() {
   
   const [salaryReport, setSalaryReport] = useState<SalaryReport | null>(null);
   const [leaveReport, setLeaveReport] = useState<LeaveReport | null>(null);
+  const [exportingLeaves, setExportingLeaves] = useState(false);
+  const [exportingSalary, setExportingSalary] = useState(false);
+
+  const downloadBlob = (blob: Blob, filename: string) => {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
+  const handleExportLeavesExcel = async () => {
+    setExportingLeaves(true);
+    setError('');
+    try {
+      const params = new URLSearchParams({
+        year: selectedYear.toString(),
+        format: 'excel',
+      });
+      if (selectedMonth) params.append('month', selectedMonth.toString());
+      const res = await api.get(`/reports/leaves?${params.toString()}`, { responseType: 'blob' });
+      const blob = res.data as Blob;
+      if (res.status !== 200 || blob.type?.includes('application/json')) {
+        const text = await blob.text();
+        const json = JSON.parse(text).catch(() => ({}));
+        setError((json as { message?: string }).message || 'Failed to export leaves Excel');
+        return;
+      }
+      const yearMonth = selectedMonth ? `${selectedYear}-${String(selectedMonth).padStart(2, '0')}` : String(selectedYear);
+      downloadBlob(blob, `leave-report-${yearMonth}.xlsx`);
+    } catch (err: any) {
+      setError(err.response?.data?.message || 'Failed to export leaves Excel');
+    } finally {
+      setExportingLeaves(false);
+    }
+  };
+
+  const handleExportSalaryExcel = async () => {
+    setExportingSalary(true);
+    setError('');
+    try {
+      const params = new URLSearchParams({
+        year: selectedYear.toString(),
+        format: 'excel',
+      });
+      if (selectedMonth) params.append('month', selectedMonth.toString());
+      const res = await api.get(`/reports/salaries?${params.toString()}`, { responseType: 'blob' });
+      const blob = res.data as Blob;
+      if (res.status !== 200 || blob.type?.includes('application/json')) {
+        const text = await blob.text();
+        const json = JSON.parse(text).catch(() => ({}));
+        setError((json as { message?: string }).message || 'Failed to export salary Excel');
+        return;
+      }
+      const yearMonth = selectedMonth ? `${selectedYear}-${String(selectedMonth).padStart(2, '0')}` : String(selectedYear);
+      downloadBlob(blob, `salary-report-${yearMonth}.xlsx`);
+    } catch (err: any) {
+      setError(err.response?.data?.message || 'Failed to export salary Excel');
+    } finally {
+      setExportingSalary(false);
+    }
+  };
 
   useEffect(() => {
     if (isHR) {
@@ -194,12 +259,28 @@ export default function ReportsPage() {
               <option value="12">December</option>
             </select>
           </div>
-          <div className="flex items-end">
+          <div className="flex items-end gap-2 flex-wrap">
             <button
               onClick={fetchReports}
-              className="w-full px-4 py-2.5 text-sm font-semibold text-white bg-[#465FFF] rounded-lg hover:bg-[#3641F5] transition-colors"
+              className="px-4 py-2.5 text-sm font-semibold text-white bg-[#465FFF] rounded-lg hover:bg-[#3641F5] transition-colors"
             >
               Refresh
+            </button>
+            <button
+              onClick={handleExportLeavesExcel}
+              disabled={exportingLeaves}
+              className="inline-flex items-center gap-2 px-4 py-2.5 text-sm font-semibold text-[#344054] bg-white border border-[#D0D5DD] rounded-lg hover:bg-[#F9FAFB] transition-colors disabled:opacity-50"
+            >
+              <ArrowDownTrayIcon className="h-5 w-5" />
+              {exportingLeaves ? 'Exporting...' : 'Export Leaves (Excel)'}
+            </button>
+            <button
+              onClick={handleExportSalaryExcel}
+              disabled={exportingSalary}
+              className="inline-flex items-center gap-2 px-4 py-2.5 text-sm font-semibold text-[#344054] bg-white border border-[#D0D5DD] rounded-lg hover:bg-[#F9FAFB] transition-colors disabled:opacity-50"
+            >
+              <ArrowDownTrayIcon className="h-5 w-5" />
+              {exportingSalary ? 'Exporting...' : 'Export Salary (Excel)'}
             </button>
           </div>
         </div>

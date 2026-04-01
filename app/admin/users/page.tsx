@@ -12,8 +12,9 @@ import {
   UserGroupIcon,
   FunnelIcon,
 } from '@heroicons/react/24/outline';
-import { UserRole } from '@/types';
+import { UserRole, Vendor } from '@/types';
 import CreateUserModal from '@/components/modals/CreateUserModal';
+import CreateServiceProviderModal, { CreateServiceProviderPayload } from '@/components/modals/CreateServiceProviderModal';
 import ResetPasswordModal from '@/components/modals/ResetPasswordModal';
 
 interface User {
@@ -30,11 +31,17 @@ interface User {
   created_at: string;
 }
 
+function isVendor(item: User | Vendor): item is Vendor {
+  return 'company_name' in item && !('role' in item);
+}
+
 export default function AdminUsersPage() {
-  const { user: currentUser, isHR } = useAuth();
-  const [users, setUsers] = useState<User[]>([]);
+  const { user: currentUser, isHR, isFinance } = useAuth();
+  const canAccessUsers = isHR || isFinance;
+  const [listItems, setListItems] = useState<(User | Vendor)[]>([]);
   const [loading, setLoading] = useState(true);
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showCreateServiceProviderModal, setShowCreateServiceProviderModal] = useState(false);
   const [showResetModal, setShowResetModal] = useState(false);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
@@ -46,25 +53,31 @@ export default function AdminUsersPage() {
   const [success, setSuccess] = useState('');
 
   useEffect(() => {
-    if (isHR) {
+    if (canAccessUsers) {
       fetchUsers();
-      fetchDepartments();
+      if (!isFinance) fetchDepartments();
     }
-  }, [isHR, searchTerm, filterRole, filterDepartment]);
+  }, [canAccessUsers, isFinance, searchTerm, filterRole, filterDepartment]);
 
   const fetchUsers = async () => {
     try {
       setLoading(true);
-      const params = new URLSearchParams();
-      if (searchTerm) params.append('search', searchTerm);
-      if (filterRole) params.append('role', filterRole);
-      if (filterDepartment) params.append('department', filterDepartment);
-
-      const response = await api.get(`/users?${params.toString()}`);
-      setUsers(response.data.users || []);
+      if (isFinance) {
+        const params = new URLSearchParams();
+        if (searchTerm) params.append('search', searchTerm);
+        const response = await api.get(`/vendors?${params.toString()}`);
+        setListItems(response.data.vendors || []);
+      } else {
+        const params = new URLSearchParams();
+        if (searchTerm) params.append('search', searchTerm);
+        if (filterRole) params.append('role', filterRole);
+        if (filterDepartment) params.append('department', filterDepartment);
+        const response = await api.get(`/users?${params.toString()}`);
+        setListItems(response.data.users || []);
+      }
     } catch (err: any) {
-      console.error('Failed to fetch users:', err);
-      setError(err.response?.data?.message || 'Failed to fetch users');
+      console.error('Failed to fetch:', err);
+      setError(err.response?.data?.message || 'Failed to fetch');
     } finally {
       setLoading(false);
     }
@@ -80,6 +93,7 @@ export default function AdminUsersPage() {
   };
 
   const handleCreateUser = async (formData: {
+    employee_id?: string;
     email: string;
     first_name: string;
     last_name: string;
@@ -88,6 +102,13 @@ export default function AdminUsersPage() {
     position: string;
     hire_date: string;
     manager_id: string;
+    hourly_rate?: string;
+    bank_name?: string;
+    account_holder_name?: string;
+    account_number?: string;
+    bank_branch?: string;
+    company_name?: string;
+    contact_number?: string;
   }) => {
     setError('');
     setSuccess('');
@@ -100,6 +121,20 @@ export default function AdminUsersPage() {
     } catch (err: any) {
       setError(err.response?.data?.message || 'Failed to create user');
       throw err; // Re-throw to let modal handle loading state
+    }
+  };
+
+  const handleCreateServiceProvider = async (data: CreateServiceProviderPayload) => {
+    setError('');
+    setSuccess('');
+    try {
+      const response = await api.post('/vendors', data);
+      setSuccess(response.data.message || 'Vendor created successfully');
+      setShowCreateServiceProviderModal(false);
+      fetchUsers();
+    } catch (err: any) {
+      setError(err.response?.data?.message || 'Failed to create vendor');
+      throw err;
     }
   };
 
@@ -132,7 +167,7 @@ export default function AdminUsersPage() {
     }
   };
 
-  if (!isHR) {
+  if (!canAccessUsers) {
     return (
       <div className="flex items-center justify-center min-h-64">
         <div className="text-center">
@@ -148,16 +183,44 @@ export default function AdminUsersPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-[#101828]">Employee Management</h1>
-          <p className="mt-2 text-[#475467]">Create and manage employee accounts</p>
+          <h1 className="text-3xl font-bold text-[#101828]">
+            {isFinance ? 'Service Providers' : 'Employee Management'}
+          </h1>
+          <p className="mt-2 text-[#475467]">
+            {isFinance ? 'Create and manage service provider accounts' : 'Create and manage employee accounts'}
+          </p>
         </div>
-        <button
-          onClick={() => setShowCreateModal(true)}
-          className="inline-flex items-center space-x-2 px-4 py-2.5 bg-[#465FFF] text-white rounded-xl font-semibold hover:bg-[#3641F5] transition-colors shadow-sm hover:shadow-md"
-        >
-          <PlusIcon className="h-5 w-5" />
-          <span>Create Employee</span>
-        </button>
+        {(isHR || isFinance) && (
+          <div className="flex items-center gap-2">
+            {isFinance && (
+              <button
+                onClick={() => setShowCreateServiceProviderModal(true)}
+                className="inline-flex items-center space-x-2 px-4 py-2.5 bg-[#465FFF] text-white rounded-xl font-semibold hover:bg-[#3641F5] transition-colors shadow-sm hover:shadow-md"
+              >
+                <PlusIcon className="h-5 w-5" />
+                <span>Create Service Provider</span>
+              </button>
+            )}
+            {isHR && (
+              <>
+                <button
+                  onClick={() => setShowCreateModal(true)}
+                  className="inline-flex items-center space-x-2 px-4 py-2.5 bg-[#465FFF] text-white rounded-xl font-semibold hover:bg-[#3641F5] transition-colors shadow-sm hover:shadow-md"
+                >
+                  <PlusIcon className="h-5 w-5" />
+                  <span>Create Employee</span>
+                </button>
+                <button
+                  onClick={() => setShowCreateServiceProviderModal(true)}
+                  className="inline-flex items-center space-x-2 px-4 py-2.5 bg-white border border-[#D0D5DD] text-[#344054] rounded-xl font-semibold hover:bg-[#F9FAFB] transition-colors shadow-sm"
+                >
+                  <PlusIcon className="h-5 w-5" />
+                  <span>Create Service Provider</span>
+                </button>
+              </>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Alerts */}
@@ -174,41 +237,50 @@ export default function AdminUsersPage() {
 
       {/* Filters */}
       <div className="bg-white rounded-2xl shadow-sm border border-[#E4E7EC] p-4">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className={`grid grid-cols-1 gap-4 ${isHR ? 'md:grid-cols-3' : ''}`}>
           <div className="relative">
             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
               <MagnifyingGlassIcon className="h-5 w-5 text-[#98A2B3]" />
             </div>
             <input
               type="text"
-              placeholder="Search employees..."
+              placeholder={isFinance ? 'Search service providers...' : 'Search employees...'}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="block w-full pl-10 pr-3 py-2.5 border border-[#D0D5DD] rounded-lg text-sm text-[#101828] placeholder:text-[#98A2B3] focus:outline-none focus:ring-2 focus:ring-[#465FFF] focus:border-transparent"
             />
           </div>
-          <select
-            value={filterRole}
-            onChange={(e) => setFilterRole(e.target.value)}
-            className="px-3 py-2.5 border border-[#D0D5DD] rounded-lg text-sm font-medium text-[#344054] bg-white focus:outline-none focus:ring-2 focus:ring-[#465FFF] focus:border-transparent"
-          >
-            <option value="">All Roles</option>
-            <option value={UserRole.HR_MANAGER}>HR Manager</option>
-            <option value={UserRole.HR_EXECUTIVE}>HR Executive</option>
-            <option value={UserRole.EMPLOYEE}>Employee</option>
-          </select>
-          <select
-            value={filterDepartment}
-            onChange={(e) => setFilterDepartment(e.target.value)}
-            className="px-3 py-2.5 border border-[#D0D5DD] rounded-lg text-sm font-medium text-[#344054] bg-white focus:outline-none focus:ring-2 focus:ring-[#465FFF] focus:border-transparent"
-          >
-            <option value="">All Departments</option>
-            {departments.map((dept) => (
-              <option key={dept} value={dept}>
-                {dept}
-              </option>
-            ))}
-          </select>
+          {isHR && (
+            <>
+              <select
+                value={filterRole}
+                onChange={(e) => setFilterRole(e.target.value)}
+                className="px-3 py-2.5 border border-[#D0D5DD] rounded-lg text-sm font-medium text-[#344054] bg-white focus:outline-none focus:ring-2 focus:ring-[#465FFF] focus:border-transparent"
+              >
+                <option value="">All Roles</option>
+                <option value={UserRole.HR_MANAGER}>HR Manager</option>
+                <option value={UserRole.HR_EXECUTIVE}>HR Executive</option>
+                <option value={UserRole.FINANCE_MANAGER}>Finance Manager</option>
+                <option value={UserRole.FINANCE_EXECUTIVE}>Finance Executive</option>
+                <option value={UserRole.PAYMENT_APPROVER}>Payment Approver</option>
+                <option value={UserRole.EMPLOYEE}>Employee</option>
+                <option value={UserRole.CONSULTANT}>Consultant</option>
+                <option value={UserRole.SERVICE_PROVIDER}>Service Provider</option>
+              </select>
+              <select
+                value={filterDepartment}
+                onChange={(e) => setFilterDepartment(e.target.value)}
+                className="px-3 py-2.5 border border-[#D0D5DD] rounded-lg text-sm font-medium text-[#344054] bg-white focus:outline-none focus:ring-2 focus:ring-[#465FFF] focus:border-transparent"
+              >
+                <option value="">All Departments</option>
+                {departments.map((dept) => (
+                  <option key={dept} value={dept}>
+                    {dept}
+                  </option>
+                ))}
+              </select>
+            </>
+          )}
         </div>
       </div>
 
@@ -224,93 +296,110 @@ export default function AdminUsersPage() {
               <thead className="bg-[#F9FAFB]">
                 <tr>
                   <th className="px-6 py-4 text-left text-xs font-bold text-[#344054] uppercase tracking-wider">
-                    Employee
+                    {isFinance ? 'Company' : 'Employee'}
                   </th>
-                  <th className="px-6 py-4 text-left text-xs font-bold text-[#344054] uppercase tracking-wider">
-                    Role
-                  </th>
-                  <th className="px-6 py-4 text-left text-xs font-bold text-[#344054] uppercase tracking-wider">
-                    Department
-                  </th>
-                  <th className="px-6 py-4 text-left text-xs font-bold text-[#344054] uppercase tracking-wider">
-                    Position
-                  </th>
-                  <th className="px-6 py-4 text-left text-xs font-bold text-[#344054] uppercase tracking-wider">
-                    Status
-                  </th>
-                  <th className="px-6 py-4 text-right text-xs font-bold text-[#344054] uppercase tracking-wider">
-                    Actions
-                  </th>
+                  {!isFinance && (
+                    <>
+                      <th className="px-6 py-4 text-left text-xs font-bold text-[#344054] uppercase tracking-wider">Role</th>
+                      <th className="px-6 py-4 text-left text-xs font-bold text-[#344054] uppercase tracking-wider">Department</th>
+                      <th className="px-6 py-4 text-left text-xs font-bold text-[#344054] uppercase tracking-wider">Position</th>
+                      <th className="px-6 py-4 text-left text-xs font-bold text-[#344054] uppercase tracking-wider">Status</th>
+                    </>
+                  )}
+                  {isFinance && (
+                    <th className="px-6 py-4 text-left text-xs font-bold text-[#344054] uppercase tracking-wider">Contact</th>
+                  )}
+                  {!isFinance && (
+                    <th className="px-6 py-4 text-right text-xs font-bold text-[#344054] uppercase tracking-wider">Actions</th>
+                  )}
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-[#E4E7EC]">
-                {users.length === 0 ? (
+                {listItems.length === 0 ? (
                   <tr>
-                    <td colSpan={6} className="px-6 py-12 text-center">
+                    <td colSpan={isFinance ? 2 : 6} className="px-6 py-12 text-center">
                       <UserGroupIcon className="h-12 w-12 text-[#98A2B3] mx-auto mb-4" />
-                      <p className="text-sm font-medium text-[#344054]">No employees found</p>
-                      <p className="text-sm text-[#98A2B3] mt-1">Try adjusting your search or filters</p>
+                      <p className="text-sm font-medium text-[#344054]">
+                        {isFinance ? 'No vendors found' : 'No employees found'}
+                      </p>
+                      <p className="text-sm text-[#98A2B3] mt-1">
+                        {isFinance ? 'Try adjusting your search' : 'Try adjusting your search or filters'}
+                      </p>
                     </td>
                   </tr>
                 ) : (
-                  users.map((user) => (
-                    <tr key={user.id} className="hover:bg-[#F9FAFB] transition-colors">
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div>
-                          <p className="text-sm font-semibold text-[#101828]">
-                            {user.first_name} {user.last_name}
-                          </p>
-                          <p className="text-xs text-[#475467]">{user.email}</p>
-                          <p className="text-xs text-[#98A2B3] mt-0.5">ID: {user.employee_id}</p>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-[#ECF3FF] text-[#465FFF]">
-                          {user.role.replace('_', ' ')}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-[#475467]">
-                        {user.department || '—'}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-[#475467]">
-                        {user.position || '—'}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        {user.must_change_password ? (
-                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-700">
-                            Password Setup Required
+                  listItems.map((item) =>
+                    isVendor(item) ? (
+                      <tr key={item.id} className="hover:bg-[#F9FAFB] transition-colors">
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div>
+                            <p className="text-sm font-semibold text-[#101828]">{item.company_name}</p>
+                            <p className="text-xs text-[#475467]">{item.email}</p>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-[#475467]">
+                          {item.contact_number || '—'}
+                        </td>
+                      </tr>
+                    ) : (
+                      <tr key={item.id} className="hover:bg-[#F9FAFB] transition-colors">
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div>
+                            <p className="text-sm font-semibold text-[#101828]">
+                              {item.first_name} {item.last_name}
+                            </p>
+                            <p className="text-xs text-[#475467]">{item.email}</p>
+                            <p className="text-xs text-[#98A2B3] mt-0.5">ID: {item.employee_id}</p>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-[#ECF3FF] text-[#465FFF]">
+                            {item.role.replace('_', ' ')}
                           </span>
-                        ) : (
-                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-100 text-emerald-700">
-                            Active
-                          </span>
-                        )}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                        <div className="flex items-center justify-end space-x-2">
-                          <button
-                            onClick={() => {
-                              setSelectedUser(user);
-                              setShowResetModal(true);
-                            }}
-                            className="p-2 text-[#465FFF] hover:bg-[#ECF3FF] rounded-lg transition-colors"
-                            title="Reset Password"
-                          >
-                            <KeyIcon className="h-5 w-5" />
-                          </button>
-                          {currentUser?.role === UserRole.HR_MANAGER && (
-                            <button
-                              onClick={() => handleDeleteUser(user.id)}
-                              className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                              title="Delete User"
-                            >
-                              <TrashIcon className="h-5 w-5" />
-                            </button>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-[#475467]">
+                          {item.department || '—'}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-[#475467]">
+                          {item.position || '—'}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          {item.must_change_password ? (
+                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-700">
+                              Password Setup Required
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-100 text-emerald-700">
+                              Active
+                            </span>
                           )}
-                        </div>
-                      </td>
-                    </tr>
-                  ))
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                          <div className="flex items-center justify-end space-x-2">
+                            <button
+                              onClick={() => {
+                                setSelectedUser(item);
+                                setShowResetModal(true);
+                              }}
+                              className="p-2 text-[#465FFF] hover:bg-[#ECF3FF] rounded-lg transition-colors"
+                              title="Reset Password"
+                            >
+                              <KeyIcon className="h-5 w-5" />
+                            </button>
+                            {currentUser?.role === UserRole.HR_MANAGER && (
+                              <button
+                                onClick={() => handleDeleteUser(item.id)}
+                                className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                                title="Delete User"
+                              >
+                                <TrashIcon className="h-5 w-5" />
+                              </button>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    )
+                  )
                 )}
               </tbody>
             </table>
@@ -318,12 +407,19 @@ export default function AdminUsersPage() {
         </div>
       )}
 
-      {/* Create User Modal */}
+      {/* Create User Modal (HR only - employees/consultants) */}
       <CreateUserModal
         isOpen={showCreateModal}
         onClose={() => setShowCreateModal(false)}
         onSubmit={handleCreateUser}
         currentUserRole={currentUser?.role as UserRole | undefined}
+      />
+
+      {/* Create Service Provider Modal */}
+      <CreateServiceProviderModal
+        isOpen={showCreateServiceProviderModal}
+        onClose={() => setShowCreateServiceProviderModal(false)}
+        onSubmit={handleCreateServiceProvider}
       />
 
       {/* Reset Password Modal */}

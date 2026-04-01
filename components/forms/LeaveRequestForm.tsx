@@ -46,7 +46,7 @@ export default function LeaveRequestForm() {
   
   const leaveRequestMutation = useMutation({
     mutationFn: async (data: FormData) => {
-      const response = await api.post('/leaves/request', data, {
+      const response = await api.post('/leaves', data, {
         headers: {
           'Content-Type': 'multipart/form-data'
         }
@@ -84,6 +84,17 @@ export default function LeaveRequestForm() {
   
   const startDate = watch('start_date');
   const endDate = watch('end_date');
+  
+  // Fetch holidays in the selected date range
+  const { data: holidays } = useQuery({
+    queryKey: ['holidays', startDate, endDate],
+    queryFn: async () => {
+      if (!startDate || !endDate) return [];
+      const response = await api.get(`/leave-calendar/range?startDate=${startDate}&endDate=${endDate}`);
+      return response.data.data || [];
+    },
+    enabled: !!startDate && !!endDate
+  });
   
   const calculateDays = () => {
     if (startDate && endDate) {
@@ -160,6 +171,33 @@ export default function LeaveRequestForm() {
           )}
         </div>
       </div>
+      
+      {/* Holidays in date range */}
+      {holidays && holidays.length > 0 && (
+        <div className="rounded-lg border border-amber-200 bg-amber-50 p-4">
+          <h4 className="text-sm font-semibold text-amber-800 mb-2">
+            Holidays in Selected Period:
+          </h4>
+          <ul className="space-y-1">
+            {holidays.map((holiday: any) => (
+              <li key={holiday.id} className="text-sm text-amber-700">
+                <span className="font-medium">
+                  {new Date(holiday.date).toLocaleDateString('en-US', {
+                    month: 'short',
+                    day: 'numeric',
+                    year: 'numeric'
+                  })}
+                </span>
+                {' - '}
+                {holiday.name}
+                {holiday.is_recurring && (
+                  <span className="ml-2 text-xs text-amber-600">(Recurring)</span>
+                )}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
       
       {/* Reason */}
       <div>
