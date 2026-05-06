@@ -1,4 +1,4 @@
-name: Deploy OXO Carriers Frontend to QA Cloud Run
+name: Deploy OXO Carriers Backend to QA Cloud Run
 
 on:
   pull_request:
@@ -9,7 +9,7 @@ on:
 
 env:
   PROJECT_ID: ${{ secrets.QA_GCP_PROJECT_ID }}
-  SERVICE_NAME: qa-oxo-carriers-frontend
+  SERVICE_NAME: qa-oxo-carriers-backend
   REGION: us-central1
   AR_HOSTNAME: us-central1-docker.pkg.dev
   REPOSITORY: oxo-carriers-qa-repo
@@ -85,11 +85,6 @@ jobs:
         run: pnpm test --if-present
 
       - name: Build Application
-        env:
-          NEXT_PUBLIC_API_URL: ${{ secrets.QA_NEXT_PUBLIC_API_URL }}
-          NEXT_PUBLIC_EMAILJS_SERVICE_ID: ${{ secrets.QA_NEXT_PUBLIC_EMAILJS_SERVICE_ID }}
-          NEXT_PUBLIC_EMAILJS_TEMPLATE_ID: ${{ secrets.QA_NEXT_PUBLIC_EMAILJS_TEMPLATE_ID }}
-          NEXT_PUBLIC_EMAILJS_PUBLIC_KEY: ${{ secrets.QA_NEXT_PUBLIC_EMAILJS_PUBLIC_KEY }}
         run: pnpm run build
 
       - name: Get Application Version
@@ -139,10 +134,6 @@ jobs:
           docker build --no-cache \
             --build-arg COMMIT_SHA=${{ github.sha }} \
             --build-arg BUILD_DATE=$(date -u +'%Y-%m-%dT%H:%M:%SZ') \
-            --build-arg NEXT_PUBLIC_API_URL=${{ secrets.QA_NEXT_PUBLIC_API_URL }} \
-            --build-arg NEXT_PUBLIC_EMAILJS_SERVICE_ID=${{ secrets.QA_NEXT_PUBLIC_EMAILJS_SERVICE_ID }} \
-            --build-arg NEXT_PUBLIC_EMAILJS_TEMPLATE_ID=${{ secrets.QA_NEXT_PUBLIC_EMAILJS_TEMPLATE_ID }} \
-            --build-arg NEXT_PUBLIC_EMAILJS_PUBLIC_KEY=${{ secrets.QA_NEXT_PUBLIC_EMAILJS_PUBLIC_KEY }} \
             -t $AR_HOSTNAME/$PROJECT_ID/$REPOSITORY/$SERVICE_NAME:${{ steps.application-version.outputs.version }} \
             -t $AR_HOSTNAME/$PROJECT_ID/$REPOSITORY/$SERVICE_NAME:latest \
             .
@@ -163,10 +154,22 @@ jobs:
             --allow-unauthenticated \
             --memory=1Gi \
             --cpu=1 \
-            --port=3000 \
+            --port=5000 \
             --set-env-vars="NODE_ENV=production" \
+            --set-env-vars="PORT=${{ secrets.QA_PORT }}" \
+            --set-env-vars="DB_HOST=${{ secrets.QA_DB_HOST }}" \
+            --set-env-vars="DB_USER=${{ secrets.QA_DB_USER }}" \
+            --set-env-vars="DB_PASSWORD=${{ secrets.QA_DB_PASSWORD }}" \
+            --set-env-vars="DB_NAME=${{ secrets.QA_DB_NAME }}" \
+            --set-env-vars="DB_PORT=${{ secrets.QA_DB_PORT }}" \
+            --set-env-vars="JWT_SECRET=${{ secrets.QA_JWT_SECRET }}" \
+            --set-env-vars="FRONTEND_URL=${{ secrets.QA_FRONTEND_URL }}" \
+            --set-env-vars="EMAILJS_SERVICE_ID=${{ secrets.QA_EMAILJS_SERVICE_ID }}" \
+            --set-env-vars="EMAILJS_TEMPLATE_ID=${{ secrets.QA_EMAILJS_TEMPLATE_ID }}" \
+            --set-env-vars="EMAILJS_PUBLIC_KEY=${{ secrets.QA_EMAILJS_PUBLIC_KEY }}" \
+            --set-env-vars="EMAILJS_PRIVATE_KEY=${{ secrets.QA_EMAILJS_PRIVATE_KEY }}" \
             --revision-suffix=${{ github.sha }} \
-            --labels="commit=${{ github.sha }},branch=qa,app=oxo-carriers-frontend" \
+            --labels="commit=${{ github.sha }},branch=qa,app=oxo-carriers-backend" \
             --quiet
 
           # Get service URL
