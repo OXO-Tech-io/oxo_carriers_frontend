@@ -1,0 +1,20 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"label": "Install frontend test deps",
+			"type": "shell",
+			"command": "pnpm",
+			"args": [
+				"add",
+				"-D",
+				"vitest",
+				"@vitest/coverage-v8",
+				"jsdom",
+				"@testing-library/react",
+				"@testing-library/jest-dom"
+			],
+			"isBackground": false
+		}
+	]
+}

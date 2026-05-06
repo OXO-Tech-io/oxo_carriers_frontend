@@ -123,15 +123,17 @@ export interface ConsultantWorkSubmission {
     start_date: string;
     end_date: string;
     total_days: number;
-    reason: string;
+    is_half_day?: boolean;
+    half_day_period?: 'morning' | 'evening';
+    reason?: string;
     status: 'pending' | 'team_leader_approved' | 'hr_approved' | 'rejected' | 'cancelled';
     team_leader_approval_date?: string;
     hr_approval_date?: string;
     rejection_reason?: string;
     attachment_url?: string;
     created_at: string;
-    user: User;
-    leave_type: LeaveType;
+    user?: User;
+    leave_type?: LeaveType;
   }
   
   export interface SalaryComponent {

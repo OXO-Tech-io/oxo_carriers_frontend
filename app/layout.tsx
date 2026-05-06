@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
-import { ToastProvider } from "@/contexts/ToastContext";
+import { Providers } from "./providers";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -16,9 +16,7 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body className="antialiased min-h-screen bg-[var(--background)] text-[var(--foreground)]">
-        <ToastProvider>
-          {children}
-        </ToastProvider>
+        <Providers>{children}</Providers>
       </body>
     </html>
   );

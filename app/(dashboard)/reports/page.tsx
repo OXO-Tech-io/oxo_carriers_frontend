@@ -170,7 +170,7 @@ export default function ReportsPage() {
         ...(selectedMonth && { month: selectedMonth.toString() })
       });
       const leaveRes = await api.get(`/leaves?${leaveParams}`);
-      const requests = leaveRes.data.requests || [];
+      const requests = leaveRes.data.data || [];
 
       const leaveData: LeaveReport = {
         totalRequests: requests.length,

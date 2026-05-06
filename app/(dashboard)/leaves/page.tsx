@@ -1,8 +1,14 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '@/hooks/useAuth';
-import api from '@/lib/api';
+import { useLeaveTypesQuery } from '@/hooks/queries/use-leave-types-query';
+import { useLeaveBalanceQuery } from '@/hooks/queries/use-leave-balance-query';
+import { useLeaveRequestsQuery } from '@/hooks/queries/use-leave-requests-query';
+import { useHolidaysQuery } from '@/hooks/queries/use-holidays-query';
+import { useCreateLeaveMutation } from '@/hooks/mutations/use-create-leave-mutation';
+import { useApproveLeaveMutation } from '@/hooks/mutations/use-approve-leave-mutation';
+import { useRejectLeaveMutation } from '@/hooks/mutations/use-reject-leave-mutation';
 import {
   CalendarIcon,
   PlusIcon,
@@ -17,58 +23,11 @@ import DateRangePicker from '@/components/DateRangePicker';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
 
-interface LeaveType {
-  id: number;
-  name: string;
-  description: string;
-  max_days: number;
-  is_active: boolean;
-}
-
-interface LeaveBalance {
-  id: number;
-  leave_type_id: number;
-  total_days: number;
-  used_days: number;
-  remaining_days: number;
-  year: number;
-  leave_type: LeaveType;
-}
-
-interface LeaveRequest {
-  id: number;
-  leave_type_id: number;
-  start_date: string;
-  end_date: string;
-  total_days: number;
-  is_half_day?: boolean;
-  half_day_period?: 'morning' | 'evening';
-  reason?: string;
-  status: 'pending' | 'team_leader_approved' | 'hr_approved' | 'rejected' | 'cancelled';
-  team_leader_approval_date?: string;
-  hr_approval_date?: string;
-  rejection_reason?: string;
-  attachment_url?: string;
-  created_at: string;
-  user?: {
-    id: number;
-    first_name: string;
-    last_name: string;
-    email: string;
-    employee_id: string;
-  };
-  leave_type?: LeaveType;
-}
-
 type Tab = 'balance' | 'request' | 'history' | 'approvals';
 
 export default function LeavesPage() {
   const { user, isHR } = useAuth();
   const [activeTab, setActiveTab] = useState<Tab>('balance');
-  const [leaveTypes, setLeaveTypes] = useState<LeaveType[]>([]);
-  const [balances, setBalances] = useState<LeaveBalance[]>([]);
-  const [requests, setRequests] = useState<LeaveRequest[]>([]);
-  const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
 
@@ -82,33 +41,61 @@ export default function LeavesPage() {
     half_day_period: '' as 'morning' | 'evening' | '',
   });
   const [attachment, setAttachment] = useState<File | null>(null);
-  const [submitting, setSubmitting] = useState(false);
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [startDatePicker, setStartDatePicker] = useState<Date | null>(null);
   const [endDatePicker, setEndDatePicker] = useState<Date | null>(null);
-  const [holidays, setHolidays] = useState<any[]>([]);
   const [openStartCalendar, setOpenStartCalendar] = useState(false);
   const [openEndCalendar, setOpenEndCalendar] = useState(false);
-  
-  // Fetch holidays for calculation and date picker
-  useEffect(() => {
-    const fetchHolidays = async () => {
-      try {
-        // Fetch holidays for the current year to show in date pickers
-        const currentYear = new Date().getFullYear();
-        const startDate = new Date(currentYear, 0, 1);
-        const endDate = new Date(currentYear, 11, 31);
-        
-        const response = await api.get(
-          `/leave-calendar/range?startDate=${format(startDate, 'yyyy-MM-dd')}&endDate=${format(endDate, 'yyyy-MM-dd')}`
-        );
-        setHolidays(response.data.data || []);
-      } catch (err) {
-        console.error('Error fetching holidays:', err);
-      }
+
+  // Server state via React Query
+  const { yearStart, yearEnd } = useMemo(() => {
+    const y = new Date().getFullYear();
+    return {
+      yearStart: format(new Date(y, 0, 1), 'yyyy-MM-dd'),
+      yearEnd: format(new Date(y, 11, 31), 'yyyy-MM-dd'),
     };
-    fetchHolidays();
   }, []);
+
+  const leaveTypesQuery = useLeaveTypesQuery();
+  const leaveBalanceQuery = useLeaveBalanceQuery();
+  const leaveRequestsQuery = useLeaveRequestsQuery(
+    activeTab === 'approvals' ? { status: 'pending' } : {},
+    { enabled: activeTab === 'history' || activeTab === 'approvals' }
+  );
+  const holidaysQuery = useHolidaysQuery(yearStart, yearEnd);
+
+  const leaveTypes = leaveTypesQuery.data ?? [];
+  const balances = leaveBalanceQuery.data ?? [];
+  const requests = leaveRequestsQuery.data ?? [];
+  const holidays = holidaysQuery.data ?? [];
+
+  const createLeaveMutation = useCreateLeaveMutation();
+  const approveLeaveMutation = useApproveLeaveMutation();
+  const rejectLeaveMutation = useRejectLeaveMutation();
+
+  const submitting = createLeaveMutation.isPending;
+  const loading =
+    leaveTypesQuery.isLoading ||
+    leaveBalanceQuery.isLoading ||
+    leaveRequestsQuery.isLoading;
+
+  // Surface query errors
+  useEffect(() => {
+    const queryError =
+      leaveTypesQuery.error ||
+      leaveBalanceQuery.error ||
+      leaveRequestsQuery.error;
+    if (queryError) {
+      const message =
+        (queryError as { response?: { data?: { message?: string } } })
+          ?.response?.data?.message || 'Failed to fetch data';
+      setError(message);
+    }
+  }, [
+    leaveTypesQuery.error,
+    leaveBalanceQuery.error,
+    leaveRequestsQuery.error,
+  ]);
   
   // Calculate requested days (excluding weekends and holidays)
   const calculateDays = () => {
@@ -236,67 +223,30 @@ export default function LeavesPage() {
     }
   };
 
-  useEffect(() => {
-    fetchData();
-  }, [activeTab]);
-
-  const fetchData = async () => {
-    try {
-      setLoading(true);
-      setError('');
-
-      // Fetch leave types and balance
-      const [typesRes, balanceRes] = await Promise.all([
-        api.get('/leaves/types'),
-        api.get('/leaves/balance'),
-      ]);
-
-      setLeaveTypes(typesRes.data.types || []);
-      setBalances(balanceRes.data.balances || []);
-
-      // Fetch requests based on tab
-      if (activeTab === 'history' || activeTab === 'approvals') {
-        const params = new URLSearchParams();
-        if (activeTab === 'approvals') {
-          params.append('status', 'pending');
-        }
-        const queryString = params.toString();
-        const response = await api.get(`/leaves${queryString ? `?${queryString}` : ''}`);
-        setRequests(response.data.requests || []);
-      }
-    } catch (err: any) {
-      setError(err.response?.data?.message || 'Failed to fetch data');
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const handleSubmitRequest = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     setSuccess('');
-    setSubmitting(true);
+
+    const formDataToSend = new FormData();
+    formDataToSend.append('leave_type_id', formData.leave_type_id);
+    formDataToSend.append('start_date', formData.start_date);
+    // For half-day, end_date should be same as start_date
+    formDataToSend.append('end_date', formData.is_half_day ? formData.start_date : formData.end_date);
+    if (formData.reason) {
+      formDataToSend.append('reason', formData.reason);
+    }
+    formDataToSend.append('is_half_day', formData.is_half_day.toString());
+    if (formData.is_half_day && formData.half_day_period) {
+      formDataToSend.append('half_day_period', formData.half_day_period);
+    }
+    if (attachment) {
+      formDataToSend.append('document', attachment);
+    }
 
     try {
-      const formDataToSend = new FormData();
-      formDataToSend.append('leave_type_id', formData.leave_type_id);
-      formDataToSend.append('start_date', formData.start_date);
-      // For half-day, end_date should be same as start_date
-      formDataToSend.append('end_date', formData.is_half_day ? formData.start_date : formData.end_date);
-      formDataToSend.append('reason', formData.reason);
-      formDataToSend.append('is_half_day', formData.is_half_day.toString());
-      if (formData.is_half_day && formData.half_day_period) {
-        formDataToSend.append('half_day_period', formData.half_day_period);
-      }
-      if (attachment) {
-        formDataToSend.append('document', attachment);
-      }
-
-      const response = await api.post('/leaves', formDataToSend, {
-        // Do not set Content-Type: axios sets it with the correct boundary for FormData
-      });
-
-      setSuccess(response.data.message || 'Leave request submitted successfully');
+      await createLeaveMutation.mutateAsync(formDataToSend);
+      setSuccess('Leave request submitted successfully');
       setFormData({
         leave_type_id: '',
         start_date: '',
@@ -306,34 +256,38 @@ export default function LeavesPage() {
         half_day_period: '',
       });
       setAttachment(null);
-      fetchData();
       setActiveTab('history');
-    } catch (err: any) {
-      setError(err.response?.data?.message || 'Failed to submit leave request');
-    } finally {
-      setSubmitting(false);
+    } catch (err) {
+      const message =
+        (err as { response?: { data?: { message?: string } } })?.response?.data
+          ?.message || 'Failed to submit leave request';
+      setError(message);
     }
   };
 
   const handleApprove = async (requestId: number, approvedBy: 'team_leader' | 'hr') => {
+    setError('');
     try {
-      setError('');
-      await api.put(`/leaves/${requestId}/approve`, { approvedBy });
+      await approveLeaveMutation.mutateAsync({ id: requestId, input: { approvedBy } });
       setSuccess('Leave request approved successfully');
-      fetchData();
-    } catch (err: any) {
-      setError(err.response?.data?.message || 'Failed to approve leave request');
+    } catch (err) {
+      const message =
+        (err as { response?: { data?: { message?: string } } })?.response?.data
+          ?.message || 'Failed to approve leave request';
+      setError(message);
     }
   };
 
   const handleReject = async (requestId: number, rejectionReason: string) => {
+    setError('');
     try {
-      setError('');
-      await api.put(`/leaves/${requestId}/reject`, { rejectionReason });
+      await rejectLeaveMutation.mutateAsync({ id: requestId, input: { rejectionReason } });
       setSuccess('Leave request rejected');
-      fetchData();
-    } catch (err: any) {
-      setError(err.response?.data?.message || 'Failed to reject leave request');
+    } catch (err) {
+      const message =
+        (err as { response?: { data?: { message?: string } } })?.response?.data
+          ?.message || 'Failed to reject leave request';
+      setError(message);
     }
   };
 

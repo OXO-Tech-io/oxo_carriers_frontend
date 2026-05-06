@@ -1,0 +1,37 @@
+version: '3.8'
+
+services:
+  # Production-like build with nginx
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL}
+        NEXT_PUBLIC_EMAILJS_SERVICE_ID: ${NEXT_PUBLIC_EMAILJS_SERVICE_ID}
+        NEXT_PUBLIC_EMAILJS_TEMPLATE_ID: ${NEXT_PUBLIC_EMAILJS_TEMPLATE_ID}
+        NEXT_PUBLIC_EMAILJS_PUBLIC_KEY: ${NEXT_PUBLIC_EMAILJS_PUBLIC_KEY}
+    ports:
+      - '8080:80'
+    env_file:
+      - .env
+    container_name: oxo-carriers-frontend
+    profiles:
+      - production
+
+  # Development with hot reload
+  dev:
+    image: node:20-alpine
+    working_dir: /app
+    command: sh -c "npm install -g pnpm && pnpm install && pnpm run dev -- -H 0.0.0.0"
+    volumes:
+      - .:/app
+      - /app/node_modules
+      - /app/.next
+    ports:
+      - '3000:3000'
+    env_file:
+      - .env
+    container_name: oxo-carriers-frontend-dev
+    profiles:
+      - dev
