@@ -1,5 +1,6 @@
 // frontend/types/index.ts
 export enum UserRole {
+  SUPER_ADMIN = 'super_admin',
   HR_MANAGER = 'hr_manager',
   HR_EXECUTIVE = 'hr_executive',
   FINANCE_MANAGER = 'finance_manager',
@@ -69,7 +70,7 @@ export interface User {
     email: string;
     first_name: string;
     last_name: string;
-    role: UserRole | 'hr_manager' | 'hr_executive' | 'employee' | 'consultant' | 'service_provider';
+    role: UserRole | 'super_admin' | 'hr_manager' | 'hr_executive' | 'employee' | 'consultant' | 'service_provider';
     department: string;
     position: string;
     hire_date: string;

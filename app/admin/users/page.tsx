@@ -2,11 +2,11 @@
 
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
+import { useToast } from '@/contexts/ToastContext';
 import api from '@/lib/api';
 import {
   PlusIcon,
   MagnifyingGlassIcon,
-  PencilIcon,
   TrashIcon,
   KeyIcon,
   UserGroupIcon,
@@ -36,8 +36,9 @@ function isVendor(item: User | Vendor): item is Vendor {
 }
 
 export default function AdminUsersPage() {
-  const { user: currentUser, isHR, isFinance } = useAuth();
-  const canAccessUsers = isHR || isFinance;
+  const { user: currentUser, isHR, isFinance, isSuperAdmin } = useAuth();
+  const toast = useToast();
+  const canAccessUsers = isSuperAdmin || isHR || isFinance;
   const [listItems, setListItems] = useState<(User | Vendor)[]>([]);
   const [loading, setLoading] = useState(true);
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -48,9 +49,6 @@ export default function AdminUsersPage() {
   const [filterRole, setFilterRole] = useState<string>('');
   const [filterDepartment, setFilterDepartment] = useState<string>('');
   const [departments, setDepartments] = useState<string[]>([]);
-
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
 
   useEffect(() => {
     if (canAccessUsers) {
@@ -77,7 +75,7 @@ export default function AdminUsersPage() {
       }
     } catch (err: any) {
       console.error('Failed to fetch:', err);
-      setError(err.response?.data?.message || 'Failed to fetch');
+      toast.error('Failed to load', err.response?.data?.message || 'Could not fetch users');
     } finally {
       setLoading(false);
     }
@@ -110,46 +108,38 @@ export default function AdminUsersPage() {
     company_name?: string;
     contact_number?: string;
   }) => {
-    setError('');
-    setSuccess('');
-
     try {
       const response = await api.post('/users', formData);
-      setSuccess(response.data.message || 'User created successfully');
+      toast.success('User created', response.data.message || 'Employee account created successfully');
       setShowCreateModal(false);
       fetchUsers();
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Failed to create user');
+      toast.error('Failed to create user', err.response?.data?.message || 'Please check the form and try again');
       throw err; // Re-throw to let modal handle loading state
     }
   };
 
   const handleCreateServiceProvider = async (data: CreateServiceProviderPayload) => {
-    setError('');
-    setSuccess('');
     try {
       const response = await api.post('/vendors', data);
-      setSuccess(response.data.message || 'Vendor created successfully');
+      toast.success('Vendor created', response.data.message || 'Service provider account created successfully');
       setShowCreateServiceProviderModal(false);
       fetchUsers();
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Failed to create vendor');
+      toast.error('Failed to create vendor', err.response?.data?.message || 'Please check the form and try again');
       throw err;
     }
   };
 
   const handleResetPassword = async () => {
     if (!selectedUser) return;
-
     try {
-      setError('');
-      setSuccess('');
       const response = await api.post(`/users/${selectedUser.id}/reset-password`);
-      setSuccess(response.data.message || 'Password reset email sent successfully');
+      toast.success('Password reset sent', response.data.message || `Reset email sent to ${selectedUser.email}`);
       setShowResetModal(false);
       setSelectedUser(null);
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Failed to reset password');
+      toast.error('Failed to reset password', err.response?.data?.message || 'Could not send reset email');
     }
   };
 
@@ -157,13 +147,12 @@ export default function AdminUsersPage() {
     if (!confirm('Are you sure you want to delete this user? This action cannot be undone.')) {
       return;
     }
-
     try {
       await api.delete(`/users/${userId}`);
-      setSuccess('User deleted successfully');
+      toast.success('User deleted', 'The user account has been removed');
       fetchUsers();
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Failed to delete user');
+      toast.error('Failed to delete user', err.response?.data?.message || 'Could not delete the user');
     }
   };
 
@@ -222,18 +211,6 @@ export default function AdminUsersPage() {
           </div>
         )}
       </div>
-
-      {/* Alerts */}
-      {error && (
-        <div className="bg-red-50 border-l-4 border-red-500 text-red-700 p-4 rounded-lg">
-          <p className="text-sm font-medium">{error}</p>
-        </div>
-      )}
-      {success && (
-        <div className="bg-emerald-50 border-l-4 border-emerald-500 text-emerald-700 p-4 rounded-lg">
-          <p className="text-sm font-medium">{success}</p>
-        </div>
-      )}
 
       {/* Filters */}
       <div className="bg-white rounded-2xl shadow-sm border border-[#E4E7EC] p-4">

@@ -145,7 +145,7 @@ export default function SalaryPage() {
       </div>
 
       {ytdEarnings && (
-        <div className="bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-200/50 rounded-2xl p-6 shadow-sm">
+        <div className="bg-[var(--card-bg)] border border-[var(--gray-100)] rounded-2xl p-6 shadow-sm">
           <div className="flex items-center justify-between mb-6">
             <h2 className="text-lg font-bold text-gray-900">Year-to-Date Summary ({year})</h2>
             <div className="px-3 py-1 bg-blue-100 rounded-full">
@@ -195,7 +195,7 @@ export default function SalaryPage() {
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gradient-to-r from-gray-50 to-gray-100/50">
+              <thead className="bg-[var(--gray-50)]">
                 <tr>
                   <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
                     Month

@@ -1,0 +1,183 @@
+name: Deploy OXO Carriers Frontend to QA Cloud Run
+
+on:
+  pull_request:
+    branches: [qa]
+    types: [closed]
+    paths-ignore:
+      - '.github/workflows/**'
+
+env:
+  PROJECT_ID: ${{ secrets.QA_GCP_PROJECT_ID }}
+  SERVICE_NAME: qa-oxo-carriers-frontend
+  REGION: us-central1
+  AR_HOSTNAME: us-central1-docker.pkg.dev
+  REPOSITORY: oxo-carriers-qa-repo
+  ENVIRONMENT: qa
+
+jobs:
+  build-and-test:
+    if: github.event.pull_request.base.ref == 'qa' && github.event.pull_request.head.ref == 'develop' && github.event.pull_request.merged == true
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.application-version.outputs.version }}
+      should_deploy: ${{ steps.check-changes.outputs.should_deploy }}
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.merge_commit_sha }}
+          fetch-depth: 0
+
+      - name: Check for relevant changes
+        id: check-changes
+        run: |
+          # Check if there are changes outside of documentation or config files
+          CHANGED_FILES=$(git diff --name-only ${{ github.event.pull_request.base.sha }} ${{ github.event.pull_request.head.sha }})
+          echo "Changed files:"
+          echo "$CHANGED_FILES"
+
+          # Filter out non-deployment related changes
+          RELEVANT_CHANGES=$(echo "$CHANGED_FILES" | grep -v -E '\.md$|\.txt$|^docs/|^README|^LICENSE' || true)
+
+          if [ -z "$RELEVANT_CHANGES" ]; then
+            echo "No relevant changes detected for deployment"
+            echo "should_deploy=false" >> $GITHUB_OUTPUT
+          else
+            echo "Relevant changes detected"
+            echo "should_deploy=true" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+          run_install: false
+
+      - name: Get pnpm store directory
+        shell: bash
+        run: |
+          echo "STORE_PATH=$(pnpm store path)" >> $GITHUB_ENV
+
+      - name: Setup pnpm cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ${{ env.STORE_PATH }}
+            ~/.cache/Cypress
+          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-store-
+
+      - name: Install Dependencies
+        run: pnpm install --frozen-lockfile
+
+      #      - name: Run Linter
+      #        run: pnpm run lint --if-present
+
+      - name: Run Tests
+        run: pnpm test --if-present
+
+      - name: Build Application
+        env:
+          NEXT_PUBLIC_API_URL: ${{ secrets.QA_NEXT_PUBLIC_API_URL }}
+          NEXT_PUBLIC_EMAILJS_SERVICE_ID: ${{ secrets.QA_NEXT_PUBLIC_EMAILJS_SERVICE_ID }}
+          NEXT_PUBLIC_EMAILJS_TEMPLATE_ID: ${{ secrets.QA_NEXT_PUBLIC_EMAILJS_TEMPLATE_ID }}
+          NEXT_PUBLIC_EMAILJS_PUBLIC_KEY: ${{ secrets.QA_NEXT_PUBLIC_EMAILJS_PUBLIC_KEY }}
+        run: pnpm run build
+
+      - name: Get Application Version
+        id: application-version
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Extracted version: $VERSION"
+
+  deploy-to-qa-cloud-run:
+    if: github.event.pull_request.base.ref == 'qa' && github.event.pull_request.head.ref == 'develop' && github.event.pull_request.merged == true && needs.build-and-test.outputs.should_deploy == 'true'
+    runs-on: ubuntu-latest
+    needs: [build-and-test]
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.merge_commit_sha }}
+
+      - name: Google Cloud Auth
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.QA_GCP_SA_KEY }}
+          project_id: ${{ secrets.QA_GCP_PROJECT_ID }}
+
+      - name: Setup Google Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+        with:
+          project_id: ${{ secrets.QA_GCP_PROJECT_ID }}
+          export_default_credentials: true
+
+      - name: Configure Docker for Artifact Registry
+        run: |
+          gcloud auth configure-docker $AR_HOSTNAME --quiet
+
+      - name: Get Application Version
+        id: application-version
+        run: |
+          # Extract version from package.json
+          VERSION=$(node -p "require('./package.json').version")
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Extracted version: $VERSION"
+
+      - name: Build Docker Image
+        run: |
+          docker build --no-cache \
+            --build-arg COMMIT_SHA=${{ github.sha }} \
+            --build-arg BUILD_DATE=$(date -u +'%Y-%m-%dT%H:%M:%SZ') \
+            --build-arg NEXT_PUBLIC_API_URL=${{ secrets.QA_NEXT_PUBLIC_API_URL }} \
+            --build-arg NEXT_PUBLIC_EMAILJS_SERVICE_ID=${{ secrets.QA_NEXT_PUBLIC_EMAILJS_SERVICE_ID }} \
+            --build-arg NEXT_PUBLIC_EMAILJS_TEMPLATE_ID=${{ secrets.QA_NEXT_PUBLIC_EMAILJS_TEMPLATE_ID }} \
+            --build-arg NEXT_PUBLIC_EMAILJS_PUBLIC_KEY=${{ secrets.QA_NEXT_PUBLIC_EMAILJS_PUBLIC_KEY }} \
+            -t $AR_HOSTNAME/$PROJECT_ID/$REPOSITORY/$SERVICE_NAME:${{ steps.application-version.outputs.version }} \
+            -t $AR_HOSTNAME/$PROJECT_ID/$REPOSITORY/$SERVICE_NAME:latest \
+            .
+
+      - name: Push to Artifact Registry
+        run: |
+          docker push $AR_HOSTNAME/$PROJECT_ID/$REPOSITORY/$SERVICE_NAME:${{ steps.application-version.outputs.version }}
+          docker push $AR_HOSTNAME/$PROJECT_ID/$REPOSITORY/$SERVICE_NAME:latest
+
+      - name: Deploy to Cloud Run
+        id: deploy
+        run: |
+          # Deploy the service
+          gcloud run deploy $SERVICE_NAME \
+            --image=$AR_HOSTNAME/$PROJECT_ID/$REPOSITORY/$SERVICE_NAME:${{ steps.application-version.outputs.version }} \
+            --region=$REGION \
+            --platform=managed \
+            --allow-unauthenticated \
+            --memory=1Gi \
+            --cpu=1 \
+            --port=3000 \
+            --set-env-vars="NODE_ENV=production" \
+            --revision-suffix=${{ github.sha }} \
+            --labels="commit=${{ github.sha }},branch=qa,app=oxo-carriers-frontend" \
+            --quiet
+
+          # Get service URL
+          SERVICE_URL=$(gcloud run services describe $SERVICE_NAME \
+            --region=$REGION \
+            --format='value(status.url)')
+          echo "url=$SERVICE_URL" >> $GITHUB_OUTPUT
+          echo "service_name=$SERVICE_NAME" >> $GITHUB_OUTPUT
+
+      - name: Show Deployment Info
+        run: |
+          echo "QA Deployment Successful!"
+          echo "URL: ${{ steps.deploy.outputs.url }}"
+          echo "Image: $AR_HOSTNAME/$PROJECT_ID/$REPOSITORY/$SERVICE_NAME:${{ steps.application-version.outputs.version }}"

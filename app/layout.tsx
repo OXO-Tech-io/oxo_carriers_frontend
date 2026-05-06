@@ -1,9 +1,10 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
+import { ToastProvider } from "@/contexts/ToastContext";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Payroll System",
+  title: "OXO Carriers — Payroll System",
   description: "Employee Payroll Management System",
 };
 
@@ -15,7 +16,9 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body className="antialiased min-h-screen bg-[var(--background)] text-[var(--foreground)]">
-        {children}
+        <ToastProvider>
+          {children}
+        </ToastProvider>
       </body>
     </html>
   );

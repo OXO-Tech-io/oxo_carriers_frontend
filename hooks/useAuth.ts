@@ -14,6 +14,7 @@ export const useAuth = () => {
     checkAuth,
   } = useAuthStore();
 
+  const isSuperAdmin = user?.role === 'super_admin';
   const isHRManager = user?.role === 'hr_manager';
   const isHRExecutive = user?.role === 'hr_executive';
   const isEmployee = user?.role === 'employee';
@@ -34,6 +35,7 @@ export const useAuth = () => {
     logout,
     setUser,
     checkAuth,
+    isSuperAdmin,
     isHRManager,
     isHRExecutive,
     isEmployee,

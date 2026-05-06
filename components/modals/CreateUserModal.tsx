@@ -374,7 +374,7 @@ export default function CreateUserModal({
               </div>
               
               {leaveInfo && formData.role === UserRole.EMPLOYEE && (
-                <div className="bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-200 rounded-lg p-4 mt-4">
+                <div className="bg-[var(--success-light)] border border-[var(--success)]/30 rounded-lg p-4 mt-4">
                   <div className="flex items-start space-x-3">
                     <div className="flex-shrink-0 mt-0.5">
                       <svg className="h-5 w-5 text-emerald-600" fill="currentColor" viewBox="0 0 20 20">
