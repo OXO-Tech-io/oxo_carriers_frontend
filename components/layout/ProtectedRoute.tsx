@@ -1,7 +1,7 @@
 'use client';
 
-import { useEffect, useState, useRef } from 'react';
-import { useRouter } from 'next/navigation';
+import { useEffect } from 'react';
+import { useRouter, usePathname } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
 import { UserRole } from '@/types';
 
@@ -10,37 +10,29 @@ interface ProtectedRouteProps {
   allowedRoles?: (UserRole | string)[];
 }
 
+/**
+ * Auth gate for dashboard / admin routes.
+ *
+ * Auth state lives in the persisted Zustand store: a non-null `accessToken`
+ * means the user has a (possibly stale) session, which `lib/api.ts` will
+ * silently refresh on the next call. The `AuthHydrator` in `app/providers.tsx`
+ * fetches `/auth/me` whenever the access token changes, so this component
+ * just observes `isAuthenticated` and `user` and reacts.
+ */
 export default function ProtectedRoute({ children, allowedRoles }: ProtectedRouteProps) {
-  const { isAuthenticated, user, checkAuth } = useAuth();
+  const { isAuthenticated, user } = useAuth();
   const router = useRouter();
-  const [isChecking, setIsChecking] = useState(true);
-  const hasChecked = useRef(false);
+  const pathname = usePathname();
 
   useEffect(() => {
-    if (hasChecked.current) return;
-    
-    const verifyAuth = async () => {
-      hasChecked.current = true;
-      setIsChecking(true);
-      try {
-        await checkAuth();
-      } catch (error) {
-        console.error('Auth check failed:', error);
-      } finally {
-        setIsChecking(false);
-      }
-    };
-    
-    verifyAuth();
-  }, [checkAuth]);
-
-  useEffect(() => {
-    if (!isChecking && !isAuthenticated) {
-      router.replace('/login');
+    if (!isAuthenticated) {
+      const next = encodeURIComponent(pathname ?? '/');
+      router.replace(`/login?next=${next}`);
     }
-  }, [isChecking, isAuthenticated, router]);
+  }, [isAuthenticated, router, pathname]);
 
-  if (isChecking) {
+  // Token present but profile still hydrating from /auth/me — show spinner.
+  if (isAuthenticated && !user) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-gray-50">
         <div className="text-center">
@@ -51,7 +43,7 @@ export default function ProtectedRoute({ children, allowedRoles }: ProtectedRout
     );
   }
 
-  if (!isAuthenticated || !user) {
+  if (!isAuthenticated) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-gray-50">
         <div className="text-center">
@@ -62,12 +54,12 @@ export default function ProtectedRoute({ children, allowedRoles }: ProtectedRout
     );
   }
 
-  if (allowedRoles && !allowedRoles.includes(user.role)) {
+  if (allowedRoles && user && !allowedRoles.includes(user.role)) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-gray-50">
         <div className="text-center">
           <h1 className="text-2xl font-bold text-gray-900">Access Denied</h1>
-          <p className="mt-2 text-gray-600">You don't have permission to access this page.</p>
+          <p className="mt-2 text-gray-600">You don&apos;t have permission to access this page.</p>
         </div>
       </div>
     );

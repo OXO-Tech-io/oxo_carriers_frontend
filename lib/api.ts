@@ -1,44 +1,38 @@
 import axios from 'axios';
+import { useAuthStore } from '@/store/authStore';
 
-// Production API URL: https://backend.oxocareers.com/api
-// Development API URL: http://localhost:5000/api
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 
-  (process.env.NODE_ENV === 'production' 
-    ? 'https://backend.oxocareers.com/api' 
+const API_URL =
+  process.env.NEXT_PUBLIC_API_URL ||
+  (process.env.NODE_ENV === 'production'
+    ? 'https://backend.oxocareers.com/api'
     : 'http://localhost:5000/api');
 
 const api = axios.create({
   baseURL: API_URL,
-  headers: {
-    'Content-Type': 'application/json',
-  },
-  withCredentials: true, // Important for CORS with credentials
+  headers: { 'Content-Type': 'application/json' },
+  withCredentials: true,
 });
 
-// Request interceptor to add token
-api.interceptors.request.use(
-  (config) => {
-    if (typeof window !== 'undefined') {
-      const token = localStorage.getItem('token');
-      if (token) {
-        config.headers.Authorization = `Bearer ${token}`;
-      }
+// Attach a fresh access token to every request, refreshing if it's expiring.
+api.interceptors.request.use(async config => {
+  if (typeof window !== 'undefined') {
+    const token = await useAuthStore.getState().refresh();
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
     }
-    return config;
-  },
-  (error) => {
-    return Promise.reject(error);
   }
-);
+  return config;
+});
 
-// Response interceptor for error handling
+// On 401, clear the session and redirect to /login.
 api.interceptors.response.use(
-  (response) => response,
-  (error) => {
+  response => response,
+  async error => {
     if (error.response?.status === 401 && typeof window !== 'undefined') {
-      localStorage.removeItem('token');
-      localStorage.removeItem('user');
-      window.location.href = '/login';
+      await useAuthStore.getState().logout();
+      if (!window.location.pathname.startsWith('/login')) {
+        window.location.href = '/login';
+      }
     }
     return Promise.reject(error);
   }

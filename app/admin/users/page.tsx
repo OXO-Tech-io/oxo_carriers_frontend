@@ -1,9 +1,9 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
-import { useAuth } from '@/hooks/useAuth';
-import { useToast } from '@/contexts/ToastContext';
-import api from '@/lib/api';
+import { useState, useEffect } from "react";
+import { useAuth } from "@/hooks/useAuth";
+import { useToast } from "@/contexts/ToastContext";
+import api from "@/lib/api";
 import {
   PlusIcon,
   MagnifyingGlassIcon,
@@ -11,11 +11,13 @@ import {
   KeyIcon,
   UserGroupIcon,
   FunnelIcon,
-} from '@heroicons/react/24/outline';
-import { UserRole, Vendor } from '@/types';
-import CreateUserModal from '@/components/modals/CreateUserModal';
-import CreateServiceProviderModal, { CreateServiceProviderPayload } from '@/components/modals/CreateServiceProviderModal';
-import ResetPasswordModal from '@/components/modals/ResetPasswordModal';
+} from "@heroicons/react/24/outline";
+import { UserRole, Vendor } from "@/types";
+import CreateUserModal from "@/components/modals/CreateUserModal";
+import CreateServiceProviderModal, {
+  CreateServiceProviderPayload,
+} from "@/components/modals/CreateServiceProviderModal";
+import ResetPasswordModal from "@/components/modals/ResetPasswordModal";
 
 interface User {
   id: number;
@@ -32,7 +34,7 @@ interface User {
 }
 
 function isVendor(item: User | Vendor): item is Vendor {
-  return 'company_name' in item && !('role' in item);
+  return "company_name" in item && !("role" in item);
 }
 
 export default function AdminUsersPage() {
@@ -42,12 +44,13 @@ export default function AdminUsersPage() {
   const [listItems, setListItems] = useState<(User | Vendor)[]>([]);
   const [loading, setLoading] = useState(true);
   const [showCreateModal, setShowCreateModal] = useState(false);
-  const [showCreateServiceProviderModal, setShowCreateServiceProviderModal] = useState(false);
+  const [showCreateServiceProviderModal, setShowCreateServiceProviderModal] =
+    useState(false);
   const [showResetModal, setShowResetModal] = useState(false);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [filterRole, setFilterRole] = useState<string>('');
-  const [filterDepartment, setFilterDepartment] = useState<string>('');
+  const [searchTerm, setSearchTerm] = useState("");
+  const [filterRole, setFilterRole] = useState<string>("");
+  const [filterDepartment, setFilterDepartment] = useState<string>("");
   const [departments, setDepartments] = useState<string[]>([]);
 
   useEffect(() => {
@@ -62,20 +65,23 @@ export default function AdminUsersPage() {
       setLoading(true);
       if (isFinance) {
         const params = new URLSearchParams();
-        if (searchTerm) params.append('search', searchTerm);
+        if (searchTerm) params.append("search", searchTerm);
         const response = await api.get(`/vendors?${params.toString()}`);
         setListItems(response.data.vendors || []);
       } else {
         const params = new URLSearchParams();
-        if (searchTerm) params.append('search', searchTerm);
-        if (filterRole) params.append('role', filterRole);
-        if (filterDepartment) params.append('department', filterDepartment);
+        if (searchTerm) params.append("search", searchTerm);
+        if (filterRole) params.append("role", filterRole);
+        if (filterDepartment) params.append("department", filterDepartment);
         const response = await api.get(`/users?${params.toString()}`);
         setListItems(response.data.users || []);
       }
     } catch (err: any) {
-      console.error('Failed to fetch:', err);
-      toast.error('Failed to load', err.response?.data?.message || 'Could not fetch users');
+      console.error("Failed to fetch:", err);
+      toast.error(
+        "Failed to load",
+        err.response?.data?.message || "Could not fetch users",
+      );
     } finally {
       setLoading(false);
     }
@@ -83,10 +89,10 @@ export default function AdminUsersPage() {
 
   const fetchDepartments = async () => {
     try {
-      const response = await api.get('/users/departments');
+      const response = await api.get("/users/departments");
       setDepartments(response.data.departments || []);
     } catch (err) {
-      console.error('Failed to fetch departments:', err);
+      console.error("Failed to fetch departments:", err);
     }
   };
 
@@ -109,24 +115,39 @@ export default function AdminUsersPage() {
     contact_number?: string;
   }) => {
     try {
-      const response = await api.post('/users', formData);
-      toast.success('User created', response.data.message || 'Employee account created successfully');
+      const response = await api.post("/users", formData);
+      toast.success(
+        "User created",
+        response.data.message || "Employee account created successfully",
+      );
       setShowCreateModal(false);
       fetchUsers();
     } catch (err: any) {
-      toast.error('Failed to create user', err.response?.data?.message || 'Please check the form and try again');
+      toast.error(
+        "Failed to create user",
+        err.response?.data?.message || "Please check the form and try again",
+      );
       throw err; // Re-throw to let modal handle loading state
     }
   };
 
-  const handleCreateServiceProvider = async (data: CreateServiceProviderPayload) => {
+  const handleCreateServiceProvider = async (
+    data: CreateServiceProviderPayload,
+  ) => {
     try {
-      const response = await api.post('/vendors', data);
-      toast.success('Vendor created', response.data.message || 'Service provider account created successfully');
+      const response = await api.post("/vendors", data);
+      toast.success(
+        "Vendor created",
+        response.data.message ||
+          "Service provider account created successfully",
+      );
       setShowCreateServiceProviderModal(false);
       fetchUsers();
     } catch (err: any) {
-      toast.error('Failed to create vendor', err.response?.data?.message || 'Please check the form and try again');
+      toast.error(
+        "Failed to create vendor",
+        err.response?.data?.message || "Please check the form and try again",
+      );
       throw err;
     }
   };
@@ -134,25 +155,40 @@ export default function AdminUsersPage() {
   const handleResetPassword = async () => {
     if (!selectedUser) return;
     try {
-      const response = await api.post(`/users/${selectedUser.id}/reset-password`);
-      toast.success('Password reset sent', response.data.message || `Reset email sent to ${selectedUser.email}`);
+      const response = await api.post(
+        `/users/${selectedUser.id}/reset-password`,
+      );
+      toast.success(
+        "Password reset sent",
+        response.data.message || `Reset email sent to ${selectedUser.email}`,
+      );
       setShowResetModal(false);
       setSelectedUser(null);
     } catch (err: any) {
-      toast.error('Failed to reset password', err.response?.data?.message || 'Could not send reset email');
+      toast.error(
+        "Failed to reset password",
+        err.response?.data?.message || "Could not send reset email",
+      );
     }
   };
 
   const handleDeleteUser = async (userId: number) => {
-    if (!confirm('Are you sure you want to delete this user? This action cannot be undone.')) {
+    if (
+      !confirm(
+        "Are you sure you want to delete this user? This action cannot be undone.",
+      )
+    ) {
       return;
     }
     try {
       await api.delete(`/users/${userId}`);
-      toast.success('User deleted', 'The user account has been removed');
+      toast.success("User deleted", "The user account has been removed");
       fetchUsers();
     } catch (err: any) {
-      toast.error('Failed to delete user', err.response?.data?.message || 'Could not delete the user');
+      toast.error(
+        "Failed to delete user",
+        err.response?.data?.message || "Could not delete the user",
+      );
     }
   };
 
@@ -161,7 +197,9 @@ export default function AdminUsersPage() {
       <div className="flex items-center justify-center min-h-64">
         <div className="text-center">
           <p className="text-lg font-semibold text-[#101828]">Access Denied</p>
-          <p className="text-[#475467]">You don't have permission to access this page.</p>
+          <p className="text-[#475467]">
+            You don't have permission to access this page.
+          </p>
         </div>
       </div>
     );
@@ -173,10 +211,12 @@ export default function AdminUsersPage() {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold text-[#101828]">
-            {isFinance ? 'Service Providers' : 'Employee Management'}
+            {isFinance ? "Service Providers" : "Employee Management"}
           </h1>
           <p className="mt-2 text-[#475467]">
-            {isFinance ? 'Create and manage service provider accounts' : 'Create and manage employee accounts'}
+            {isFinance
+              ? "Create and manage service provider accounts"
+              : "Create and manage employee accounts"}
           </p>
         </div>
         {(isHR || isFinance) && (
@@ -214,14 +254,20 @@ export default function AdminUsersPage() {
 
       {/* Filters */}
       <div className="bg-white rounded-2xl shadow-sm border border-[#E4E7EC] p-4">
-        <div className={`grid grid-cols-1 gap-4 ${isHR ? 'md:grid-cols-3' : ''}`}>
+        <div
+          className={`grid grid-cols-1 gap-4 ${isHR ? "md:grid-cols-3" : ""}`}
+        >
           <div className="relative">
             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
               <MagnifyingGlassIcon className="h-5 w-5 text-[#98A2B3]" />
             </div>
             <input
               type="text"
-              placeholder={isFinance ? 'Search service providers...' : 'Search employees...'}
+              placeholder={
+                isFinance
+                  ? "Search service providers..."
+                  : "Search employees..."
+              }
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="block w-full pl-10 pr-3 py-2.5 border border-[#D0D5DD] rounded-lg text-sm text-[#101828] placeholder:text-[#98A2B3] focus:outline-none focus:ring-2 focus:ring-[#465FFF] focus:border-transparent"
@@ -237,12 +283,17 @@ export default function AdminUsersPage() {
                 <option value="">All Roles</option>
                 <option value={UserRole.HR_MANAGER}>HR Manager</option>
                 <option value={UserRole.HR_EXECUTIVE}>HR Executive</option>
-                <option value={UserRole.FINANCE_MANAGER}>Finance Manager</option>
-                <option value={UserRole.FINANCE_EXECUTIVE}>Finance Executive</option>
-                <option value={UserRole.PAYMENT_APPROVER}>Payment Approver</option>
+                <option value={UserRole.FINANCE_MANAGER}>
+                  Finance Manager
+                </option>
+                <option value={UserRole.FINANCE_EXECUTIVE}>
+                  Finance Executive
+                </option>
                 <option value={UserRole.EMPLOYEE}>Employee</option>
                 <option value={UserRole.CONSULTANT}>Consultant</option>
-                <option value={UserRole.SERVICE_PROVIDER}>Service Provider</option>
+                <option value={UserRole.SERVICE_PROVIDER}>
+                  Service Provider
+                </option>
               </select>
               <select
                 value={filterDepartment}
@@ -273,72 +324,103 @@ export default function AdminUsersPage() {
               <thead className="bg-[#F9FAFB]">
                 <tr>
                   <th className="px-6 py-4 text-left text-xs font-bold text-[#344054] uppercase tracking-wider">
-                    {isFinance ? 'Company' : 'Employee'}
+                    {isFinance ? "Company" : "Employee"}
                   </th>
                   {!isFinance && (
                     <>
-                      <th className="px-6 py-4 text-left text-xs font-bold text-[#344054] uppercase tracking-wider">Role</th>
-                      <th className="px-6 py-4 text-left text-xs font-bold text-[#344054] uppercase tracking-wider">Department</th>
-                      <th className="px-6 py-4 text-left text-xs font-bold text-[#344054] uppercase tracking-wider">Position</th>
-                      <th className="px-6 py-4 text-left text-xs font-bold text-[#344054] uppercase tracking-wider">Status</th>
+                      <th className="px-6 py-4 text-left text-xs font-bold text-[#344054] uppercase tracking-wider">
+                        Role
+                      </th>
+                      <th className="px-6 py-4 text-left text-xs font-bold text-[#344054] uppercase tracking-wider">
+                        Department
+                      </th>
+                      <th className="px-6 py-4 text-left text-xs font-bold text-[#344054] uppercase tracking-wider">
+                        Position
+                      </th>
+                      <th className="px-6 py-4 text-left text-xs font-bold text-[#344054] uppercase tracking-wider">
+                        Status
+                      </th>
                     </>
                   )}
                   {isFinance && (
-                    <th className="px-6 py-4 text-left text-xs font-bold text-[#344054] uppercase tracking-wider">Contact</th>
+                    <th className="px-6 py-4 text-left text-xs font-bold text-[#344054] uppercase tracking-wider">
+                      Contact
+                    </th>
                   )}
                   {!isFinance && (
-                    <th className="px-6 py-4 text-right text-xs font-bold text-[#344054] uppercase tracking-wider">Actions</th>
+                    <th className="px-6 py-4 text-right text-xs font-bold text-[#344054] uppercase tracking-wider">
+                      Actions
+                    </th>
                   )}
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-[#E4E7EC]">
                 {listItems.length === 0 ? (
                   <tr>
-                    <td colSpan={isFinance ? 2 : 6} className="px-6 py-12 text-center">
+                    <td
+                      colSpan={isFinance ? 2 : 6}
+                      className="px-6 py-12 text-center"
+                    >
                       <UserGroupIcon className="h-12 w-12 text-[#98A2B3] mx-auto mb-4" />
                       <p className="text-sm font-medium text-[#344054]">
-                        {isFinance ? 'No vendors found' : 'No employees found'}
+                        {isFinance ? "No vendors found" : "No employees found"}
                       </p>
                       <p className="text-sm text-[#98A2B3] mt-1">
-                        {isFinance ? 'Try adjusting your search' : 'Try adjusting your search or filters'}
+                        {isFinance
+                          ? "Try adjusting your search"
+                          : "Try adjusting your search or filters"}
                       </p>
                     </td>
                   </tr>
                 ) : (
                   listItems.map((item) =>
                     isVendor(item) ? (
-                      <tr key={item.id} className="hover:bg-[#F9FAFB] transition-colors">
+                      <tr
+                        key={item.id}
+                        className="hover:bg-[#F9FAFB] transition-colors"
+                      >
                         <td className="px-6 py-4 whitespace-nowrap">
                           <div>
-                            <p className="text-sm font-semibold text-[#101828]">{item.company_name}</p>
-                            <p className="text-xs text-[#475467]">{item.email}</p>
+                            <p className="text-sm font-semibold text-[#101828]">
+                              {item.company_name}
+                            </p>
+                            <p className="text-xs text-[#475467]">
+                              {item.email}
+                            </p>
                           </div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-[#475467]">
-                          {item.contact_number || '—'}
+                          {item.contact_number || "—"}
                         </td>
                       </tr>
                     ) : (
-                      <tr key={item.id} className="hover:bg-[#F9FAFB] transition-colors">
+                      <tr
+                        key={item.id}
+                        className="hover:bg-[#F9FAFB] transition-colors"
+                      >
                         <td className="px-6 py-4 whitespace-nowrap">
                           <div>
                             <p className="text-sm font-semibold text-[#101828]">
                               {item.first_name} {item.last_name}
                             </p>
-                            <p className="text-xs text-[#475467]">{item.email}</p>
-                            <p className="text-xs text-[#98A2B3] mt-0.5">ID: {item.employee_id}</p>
+                            <p className="text-xs text-[#475467]">
+                              {item.email}
+                            </p>
+                            <p className="text-xs text-[#98A2B3] mt-0.5">
+                              ID: {item.employee_id}
+                            </p>
                           </div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-[#ECF3FF] text-[#465FFF]">
-                            {item.role.replace('_', ' ')}
+                            {item.role.replace("_", " ")}
                           </span>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-[#475467]">
-                          {item.department || '—'}
+                          {item.department || "—"}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-[#475467]">
-                          {item.position || '—'}
+                          {item.position || "—"}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           {item.must_change_password ? (
@@ -375,7 +457,7 @@ export default function AdminUsersPage() {
                           </div>
                         </td>
                       </tr>
-                    )
+                    ),
                   )
                 )}
               </tbody>
@@ -407,7 +489,7 @@ export default function AdminUsersPage() {
           setSelectedUser(null);
         }}
         onConfirm={handleResetPassword}
-        userEmail={selectedUser?.email || ''}
+        userEmail={selectedUser?.email || ""}
       />
     </div>
   );

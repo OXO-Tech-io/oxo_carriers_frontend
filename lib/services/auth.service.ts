@@ -2,6 +2,7 @@ import api from "@/lib/api";
 import { extractData } from "@/lib/services/http";
 import type { User } from "@/types";
 import type { ApiResponse } from "@/types/api";
+import { passwordLogin } from "@/lib/keycloakAuth";
 
 export interface LoginInput {
   email: string;
@@ -26,10 +27,35 @@ export interface LoginResponse {
   mustChangePassword?: boolean;
 }
 
+const API_URL =
+  process.env.NEXT_PUBLIC_API_URL ||
+  (process.env.NODE_ENV === "production"
+    ? "https://backend.oxocareers.com/api"
+    : "http://localhost:5000/api");
+
 export const authService = {
   login: async (input: LoginInput): Promise<LoginResponse> => {
-    const res = await api.post<LoginResponse>("/auth/login", input);
-    return res.data;
+    const tokens = await passwordLogin(input.email, input.password);
+    const meRes = await api.get<
+      ApiResponse<User> | { success?: boolean; user?: User }
+    >("/auth/me", {
+      headers: {
+        Authorization: `Bearer ${tokens.access_token}`,
+      },
+      // Avoid stale auth from interceptors by using explicit URL + header here.
+      baseURL: API_URL,
+    });
+
+    const body = meRes.data;
+    const user =
+      typeof body === "object" && body !== null && "user" in body
+        ? (body as { user: User }).user
+        : extractData<User>(meRes as never);
+
+    return {
+      token: tokens.access_token,
+      user,
+    };
   },
 
   getCurrentUser: async (): Promise<User> => {

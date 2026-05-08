@@ -3,16 +3,13 @@
 import { useAuthStore } from '@/store/authStore';
 
 export const useAuth = () => {
-  const {
-    user,
-    token,
-    isAuthenticated,
-    mustChangePassword,
-    login,
-    logout,
-    setUser,
-    checkAuth,
-  } = useAuthStore();
+  const accessToken = useAuthStore(s => s.accessToken);
+  const user = useAuthStore(s => s.user);
+  const login = useAuthStore(s => s.login);
+  const logout = useAuthStore(s => s.logout);
+  const setUser = useAuthStore(s => s.setUser);
+
+  const isAuthenticated = !!accessToken;
 
   const isSuperAdmin = user?.role === 'super_admin';
   const isHRManager = user?.role === 'hr_manager';
@@ -22,19 +19,16 @@ export const useAuth = () => {
   const isServiceProvider = user?.role === 'service_provider';
   const isFinanceManager = user?.role === 'finance_manager';
   const isFinanceExecutive = user?.role === 'finance_executive';
-  const isPaymentApprover = user?.role === 'payment_approver';
   const isHR = isHRManager || isHRExecutive;
   const isFinance = isFinanceManager || isFinanceExecutive;
 
   return {
     user,
-    token,
+    token: accessToken,
     isAuthenticated,
-    mustChangePassword,
     login,
     logout,
     setUser,
-    checkAuth,
     isSuperAdmin,
     isHRManager,
     isHRExecutive,
@@ -43,7 +37,6 @@ export const useAuth = () => {
     isServiceProvider,
     isFinanceManager,
     isFinanceExecutive,
-    isPaymentApprover,
     isFinance,
     isHR,
   };

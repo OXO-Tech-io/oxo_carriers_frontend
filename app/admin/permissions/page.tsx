@@ -1,56 +1,66 @@
-'use client';
+"use client";
 
-import { useState, useEffect, useCallback } from 'react';
-import { useAuth } from '@/hooks/useAuth';
-import { useToast } from '@/contexts/ToastContext';
-import api from '@/lib/api';
-import { UserRole } from '@/types';
-import {
-  ShieldCheckIcon,
-  MagnifyingGlassIcon,
-  UserGroupIcon,
-  CheckIcon,
-  FunnelIcon,
-} from '@heroicons/react/24/outline';
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { useAuth } from "@/hooks/useAuth";
+import { useToast } from "@/contexts/ToastContext";
+import api from "@/lib/api";
+import { UserRole } from "@/types";
+import { ShieldCheckIcon, UserGroupIcon } from "@heroicons/react/24/outline";
 
 interface ManagedUser {
   id: number;
-  employee_id: string;
   email: string;
   first_name: string;
   last_name: string;
   role: string;
-  department?: string;
-  position?: string;
-  hire_date?: string;
-  must_change_password?: boolean;
 }
 
-const ROLES: { value: string; label: string; color: string; bg: string }[] = [
-  { value: UserRole.SUPER_ADMIN,       label: 'Super Admin',       color: '#6D28D9', bg: '#EDE9FE' },
-  { value: UserRole.HR_MANAGER,        label: 'HR Manager',        color: '#0369A1', bg: '#E0F2FE' },
-  { value: UserRole.HR_EXECUTIVE,      label: 'HR Executive',      color: '#0369A1', bg: '#E0F2FE' },
-  { value: UserRole.FINANCE_MANAGER,   label: 'Finance Manager',   color: '#065F46', bg: '#D1FAE5' },
-  { value: UserRole.FINANCE_EXECUTIVE, label: 'Finance Executive', color: '#065F46', bg: '#D1FAE5' },
-  { value: UserRole.PAYMENT_APPROVER,  label: 'Payment Approver',  color: '#92400E', bg: '#FEF3C7' },
-  { value: UserRole.EMPLOYEE,          label: 'Employee',          color: '#1E40AF', bg: '#DBEAFE' },
-  { value: UserRole.CONSULTANT,        label: 'Consultant',        color: '#3730A3', bg: '#EEF2FF' },
-  { value: UserRole.SERVICE_PROVIDER,  label: 'Service Provider',  color: '#831843', bg: '#FCE7F3' },
+interface PermissionItem {
+  key: string;
+  label: string;
+  description: string;
+  group: string;
+}
+
+type AccessLevel = "read" | "write";
+
+interface PermissionAssignment {
+  key: string;
+  accessLevel: AccessLevel;
+}
+
+type PermissionLevelMap = Record<string, AccessLevel>;
+
+const ROLES: { value: string; label: string }[] = [
+  { value: UserRole.SUPER_ADMIN, label: "Super Admin" },
+  { value: UserRole.HR_MANAGER, label: "HR Manager" },
+  { value: UserRole.HR_EXECUTIVE, label: "HR Executive" },
+  { value: UserRole.FINANCE_MANAGER, label: "Finance Manager" },
+  { value: UserRole.FINANCE_EXECUTIVE, label: "Finance Executive" },
+  { value: UserRole.EMPLOYEE, label: "Employee" },
+  { value: UserRole.CONSULTANT, label: "Consultant" },
+  { value: UserRole.SERVICE_PROVIDER, label: "Service Provider" },
 ];
 
-function roleMeta(role: string) {
-  return ROLES.find((r) => r.value === role) ?? { label: role.replace(/_/g, ' '), color: '#475569', bg: '#F1F5F9' };
-}
-
-function RoleBadge({ role }: { role: string }) {
-  const meta = roleMeta(role);
+function PageHeader() {
   return (
-    <span
-      className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold capitalize"
-      style={{ color: meta.color, background: meta.bg }}
-    >
-      {meta.label}
-    </span>
+    <div className="flex items-center gap-3">
+      <div
+        className="flex h-10 w-10 items-center justify-center rounded-xl"
+        style={{ background: "var(--primary)" }}
+      >
+        <ShieldCheckIcon className="h-5 w-5 text-white" />
+      </div>
+      <div>
+        <h1 className="text-2xl font-bold text-[var(--foreground)]">
+          Function Permission Management
+        </h1>
+        <p className="text-sm text-[var(--gray-500)]">
+          Assign feature-level permissions. Role and permissions are saved
+          separately.
+        </p>
+      </div>
+    </div>
   );
 }
 
@@ -59,307 +69,447 @@ export default function PermissionsPage() {
   const toast = useToast();
 
   const [users, setUsers] = useState<ManagedUser[]>([]);
+  const [catalog, setCatalog] = useState<PermissionItem[]>([]);
+  const [assignments, setAssignments] = useState<
+    Record<number, PermissionLevelMap>
+  >({});
+  const [pendingRoles, setPendingRoles] = useState<Record<number, string>>({});
+  const [pendingPermissions, setPendingPermissions] = useState<
+    Record<number, PermissionLevelMap>
+  >({});
   const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState<number | null>(null);
-  const [pendingRole, setPendingRole] = useState<Record<number, string>>({});
-  const [searchTerm, setSearchTerm] = useState('');
-  const [filterRole, setFilterRole] = useState('');
+  const [pageError, setPageError] = useState("");
+  const [accessLoading, setAccessLoading] = useState(true);
+  const [permissionsAccessLevel, setPermissionsAccessLevel] =
+    useState<AccessLevel | null>(null);
+  const [savingRoleUserId, setSavingRoleUserId] = useState<number | null>(null);
+  const [savingPermissionUserId, setSavingPermissionUserId] = useState<
+    number | null
+  >(null);
 
-  const fetchUsers = useCallback(async () => {
+  const canReadPermissions =
+    isSuperAdmin ||
+    permissionsAccessLevel === "read" ||
+    permissionsAccessLevel === "write";
+  const canWritePermissions =
+    isSuperAdmin || permissionsAccessLevel === "write";
+
+  useEffect(() => {
+    const resolveAccess = async () => {
+      if (isSuperAdmin) {
+        setPermissionsAccessLevel("write");
+        setAccessLoading(false);
+        return;
+      }
+
+      if (!currentUser) {
+        setPermissionsAccessLevel(null);
+        setAccessLoading(false);
+        return;
+      }
+
+      try {
+        setAccessLoading(true);
+        const res = await api.get("/permissions/me");
+        const level = res.data?.permissionLevels?.permissions;
+        if (level === "read" || level === "write") {
+          setPermissionsAccessLevel(level);
+        } else {
+          setPermissionsAccessLevel(null);
+        }
+      } catch {
+        setPermissionsAccessLevel(null);
+      } finally {
+        setAccessLoading(false);
+      }
+    };
+
+    resolveAccess();
+  }, [isSuperAdmin, currentUser?.id]);
+
+  const normalizeAssignments = (raw: Record<number, any>) => {
+    const normalized: Record<number, PermissionLevelMap> = {};
+
+    Object.entries(raw || {}).forEach(([userId, value]) => {
+      const uid = Number(userId);
+      if (!uid || !Array.isArray(value)) {
+        return;
+      }
+
+      const levels: PermissionLevelMap = {};
+      value.forEach((item: any) => {
+        if (typeof item === "string") {
+          levels[item] = "write";
+          return;
+        }
+
+        if (
+          item &&
+          typeof item.key === "string" &&
+          (item.accessLevel === "read" || item.accessLevel === "write")
+        ) {
+          levels[item.key] = item.accessLevel;
+        }
+      });
+
+      normalized[uid] = levels;
+    });
+
+    return normalized;
+  };
+
+  const fetchAll = useCallback(async () => {
     try {
       setLoading(true);
-      const params = new URLSearchParams();
-      if (searchTerm) params.append('search', searchTerm);
-      if (filterRole) params.append('role', filterRole);
-      const response = await api.get(`/users?${params.toString()}`);
-      setUsers(response.data.users || []);
-    } catch (err: any) {
-      toast.error('Failed to load users', err.response?.data?.message || err.message);
+      setPageError("");
+      const [usersRes, catalogRes, assignmentsRes] = await Promise.all([
+        api.get("/permissions/manage-users"),
+        api.get("/permissions/catalog"),
+        api.get("/permissions/users"),
+      ]);
+
+      setUsers(usersRes.data?.users || []);
+      setCatalog(catalogRes.data?.permissions || []);
+      const normalizedAssignments = normalizeAssignments(
+        assignmentsRes.data?.assignments || {},
+      );
+      setAssignments(normalizedAssignments);
+      setPendingPermissions(normalizedAssignments);
+    } catch (error: any) {
+      setPageError(error.response?.data?.message || error.message);
+      toast.error(
+        "Failed to load permission data",
+        error.response?.data?.message || error.message,
+      );
     } finally {
       setLoading(false);
     }
-  }, [searchTerm, filterRole, toast]);
+  }, [toast]);
 
   useEffect(() => {
-    if (isSuperAdmin) fetchUsers();
-  }, [isSuperAdmin, fetchUsers]);
+    if (!accessLoading && canReadPermissions) {
+      fetchAll();
+    }
+  }, [fetchAll, accessLoading, canReadPermissions]);
 
-  const handleRoleChange = (userId: number, newRole: string) => {
-    setPendingRole((prev) => ({ ...prev, [userId]: newRole }));
+  const visibleUsers = useMemo(
+    () => users.filter((user) => user.id !== currentUser?.id),
+    [users, currentUser?.id],
+  );
+
+  const togglePermission = (
+    userId: number,
+    permissionKey: string,
+    level: AccessLevel,
+    checked: boolean,
+  ) => {
+    setPendingPermissions((prev) => {
+      const current = prev[userId] || {};
+      const next = { ...current };
+
+      if (level === "read") {
+        if (checked) {
+          if (next[permissionKey] !== "write") {
+            next[permissionKey] = "read";
+          }
+        } else {
+          delete next[permissionKey];
+        }
+      }
+
+      if (level === "write") {
+        if (checked) {
+          next[permissionKey] = "write";
+        } else if (next[permissionKey] === "write") {
+          next[permissionKey] = "read";
+        }
+      }
+
+      return {
+        ...prev,
+        [userId]: next,
+      };
+    });
   };
 
-  const handleSaveRole = async (user: ManagedUser) => {
-    const newRole = pendingRole[user.id];
-    if (!newRole || newRole === user.role) return;
+  const saveRole = async (user: ManagedUser) => {
+    if (!isSuperAdmin) {
+      toast.error("Only super admins can update user roles");
+      return;
+    }
 
-    setSaving(user.id);
+    const nextRole = pendingRoles[user.id];
+    if (!nextRole || nextRole === user.role) {
+      return;
+    }
+
     try {
-      await api.patch(`/users/${user.id}/role`, { role: newRole });
-      toast.success(
-        'Role updated',
-        `${user.first_name} ${user.last_name} is now ${roleMeta(newRole).label}`
-      );
-      // update local state
+      setSavingRoleUserId(user.id);
+      await api.patch(`/users/${user.id}/role`, { role: nextRole });
       setUsers((prev) =>
-        prev.map((u) => (u.id === user.id ? { ...u, role: newRole } : u))
+        prev.map((item) =>
+          item.id === user.id ? { ...item, role: nextRole } : item,
+        ),
       );
-      setPendingRole((prev) => {
+      setPendingRoles((prev) => {
         const next = { ...prev };
         delete next[user.id];
         return next;
       });
-    } catch (err: any) {
+      toast.success(
+        "Role updated",
+        `${user.first_name} ${user.last_name} is now ${nextRole}`,
+      );
+    } catch (error: any) {
       toast.error(
-        'Failed to update role',
-        err.response?.data?.message || err.message
+        "Failed to update role",
+        error.response?.data?.message || error.message,
       );
     } finally {
-      setSaving(null);
+      setSavingRoleUserId(null);
     }
   };
 
-  if (!isSuperAdmin) {
+  const savePermissions = async (user: ManagedUser) => {
+    if (!canWritePermissions) {
+      toast.error("You need write access to update permissions");
+      return;
+    }
+
+    try {
+      setSavingPermissionUserId(user.id);
+      const levelMap = pendingPermissions[user.id] || {};
+      const permissions: PermissionAssignment[] = Object.entries(levelMap).map(
+        ([key, accessLevel]) => ({ key, accessLevel }),
+      );
+      await api.put(`/permissions/users/${user.id}`, { permissions });
+      setAssignments((prev) => ({ ...prev, [user.id]: levelMap }));
+      toast.success(
+        "Permissions updated",
+        `${user.first_name} ${user.last_name} read/write permissions have been updated`,
+      );
+    } catch (error: any) {
+      toast.error(
+        "Failed to update permissions",
+        error.response?.data?.message || error.message,
+      );
+    } finally {
+      setSavingPermissionUserId(null);
+    }
+  };
+
+  if (accessLoading) {
+    return (
+      <div className="space-y-6 animate-fade-in">
+        <PageHeader />
+        <div className="rounded-2xl bg-white border border-[var(--gray-200)] p-10 text-center text-[var(--gray-500)] shadow-[var(--shadow-sm)]">
+          Checking permission access...
+        </div>
+      </div>
+    );
+  }
+
+  if (!canReadPermissions) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
         <div className="text-center max-w-sm">
           <ShieldCheckIcon className="h-16 w-16 mx-auto mb-4 text-[var(--gray-300)]" />
-          <h2 className="text-xl font-bold text-[var(--gray-700)]">Access Denied</h2>
+          <h2 className="text-xl font-bold text-[var(--gray-700)]">
+            Access Denied
+          </h2>
           <p className="mt-2 text-[var(--gray-500)]">
-            Only Super Admins can manage user permissions.
+            You do not have permission to view function permissions.
           </p>
         </div>
       </div>
     );
   }
 
-  const displayedUsers = users.filter((u) => u.id !== currentUser?.id);
-  const pendingCount = Object.keys(pendingRole).length;
+  if (loading) {
+    return (
+      <div className="space-y-6 animate-fade-in">
+        <PageHeader />
+        <div className="rounded-2xl bg-white border border-[var(--gray-200)] p-10 text-center text-[var(--gray-500)] shadow-[var(--shadow-sm)]">
+          Loading permission data...
+        </div>
+      </div>
+    );
+  }
+
+  if (visibleUsers.length === 0) {
+    return (
+      <div className="space-y-6 animate-fade-in">
+        <PageHeader />
+        <div className="flex flex-col items-center justify-center py-20 rounded-2xl bg-white border border-[var(--gray-200)] shadow-[var(--shadow-sm)]">
+          <UserGroupIcon className="h-12 w-12 text-[var(--gray-300)] mb-4" />
+          <p className="text-sm font-semibold text-[var(--gray-600)]">
+            No users available
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  if (pageError) {
+    return (
+      <div className="space-y-6 animate-fade-in">
+        <PageHeader />
+        <div className="rounded-2xl bg-white border border-red-200 p-8 text-center shadow-[var(--shadow-sm)]">
+          <p className="text-sm font-semibold text-red-700">
+            Failed to load data
+          </p>
+          <p className="text-sm text-red-600 mt-1">{pageError}</p>
+          <button
+            onClick={fetchAll}
+            className="mt-4 px-4 py-2 rounded-lg text-sm font-semibold"
+            style={{ background: "var(--primary)", color: "white" }}
+          >
+            Retry
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6 animate-fade-in">
-      {/* ── Page Header ── */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-3">
+      <PageHeader />
+
+      <div className="space-y-4">
+        {visibleUsers.map((user) => {
+          const selectedPermissions =
+            pendingPermissions[user.id] ?? assignments[user.id] ?? {};
+          const roleDirty =
+            pendingRoles[user.id] !== undefined &&
+            pendingRoles[user.id] !== user.role;
+
+          return (
             <div
-              className="flex h-10 w-10 items-center justify-center rounded-xl"
-              style={{ background: 'var(--primary)' }}
+              key={user.id}
+              className="rounded-2xl bg-white border border-[var(--gray-200)] p-5 space-y-4"
             >
-              <ShieldCheckIcon className="h-5 w-5 text-white" />
-            </div>
-            <div>
-              <h1 className="text-2xl font-bold text-[var(--foreground)]">
-                Permission Management
-              </h1>
-              <p className="text-sm text-[var(--gray-500)]">
-                Assign and manage user roles across the system
-              </p>
-            </div>
-          </div>
-        </div>
-
-        {pendingCount > 0 && (
-          <div
-            className="flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-medium"
-            style={{ background: '#EEF2FF', color: '#4338CA' }}
-          >
-            <span className="h-2 w-2 rounded-full bg-indigo-500 animate-pulse" />
-            {pendingCount} unsaved change{pendingCount > 1 ? 's' : ''}
-          </div>
-        )}
-      </div>
-
-      {/* ── Role legend ── */}
-      <div className="rounded-2xl bg-white border border-[var(--gray-200)] p-5 shadow-[var(--shadow-sm)]">
-        <p className="text-xs font-bold uppercase tracking-wider text-[var(--gray-400)] mb-3">
-          Role reference
-        </p>
-        <div className="flex flex-wrap gap-2">
-          {ROLES.map((r) => (
-            <span
-              key={r.value}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold"
-              style={{ color: r.color, background: r.bg }}
-            >
-              {r.label}
-            </span>
-          ))}
-        </div>
-      </div>
-
-      {/* ── Filters ── */}
-      <div className="rounded-2xl bg-white border border-[var(--gray-200)] p-4 shadow-[var(--shadow-sm)]">
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div className="relative">
-            <MagnifyingGlassIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[var(--gray-400)]" />
-            <input
-              type="text"
-              placeholder="Search by name or email…"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-9 pr-3 py-2.5 text-sm rounded-xl border border-[var(--gray-200)] bg-[var(--gray-50)] text-[var(--foreground)] placeholder:text-[var(--gray-400)] focus:outline-none focus:ring-2 focus:border-transparent transition-all"
-              style={{ '--tw-ring-color': 'var(--primary-ring)' } as any}
-            />
-          </div>
-          <div className="relative">
-            <FunnelIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[var(--gray-400)]" />
-            <select
-              value={filterRole}
-              onChange={(e) => setFilterRole(e.target.value)}
-              className="w-full pl-9 pr-3 py-2.5 text-sm rounded-xl border border-[var(--gray-200)] bg-[var(--gray-50)] text-[var(--foreground)] focus:outline-none focus:ring-2 focus:border-transparent transition-all appearance-none"
-            >
-              <option value="">All Roles</option>
-              {ROLES.map((r) => (
-                <option key={r.value} value={r.value}>
-                  {r.label}
-                </option>
-              ))}
-            </select>
-          </div>
-        </div>
-      </div>
-
-      {/* ── Table ── */}
-      {loading ? (
-        <div className="rounded-2xl bg-white border border-[var(--gray-200)] overflow-hidden shadow-[var(--shadow-sm)]">
-          {[...Array(5)].map((_, i) => (
-            <div
-              key={i}
-              className="flex items-center gap-4 px-6 py-4 border-b border-[var(--gray-100)] last:border-0"
-            >
-              <div className="h-10 w-10 rounded-xl bg-[var(--gray-100)] animate-pulse" />
-              <div className="flex-1 space-y-2">
-                <div className="h-4 w-1/3 rounded bg-[var(--gray-100)] animate-pulse" />
-                <div className="h-3 w-1/4 rounded bg-[var(--gray-100)] animate-pulse" />
-              </div>
-              <div className="h-9 w-44 rounded-xl bg-[var(--gray-100)] animate-pulse" />
-              <div className="h-9 w-20 rounded-xl bg-[var(--gray-100)] animate-pulse" />
-            </div>
-          ))}
-        </div>
-      ) : displayedUsers.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-20 rounded-2xl bg-white border border-[var(--gray-200)] shadow-[var(--shadow-sm)]">
-          <UserGroupIcon className="h-12 w-12 text-[var(--gray-300)] mb-4" />
-          <p className="text-sm font-semibold text-[var(--gray-600)]">No users found</p>
-          <p className="text-xs text-[var(--gray-400)] mt-1">Try adjusting your search or filters</p>
-        </div>
-      ) : (
-        <div className="rounded-2xl bg-white border border-[var(--gray-200)] overflow-hidden shadow-[var(--shadow-sm)]">
-          {/* Table header */}
-          <div className="hidden sm:grid grid-cols-[1fr_auto_220px_100px] gap-4 px-6 py-3 bg-[var(--gray-50)] border-b border-[var(--gray-200)]">
-            <p className="text-xs font-bold uppercase tracking-wider text-[var(--gray-500)]">User</p>
-            <p className="text-xs font-bold uppercase tracking-wider text-[var(--gray-500)]">Current Role</p>
-            <p className="text-xs font-bold uppercase tracking-wider text-[var(--gray-500)]">Assign Role</p>
-            <p className="text-xs font-bold uppercase tracking-wider text-[var(--gray-500)]">Action</p>
-          </div>
-
-          {/* Rows */}
-          <div className="divide-y divide-[var(--gray-100)]">
-            {displayedUsers.map((u) => {
-              const hasPending = pendingRole[u.id] !== undefined && pendingRole[u.id] !== u.role;
-              const isSavingThis = saving === u.id;
-              const selectedRole = pendingRole[u.id] ?? u.role;
-
-              return (
-                <div
-                  key={u.id}
-                  className={`flex flex-col sm:grid sm:grid-cols-[1fr_auto_220px_100px] sm:items-center gap-4 px-6 py-4 transition-colors duration-150 ${
-                    hasPending ? 'bg-indigo-50/60' : 'hover:bg-[var(--gray-50)]'
-                  }`}
-                >
-                  {/* User info */}
-                  <div className="flex items-center gap-3 min-w-0">
-                    <div
-                      className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-sm font-bold text-white"
-                      style={{ background: 'var(--primary)' }}
-                    >
-                      {u.first_name[0]}{u.last_name[0]}
-                    </div>
-                    <div className="min-w-0">
-                      <p className="text-sm font-semibold text-[var(--foreground)] truncate">
-                        {u.first_name} {u.last_name}
-                      </p>
-                      <p className="text-xs text-[var(--gray-500)] truncate">{u.email}</p>
-                      {u.department && (
-                        <p className="text-xs text-[var(--gray-400)] truncate">{u.department}</p>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Current role badge */}
-                  <div className="flex sm:justify-start">
-                    <RoleBadge role={u.role} />
-                  </div>
-
-                  {/* Role selector */}
-                  <select
-                    value={selectedRole}
-                    onChange={(e) => handleRoleChange(u.id, e.target.value)}
-                    disabled={isSavingThis}
-                    className="w-full px-3 py-2.5 text-sm rounded-xl border border-[var(--gray-200)] bg-white text-[var(--foreground)] focus:outline-none focus:ring-2 focus:border-transparent transition-all disabled:opacity-60 disabled:cursor-not-allowed"
-                    style={{
-                      borderColor: hasPending ? 'var(--primary)' : undefined,
-                      boxShadow: hasPending ? '0 0 0 3px var(--primary-ring)' : undefined,
-                    }}
-                  >
-                    {ROLES.map((r) => (
-                      <option key={r.value} value={r.value}>
-                        {r.label}
-                      </option>
-                    ))}
-                  </select>
-
-                  {/* Save button */}
-                  <button
-                    onClick={() => handleSaveRole(u)}
-                    disabled={!hasPending || isSavingThis}
-                    className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed"
-                    style={
-                      hasPending && !isSavingThis
-                        ? {
-                            background: 'var(--primary)',
-                            color: 'white',
-                            boxShadow: 'var(--shadow-indigo)',
-                          }
-                        : {
-                            background: 'var(--gray-100)',
-                            color: 'var(--gray-400)',
-                          }
-                    }
-                  >
-                    {isSavingThis ? (
-                      <svg
-                        className="animate-spin h-4 w-4"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        aria-hidden
-                      >
-                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                      </svg>
-                    ) : (
-                      <CheckIcon className="h-4 w-4" />
-                    )}
-                    {isSavingThis ? 'Saving' : 'Apply'}
-                  </button>
+              <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+                <div>
+                  <p className="text-sm font-semibold text-[var(--foreground)]">
+                    {user.first_name} {user.last_name}
+                  </p>
+                  <p className="text-xs text-[var(--gray-500)]">{user.email}</p>
                 </div>
-              );
-            })}
-          </div>
 
-          {/* Footer */}
-          <div className="px-6 py-3 bg-[var(--gray-50)] border-t border-[var(--gray-200)] flex items-center justify-between">
-            <p className="text-xs text-[var(--gray-400)]">
-              {displayedUsers.length} user{displayedUsers.length !== 1 ? 's' : ''} listed
-            </p>
-            {pendingCount > 0 && (
-              <p className="text-xs font-medium text-indigo-600">
-                {pendingCount} pending change{pendingCount > 1 ? 's' : ''} — click Apply to save
-              </p>
-            )}
-          </div>
-        </div>
-      )}
+                {isSuperAdmin && (
+                  <div className="flex items-center gap-2">
+                    <select
+                      value={pendingRoles[user.id] ?? user.role}
+                      onChange={(event) =>
+                        setPendingRoles((prev) => ({
+                          ...prev,
+                          [user.id]: event.target.value,
+                        }))
+                      }
+                      className="px-3 py-2 rounded-lg border border-[var(--gray-200)] text-sm"
+                    >
+                      {ROLES.map((role) => (
+                        <option key={role.value} value={role.value}>
+                          {role.label}
+                        </option>
+                      ))}
+                    </select>
+                    <button
+                      onClick={() => saveRole(user)}
+                      disabled={!roleDirty || savingRoleUserId === user.id}
+                      className="px-3 py-2 rounded-lg text-sm font-semibold disabled:opacity-50"
+                      style={{ background: "var(--primary)", color: "white" }}
+                    >
+                      {savingRoleUserId === user.id ? "Saving..." : "Save Role"}
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
+                {catalog.map((permission) => {
+                  const selectedLevel = selectedPermissions[permission.key];
+                  const readChecked =
+                    selectedLevel === "read" || selectedLevel === "write";
+                  const writeChecked = selectedLevel === "write";
+                  return (
+                    <div
+                      key={`${user.id}-${permission.key}`}
+                      className="flex items-start gap-2 border border-[var(--gray-200)] rounded-lg p-3"
+                    >
+                      <span>
+                        <p className="text-sm font-semibold text-[var(--foreground)]">
+                          {permission.label}
+                        </p>
+                        <p className="text-xs text-[var(--gray-500)]">
+                          {permission.description}
+                        </p>
+                        <div className="mt-2 flex items-center gap-4">
+                          <label
+                            htmlFor={`permission-read-${user.id}-${permission.key}`}
+                            className="inline-flex items-center gap-1 text-xs text-[var(--gray-600)]"
+                          >
+                            <input
+                              id={`permission-read-${user.id}-${permission.key}`}
+                              type="checkbox"
+                              checked={readChecked}
+                              onChange={(event) =>
+                                togglePermission(
+                                  user.id,
+                                  permission.key,
+                                  "read",
+                                  event.target.checked,
+                                )
+                              }
+                              aria-label={`Grant read access to ${permission.label}`}
+                            />
+                            <span>Read</span>
+                          </label>
+                          <label
+                            htmlFor={`permission-write-${user.id}-${permission.key}`}
+                            className="inline-flex items-center gap-1 text-xs text-[var(--gray-600)]"
+                          >
+                            <input
+                              id={`permission-write-${user.id}-${permission.key}`}
+                              type="checkbox"
+                              checked={writeChecked}
+                              onChange={(event) =>
+                                togglePermission(
+                                  user.id,
+                                  permission.key,
+                                  "write",
+                                  event.target.checked,
+                                )
+                              }
+                              aria-label={`Grant write access to ${permission.label}`}
+                            />
+                            <span>Write</span>
+                          </label>
+                        </div>
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+
+              <div className="flex justify-end">
+                <button
+                  onClick={() => savePermissions(user)}
+                  disabled={
+                    savingPermissionUserId === user.id || !canWritePermissions
+                  }
+                  className="px-4 py-2 rounded-lg text-sm font-semibold"
+                  style={{ background: "var(--primary)", color: "white" }}
+                >
+                  {savingPermissionUserId === user.id
+                    ? "Saving..."
+                    : "Save Permissions"}
+                </button>
+              </div>
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 }

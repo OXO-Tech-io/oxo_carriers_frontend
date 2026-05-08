@@ -1,23 +1,22 @@
 // frontend/types/index.ts
 export enum UserRole {
-  SUPER_ADMIN = 'super_admin',
-  HR_MANAGER = 'hr_manager',
-  HR_EXECUTIVE = 'hr_executive',
-  FINANCE_MANAGER = 'finance_manager',
-  FINANCE_EXECUTIVE = 'finance_executive',
-  PAYMENT_APPROVER = 'payment_approver',
-  EMPLOYEE = 'employee',
-  CONSULTANT = 'consultant',
-  SERVICE_PROVIDER = 'service_provider',
+  SUPER_ADMIN = "super_admin",
+  HR_MANAGER = "hr_manager",
+  HR_EXECUTIVE = "hr_executive",
+  FINANCE_MANAGER = "finance_manager",
+  FINANCE_EXECUTIVE = "finance_executive",
+  EMPLOYEE = "employee",
+  CONSULTANT = "consultant",
+  SERVICE_PROVIDER = "service_provider",
 }
 
 export enum VoucherStatus {
-  PENDING_REVIEW = 'pending_review',
-  APPROVED = 'approved',
-  REJECTED = 'rejected',
-  INFORMATION_REQUEST = 'information_request',
-  BANK_UPLOAD = 'bank_upload',
-  PAID = 'paid',
+  PENDING_REVIEW = "pending_review",
+  APPROVED = "approved",
+  REJECTED = "rejected",
+  INFORMATION_REQUEST = "information_request",
+  BANK_UPLOAD = "bank_upload",
+  PAID = "paid",
 }
 
 export interface Vendor {
@@ -65,22 +64,31 @@ export interface PaymentVoucher {
 }
 
 export interface User {
-    id: number;
-    employee_id: string;
-    email: string;
-    first_name: string;
-    last_name: string;
-    role: UserRole | 'super_admin' | 'hr_manager' | 'hr_executive' | 'employee' | 'consultant' | 'service_provider';
-    department: string;
-    position: string;
-    hire_date: string;
-    manager_id?: number;
-    hourly_rate?: number | null;
-    must_change_password?: boolean;
-    created_at: string;
-  }
+  id: number;
+  employee_id: string;
+  email: string;
+  first_name: string;
+  last_name: string;
+  role:
+    | UserRole
+    | "super_admin"
+    | "hr_manager"
+    | "hr_executive"
+    | "finance_manager"
+    | "finance_executive"
+    | "employee"
+    | "consultant"
+    | "service_provider";
+  department: string;
+  position: string;
+  hire_date: string;
+  manager_id?: number;
+  hourly_rate?: number | null;
+  must_change_password?: boolean;
+  created_at: string;
+}
 
-export type ConsultantSubmissionStatus = 'pending' | 'approved' | 'rejected';
+export type ConsultantSubmissionStatus = "pending" | "approved" | "rejected";
 
 export interface ConsultantWorkSubmission {
   id: number;
@@ -94,97 +102,109 @@ export interface ConsultantWorkSubmission {
   admin_comment?: string | null;
   resubmission_of?: number | null;
   created_at: string;
-  user?: { id: number; first_name: string; last_name: string; email: string; employee_id: string; hourly_rate?: number | null };
+  user?: {
+    id: number;
+    first_name: string;
+    last_name: string;
+    email: string;
+    employee_id: string;
+    hourly_rate?: number | null;
+  };
 }
-  
-  export interface LeaveType {
-    id: number;
-    name: string;
-    description: string;
-    max_days: number;
-    is_active: boolean;
-  }
-  
-  export interface LeaveBalance {
-    id: number;
-    user_id: number;
-    leave_type_id: number;
-    total_days: number;
-    used_days: number;
-    remaining_days: number;
-    year: number;
-    leave_type: LeaveType;
-  }
-  
-  export interface LeaveRequest {
-    id: number;
-    user_id: number;
-    leave_type_id: number;
-    start_date: string;
-    end_date: string;
-    total_days: number;
-    is_half_day?: boolean;
-    half_day_period?: 'morning' | 'evening';
-    reason?: string;
-    status: 'pending' | 'team_leader_approved' | 'hr_approved' | 'rejected' | 'cancelled';
-    team_leader_approval_date?: string;
-    hr_approval_date?: string;
-    rejection_reason?: string;
-    attachment_url?: string;
-    created_at: string;
-    user?: User;
-    leave_type?: LeaveType;
-  }
-  
-  export interface SalaryComponent {
-    id: number;
-    name: string;
-    type: 'earning' | 'deduction';
-    is_default: boolean;
-    is_active: boolean;
-  }
-  
-  export interface SalarySlip {
-    id: number;
-    user_id: number;
-    month_year: string;
-    basic_salary: number;
-    total_earnings: number;
-    total_deductions: number;
-    net_salary: number;
-    status: 'generated' | 'paid' | 'pending';
-    pdf_url?: string;
-    created_at: string;
-    user: User;
-    details: SalarySlipDetail[];
-  }
-  
-  export interface SalarySlipDetail {
-    id: number;
-    salary_id: number;
-    component_id: number;
-    amount: number;
-    type: 'earning' | 'deduction';
-    component: SalaryComponent;
-  }
-  
-  export interface AuthResponse {
-    token: string;
-    user: User;
-  }
-  
-  export interface ApiResponse<T = any> {
-    success: boolean;
-    data?: T;
-    message?: string;
-    error?: string;
-  }
+
+export interface LeaveType {
+  id: number;
+  name: string;
+  description: string;
+  max_days: number;
+  is_active: boolean;
+}
+
+export interface LeaveBalance {
+  id: number;
+  user_id: number;
+  leave_type_id: number;
+  total_days: number;
+  used_days: number;
+  remaining_days: number;
+  year: number;
+  leave_type: LeaveType;
+}
+
+export interface LeaveRequest {
+  id: number;
+  user_id: number;
+  leave_type_id: number;
+  start_date: string;
+  end_date: string;
+  total_days: number;
+  is_half_day?: boolean;
+  half_day_period?: "morning" | "evening";
+  reason?: string;
+  status:
+    | "pending"
+    | "team_leader_approved"
+    | "hr_approved"
+    | "rejected"
+    | "cancelled";
+  team_leader_approval_date?: string;
+  hr_approval_date?: string;
+  rejection_reason?: string;
+  attachment_url?: string;
+  created_at: string;
+  user?: User;
+  leave_type?: LeaveType;
+}
+
+export interface SalaryComponent {
+  id: number;
+  name: string;
+  type: "earning" | "deduction";
+  is_default: boolean;
+  is_active: boolean;
+}
+
+export interface SalarySlip {
+  id: number;
+  user_id: number;
+  month_year: string;
+  basic_salary: number;
+  total_earnings: number;
+  total_deductions: number;
+  net_salary: number;
+  status: "generated" | "paid" | "pending";
+  pdf_url?: string;
+  created_at: string;
+  user: User;
+  details: SalarySlipDetail[];
+}
+
+export interface SalarySlipDetail {
+  id: number;
+  salary_id: number;
+  component_id: number;
+  amount: number;
+  type: "earning" | "deduction";
+  component: SalaryComponent;
+}
+
+export interface AuthResponse {
+  token: string;
+  user: User;
+}
+
+export interface ApiResponse<T = any> {
+  success: boolean;
+  data?: T;
+  message?: string;
+  error?: string;
+}
 
 export enum FacilityType {
-  WORKSTATION = 'workstation',
-  BOARD_ROOM = 'board_room',
-  MEETING_ROOM = 'meeting_room',
-  ACCOMMODATION = 'accommodation'
+  WORKSTATION = "workstation",
+  BOARD_ROOM = "board_room",
+  MEETING_ROOM = "meeting_room",
+  ACCOMMODATION = "accommodation",
 }
 
 export interface Facility {
@@ -206,7 +226,7 @@ export interface FacilityBooking {
   start_time: string;
   end_time: string;
   purpose?: string;
-  status: 'pending' | 'confirmed' | 'cancelled' | 'completed';
+  status: "pending" | "confirmed" | "cancelled" | "completed";
   created_at: string;
   updated_at: string;
   facility_name?: string;
