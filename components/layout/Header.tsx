@@ -1,7 +1,6 @@
 'use client';
 
 import { useAuth } from '@/hooks/useAuth';
-import { useRouter } from 'next/navigation';
 import { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
 import {
@@ -15,7 +14,6 @@ import {
 
 export default function Header() {
   const { user, logout } = useAuth();
-  const router = useRouter();
   const [showDropdown, setShowDropdown] = useState(false);
   const [searchFocused, setSearchFocused] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -31,8 +29,9 @@ export default function Header() {
   }, []);
 
   const handleLogout = () => {
+    // logout() redirects the browser to Keycloak's end-session endpoint,
+    // which redirects back to /login/. No router.push needed.
     logout();
-    router.push('/login');
   };
 
   if (!user) return null;

@@ -55,13 +55,7 @@ describe("frontend services", () => {
   });
 
   it("authService methods call expected endpoints", async () => {
-    apiMock.post.mockResolvedValueOnce(
-      asResponse({ token: "t1", user: { id: 1 } }),
-    );
-    await expect(
-      authService.login({ email: "a@a.com", password: "x" }),
-    ).resolves.toEqual({ token: "t1", user: { id: 1 } });
-
+    // Login is now a redirect to Keycloak (PKCE), not a service call.
     apiMock.get.mockResolvedValueOnce(asResponse({ user: { id: 2 } }));
     await expect(authService.getCurrentUser()).resolves.toEqual({ id: 2 });
 
@@ -85,10 +79,6 @@ describe("frontend services", () => {
     apiMock.post.mockResolvedValueOnce(asResponse({ success: true }));
     await authService.changePassword("old", "new");
 
-    expect(apiMock.post).toHaveBeenCalledWith("/auth/login", {
-      email: "a@a.com",
-      password: "x",
-    });
     expect(apiMock.get).toHaveBeenCalledWith("/auth/me");
     expect(apiMock.post).toHaveBeenCalledWith(
       "/auth/register",

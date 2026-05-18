@@ -1,95 +1,90 @@
 'use client';
 
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
 import type { User } from '@/types';
 import {
-  endSession,
-  passwordLogin,
-  refreshTokens,
+  ensureFreshToken,
+  loginRedirect,
+  logoutRedirect,
 } from '@/lib/keycloakAuth';
+import { getKeycloak } from '@/lib/keycloak';
 
+/**
+ * Auth state mirrored from the singleton keycloak-js instance. `keycloak-js`
+ * holds the canonical tokens; this store exists so React components can
+ * subscribe to changes and re-render. Sync happens via `syncFromKeycloak()`,
+ * which the providers call after init and on every token refresh.
+ *
+ * No localStorage persistence — keycloak-js manages its own session via the
+ * SSO iframe cookie + silent check on page load.
+ */
 interface AuthState {
   accessToken: string | null;
   refreshToken: string | null;
   /** epoch milliseconds when accessToken expires */
   expiresAt: number | null;
   user: User | null;
-  login: (email: string, password: string) => Promise<void>;
+  /** Set true after the initial keycloak-js init() has settled. */
+  initialized: boolean;
+  /** Trigger redirect to Keycloak's login page. */
+  login: () => Promise<void>;
+  /** Trigger redirect to Keycloak's end-session endpoint. */
   logout: () => Promise<void>;
+  /** Refresh the access token if expiring; return the current valid token. */
   refresh: () => Promise<string | null>;
+  /** Internal: pull tokens from keycloak-js after init/refresh/logout. */
+  syncFromKeycloak: () => void;
+  /** Internal: mark init complete (called once by providers). */
+  setInitialized: (v: boolean) => void;
   setUser: (user: User | null) => void;
 }
 
-export const useAuthStore = create<AuthState>()(
-  persist(
-    (set, get) => ({
+export const useAuthStore = create<AuthState>()((set) => ({
+  accessToken: null,
+  refreshToken: null,
+  expiresAt: null,
+  user: null,
+  initialized: false,
+
+  login: async () => {
+    await loginRedirect();
+  },
+
+  logout: async () => {
+    set({ user: null });
+    await logoutRedirect();
+  },
+
+  refresh: async () => {
+    const token = await ensureFreshToken();
+    syncFromKeycloakInternal(set);
+    return token;
+  },
+
+  syncFromKeycloak: () => syncFromKeycloakInternal(set),
+
+  setInitialized: (v) => set({ initialized: v }),
+
+  setUser: (user) => set({ user }),
+}));
+
+const syncFromKeycloakInternal = (
+  set: (partial: Partial<AuthState>) => void,
+): void => {
+  const kc = getKeycloak();
+  if (!kc || !kc.authenticated) {
+    set({
       accessToken: null,
       refreshToken: null,
       expiresAt: null,
-      user: null,
-
-      login: async (email, password) => {
-        const tokens = await passwordLogin(email, password);
-        set({
-          accessToken: tokens.access_token,
-          refreshToken: tokens.refresh_token,
-          expiresAt: Date.now() + tokens.expires_in * 1000,
-        });
-      },
-
-      logout: async () => {
-        const rt = get().refreshToken;
-        if (rt) await endSession(rt);
-        set({
-          accessToken: null,
-          refreshToken: null,
-          expiresAt: null,
-          user: null,
-        });
-      },
-
-      /**
-       * Returns a still-valid access token, refreshing if necessary. Returns
-       * null when there's no session to refresh from.
-       */
-      refresh: async () => {
-        const { accessToken, refreshToken, expiresAt } = get();
-        if (!refreshToken) return null;
-
-        // 30 seconds of slack so the call doesn't race expiry
-        const valid = expiresAt && expiresAt - 30_000 > Date.now();
-        if (valid && accessToken) return accessToken;
-
-        try {
-          const tokens = await refreshTokens(refreshToken);
-          set({
-            accessToken: tokens.access_token,
-            refreshToken: tokens.refresh_token,
-            expiresAt: Date.now() + tokens.expires_in * 1000,
-          });
-          return tokens.access_token;
-        } catch {
-          set({
-            accessToken: null,
-            refreshToken: null,
-            expiresAt: null,
-            user: null,
-          });
-          return null;
-        }
-      },
-
-      setUser: user => set({ user }),
-    }),
-    {
-      name: 'oxo-auth',
-      partialize: state => ({
-        accessToken: state.accessToken,
-        refreshToken: state.refreshToken,
-        expiresAt: state.expiresAt,
-        user: state.user,
-      }),
-    }
-  )
-);
+    });
+    return;
+  }
+  // tokenParsed.exp is in seconds since epoch.
+  const expSec = kc.tokenParsed?.exp;
+  set({
+    accessToken: kc.token ?? null,
+    refreshToken: kc.refreshToken ?? null,
+    expiresAt: typeof expSec === 'number' ? expSec * 1000 : null,
+  });
+};

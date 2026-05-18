@@ -7,7 +7,6 @@ import { useCreateLeaveMutation } from "@/hooks/mutations/use-create-leave-mutat
 import { useApproveLeaveMutation } from "@/hooks/mutations/use-approve-leave-mutation";
 import { useRejectLeaveMutation } from "@/hooks/mutations/use-reject-leave-mutation";
 import {
-  useLoginMutation,
   useRegisterMutation,
   useVerifyEmailMutation,
   useResetPasswordMutation,
@@ -60,7 +59,6 @@ const leaveServiceMock = {
   rejectLeaveRequest: vi.fn(),
 };
 const authServiceMock = {
-  login: vi.fn(),
   register: vi.fn(),
   verifyEmail: vi.fn(),
   resetPassword: vi.fn(),
@@ -163,7 +161,6 @@ describe("mutation hooks", () => {
     leaveServiceMock.approveLeaveRequest.mockResolvedValue({ id: 1 });
     leaveServiceMock.rejectLeaveRequest.mockResolvedValue({ id: 1 });
 
-    authServiceMock.login.mockResolvedValue({ token: "x" });
     authServiceMock.register.mockResolvedValue({ success: true });
     authServiceMock.verifyEmail.mockResolvedValue({ success: true });
     authServiceMock.resetPassword.mockResolvedValue({ success: true });
@@ -215,7 +212,10 @@ describe("mutation hooks", () => {
   });
 
   const runMutation = async <T,>(
-    useHook: () => { mutateAsync: (payload: T) => Promise<unknown> },
+    useHook: () => {
+      mutateAsync: (payload: T) => Promise<unknown>;
+      isSuccess: boolean;
+    },
     payload: T,
   ) => {
     const { result } = renderHook(() => useHook(), {
@@ -250,7 +250,6 @@ describe("mutation hooks", () => {
   });
 
   it("auth mutations execute service methods", async () => {
-    await runMutation(useLoginMutation, { email: "a@a.com", password: "p" });
     await runMutation(useRegisterMutation, {
       first_name: "A",
       last_name: "B",
@@ -270,7 +269,6 @@ describe("mutation hooks", () => {
       newPassword: "new",
     });
 
-    expect(authServiceMock.login).toHaveBeenCalled();
     expect(authServiceMock.register).toHaveBeenCalled();
     expect(authServiceMock.verifyEmail).toHaveBeenCalledWith("token");
     expect(authServiceMock.resetPassword).toHaveBeenCalledWith(
