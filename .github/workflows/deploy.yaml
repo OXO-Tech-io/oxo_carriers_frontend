@@ -16,7 +16,7 @@ env:
   SERVICE_NAME: oxo-carriers-frontend
   REGION: us-central1
   AR_HOSTNAME: us-central1-docker.pkg.dev
-  REPOSITORY: oxo-carriers-repo
+  REPOSITORY: cgp-repo
 
 jobs:
   build-and-test:
