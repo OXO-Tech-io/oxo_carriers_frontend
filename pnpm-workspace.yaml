@@ -1,10 +1,12 @@
-allowBuilds:
-  core-js: true
-  esbuild: true
-  sharp: true
-  unrs-resolver: true
-onlyBuiltDependencies:
-  - core-js
-  - esbuild
-  - sharp
-  - unrs-resolver
+# allowBuilds:
+#   core-js: true
+#   esbuild: true
+#   sharp: true
+#   unrs-resolver: true
+# onlyBuiltDependencies:
+#   - core-js
+#   - esbuild
+#   - sharp
+#   - unrs-resolver
+packages:
+  - '.'
