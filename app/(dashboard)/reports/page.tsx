@@ -41,7 +41,8 @@ interface LeaveReport {
 }
 
 export default function ReportsPage() {
-  const { user, isHR } = useAuth();
+  const { user, isHR, isSuperAdmin } = useAuth();
+  const canAccess = isHR || isSuperAdmin;
   const [activeTab, setActiveTab] = useState<'salary' | 'leave' | 'summary'>('summary');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -203,7 +204,7 @@ export default function ReportsPage() {
     }
   };
 
-  if (!isHR) {
+  if (!canAccess) {
     return (
       <div className="space-y-6">
         <h1 className="text-3xl font-bold text-[#101828]">Reports</h1>

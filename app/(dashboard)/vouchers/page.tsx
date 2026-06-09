@@ -77,7 +77,7 @@ export default function VouchersPage() {
   );
 }
 function VoucherPageContent() {
-  const { user, isFinanceManager, isFinanceExecutive } = useAuth();
+  const { user, isFinanceManager, isFinanceExecutive, isSuperAdmin } = useAuth();
   const [vouchers, setVouchers] = useState<PaymentVoucher[]>([]);
   const [permissionLevels, setPermissionLevels] = useState<
     Record<string, AccessLevel>
@@ -115,15 +115,17 @@ function VoucherPageContent() {
   };
   const permissionActionKeys = Object.values(PERMISSIONS);
   const canCreate =
-    isFinanceManager || hasPermission(PERMISSIONS.CREATE, "write");
+    isSuperAdmin || isFinanceManager || hasPermission(PERMISSIONS.CREATE, "write");
   const canReview =
-    isFinanceExecutive || hasPermission(PERMISSIONS.REVIEW, "write");
+    isSuperAdmin || isFinanceExecutive || hasPermission(PERMISSIONS.REVIEW, "write");
   const canResubmit =
-    isFinanceManager || hasPermission(PERMISSIONS.RESUBMIT, "write");
+    isSuperAdmin || isFinanceManager || hasPermission(PERMISSIONS.RESUBMIT, "write");
   const canBankUpload =
-    isFinanceManager || hasPermission(PERMISSIONS.BANK_UPLOAD, "write");
-  const canMarkPaid = hasPermission(PERMISSIONS.MARK_PAID, "write");
+    isSuperAdmin || isFinanceManager || hasPermission(PERMISSIONS.BANK_UPLOAD, "write");
+  const canMarkPaid =
+    isSuperAdmin || hasPermission(PERMISSIONS.MARK_PAID, "write");
   const canAccess =
+    isSuperAdmin ||
     isFinanceManager ||
     isFinanceExecutive ||
     permissionActionKeys.some((key) => hasPermission(key, "read"));

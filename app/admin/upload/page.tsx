@@ -6,7 +6,8 @@ import api from '@/lib/api';
 import { DocumentArrowUpIcon, CheckCircleIcon, XCircleIcon } from '@heroicons/react/24/outline';
 
 export default function AdminUploadPage() {
-  const { user, isHR } = useAuth();
+  const { isHR, isSuperAdmin } = useAuth();
+  const canAccess = isHR || isSuperAdmin;
   const [selectedMonth, setSelectedMonth] = useState('');
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [file, setFile] = useState<File | null>(null);
@@ -95,7 +96,7 @@ export default function AdminUploadPage() {
     }
   };
 
-  if (!isHR) {
+  if (!canAccess) {
     return (
       <div className="space-y-6">
         <h1 className="text-3xl font-bold text-[#101828]">Upload Salary Excel</h1>

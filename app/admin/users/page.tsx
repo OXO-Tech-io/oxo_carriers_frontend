@@ -219,7 +219,7 @@ export default function AdminUsersPage() {
               : "Create and manage employee accounts"}
           </p>
         </div>
-        {(isHR || isFinance) && (
+        {(isHR || isFinance || isSuperAdmin) && (
           <div className="flex items-center gap-2">
             {isFinance && (
               <button
@@ -230,7 +230,7 @@ export default function AdminUsersPage() {
                 <span>Create Service Provider</span>
               </button>
             )}
-            {isHR && (
+            {(isHR || isSuperAdmin) && (
               <>
                 <button
                   onClick={() => setShowCreateModal(true)}
@@ -255,7 +255,7 @@ export default function AdminUsersPage() {
       {/* Filters */}
       <div className="bg-white rounded-2xl shadow-sm border border-[#E4E7EC] p-4">
         <div
-          className={`grid grid-cols-1 gap-4 ${isHR ? "md:grid-cols-3" : ""}`}
+          className={`grid grid-cols-1 gap-4 ${isHR || isSuperAdmin ? "md:grid-cols-3" : ""}`}
         >
           <div className="relative">
             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -273,7 +273,7 @@ export default function AdminUsersPage() {
               className="block w-full pl-10 pr-3 py-2.5 border border-[#D0D5DD] rounded-lg text-sm text-[#101828] placeholder:text-[#98A2B3] focus:outline-none focus:ring-2 focus:ring-[#465FFF] focus:border-transparent"
             />
           </div>
-          {isHR && (
+          {(isHR || isSuperAdmin) && (
             <>
               <select
                 value={filterRole}

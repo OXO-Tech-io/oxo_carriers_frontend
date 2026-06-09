@@ -15,7 +15,8 @@ import type { ConsultantWorkSubmission, ConsultantSubmissionStatus } from '@/typ
 const API_BASE = process.env.NEXT_PUBLIC_API_URL?.replace(/\/api\/?$/, '') || 'http://localhost:5000';
 
 export default function AdminConsultantSubmissionsPage() {
-  const { isHR } = useAuth();
+  const { isHR, isSuperAdmin } = useAuth();
+  const canAccess = isHR || isSuperAdmin;
   const [submissions, setSubmissions] = useState<ConsultantWorkSubmission[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -25,8 +26,8 @@ export default function AdminConsultantSubmissionsPage() {
   const [rejectComment, setRejectComment] = useState('');
 
   useEffect(() => {
-    if (isHR) fetchSubmissions();
-  }, [isHR, filterStatus]);
+    if (canAccess) fetchSubmissions();
+  }, [canAccess, filterStatus]);
 
   const fetchSubmissions = async () => {
     try {
@@ -81,7 +82,7 @@ export default function AdminConsultantSubmissionsPage() {
     return styles[status] || styles.pending;
   };
 
-  if (!isHR) {
+  if (!canAccess) {
     return (
       <div className="flex items-center justify-center min-h-64">
         <p className="text-[#475467]">Access denied.</p>
