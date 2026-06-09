@@ -14,7 +14,8 @@ import { Facility, FacilityBooking } from '@/types';
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, addMonths, subMonths, isToday } from 'date-fns';
 
 export default function AdminBookingCalendarPage() {
-  const { isHR } = useAuth();
+  const { isHR, isSuperAdmin } = useAuth();
+  const canAccess = isHR || isSuperAdmin;
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [bookings, setBookings] = useState<FacilityBooking[]>([]);
   const [facilities, setFacilities] = useState<Facility[]>([]);
@@ -22,11 +23,11 @@ export default function AdminBookingCalendarPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (isHR) {
+    if (canAccess) {
       fetchFacilities();
       fetchBookings();
     }
-  }, [currentMonth, selectedFacility, isHR]);
+  }, [currentMonth, selectedFacility, canAccess]);
 
   const fetchFacilities = async () => {
     try {
@@ -62,7 +63,7 @@ export default function AdminBookingCalendarPage() {
     end: endOfMonth(currentMonth),
   });
 
-  if (!isHR) return <div className="p-8 text-center font-bold">Unauthorized</div>;
+  if (!canAccess) return <div className="p-8 text-center font-bold">Unauthorized</div>;
 
   return (
     <div className="space-y-6 animate-fade-in pb-10">

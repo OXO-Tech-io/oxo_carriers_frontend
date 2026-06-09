@@ -23,7 +23,8 @@ interface LeaveCalendarEntry {
 }
 
 export default function LeaveCalendarPage() {
-  const { user, isHR } = useAuth();
+  const { user, isHR, isSuperAdmin } = useAuth();
+  const canAccess = isHR || isSuperAdmin;
   const [entries, setEntries] = useState<LeaveCalendarEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
@@ -40,10 +41,10 @@ export default function LeaveCalendarPage() {
   const [success, setSuccess] = useState('');
 
   useEffect(() => {
-    if (isHR) {
+    if (canAccess) {
       fetchEntries();
     }
-  }, [selectedYear, isHR]);
+  }, [selectedYear, canAccess]);
 
   const fetchEntries = async () => {
     try {
@@ -142,7 +143,7 @@ export default function LeaveCalendarPage() {
     });
   };
 
-  if (!isHR) {
+  if (!canAccess) {
     return (
       <div className="p-6">
         <div className="rounded-lg bg-red-50 p-4 text-red-800">

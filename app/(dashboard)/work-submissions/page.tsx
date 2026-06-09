@@ -15,7 +15,8 @@ import type { ConsultantWorkSubmission, ConsultantSubmissionStatus } from '@/typ
 const API_BASE = process.env.NEXT_PUBLIC_API_URL?.replace(/\/api\/?$/, '') || 'http://localhost:5000';
 
 export default function WorkSubmissionsPage() {
-  const { user, isConsultant } = useAuth();
+  const { isConsultant, isSuperAdmin } = useAuth();
+  const canAccessWorkSubmissions = isConsultant || isSuperAdmin;
   const [activeTab, setActiveTab] = useState<'submit' | 'list'>('list');
   const [submissions, setSubmissions] = useState<ConsultantWorkSubmission[]>([]);
   const [loading, setLoading] = useState(true);
@@ -32,8 +33,8 @@ export default function WorkSubmissionsPage() {
   const [resubmitId, setResubmitId] = useState<number | null>(null);
 
   useEffect(() => {
-    if (isConsultant) fetchData();
-  }, [activeTab, isConsultant]);
+    if (canAccessWorkSubmissions) fetchData();
+  }, [activeTab, canAccessWorkSubmissions]);
 
   const fetchData = async () => {
     try {
@@ -100,10 +101,10 @@ export default function WorkSubmissionsPage() {
     return styles[status] || styles.pending;
   };
 
-  if (!isConsultant) {
+  if (!canAccessWorkSubmissions) {
     return (
       <div className="flex items-center justify-center min-h-64">
-        <p className="text-[#475467]">Access denied. This page is for consultants only.</p>
+        <p className="text-[#475467]">Access denied.</p>
       </div>
     );
   }

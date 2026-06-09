@@ -11,7 +11,8 @@ import {
 } from '@heroicons/react/24/outline';
 
 export default function TestEmailPage() {
-  const { isHR } = useAuth();
+  const { isHR, isSuperAdmin } = useAuth();
+  const canAccess = isHR || isSuperAdmin;
   const [email, setEmail] = useState('');
   const [subject, setSubject] = useState('🧪 Test Email from HRIS System');
   const [message, setMessage] = useState('This is a test email to verify SMTP configuration is working correctly.');
@@ -82,7 +83,7 @@ export default function TestEmailPage() {
     }
   };
 
-  if (!isHR) {
+  if (!canAccess) {
     return (
       <div className="flex items-center justify-center min-h-64">
         <div className="text-center">

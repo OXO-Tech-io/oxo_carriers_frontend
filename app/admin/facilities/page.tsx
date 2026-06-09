@@ -13,7 +13,8 @@ import { Facility, FacilityType } from '@/types';
 import FacilityModal from '@/components/modals/FacilityModal';
 
 export default function AdminFacilitiesPage() {
-  const { isHR } = useAuth();
+  const { isHR, isSuperAdmin } = useAuth();
+  const canAccess = isHR || isSuperAdmin;
   const [facilities, setFacilities] = useState<Facility[]>([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
@@ -22,10 +23,10 @@ export default function AdminFacilitiesPage() {
   const [success, setSuccess] = useState('');
 
   useEffect(() => {
-    if (isHR) {
+    if (canAccess) {
       fetchFacilities();
     }
-  }, [isHR]);
+  }, [canAccess]);
 
   const fetchFacilities = async () => {
     try {
@@ -67,7 +68,7 @@ export default function AdminFacilitiesPage() {
     }
   };
 
-  if (!isHR) return <div className="p-8 text-center">Unauthorized</div>;
+  if (!canAccess) return <div className="p-8 text-center">Unauthorized</div>;
 
   return (
     <div className="space-y-6 animate-fade-in">
