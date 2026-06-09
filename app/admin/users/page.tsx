@@ -114,21 +114,42 @@ export default function AdminUsersPage() {
     company_name?: string;
     contact_number?: string;
   }) => {
+    let createdUser: any = null;
     try {
+      // 1. Save to Database
       const response = await api.post("/users", formData);
+      createdUser = response.data.user;
       toast.success(
-        "User created",
-        response.data.message || "Employee account created successfully",
+        "User Created in Database",
+        "Employee record saved successfully."
       );
-      setShowCreateModal(false);
-      fetchUsers();
     } catch (err: any) {
       toast.error(
         "Failed to create user",
         err.response?.data?.message || "Please check the form and try again",
       );
-      throw err; // Re-throw to let modal handle loading state
+      throw err; // Re-throw to let modal handle loading state and remain open
     }
+
+    // 2. Provision in Keycloak (skip for service providers/vendors)
+    if (createdUser && formData.role !== UserRole.SERVICE_PROVIDER) {
+      try {
+        const kcResponse = await api.post(`/users/${createdUser.id}/keycloak`);
+        toast.success(
+          "Keycloak Provisioned",
+          kcResponse.data.message || "Keycloak identity provisioned successfully and email sent."
+        );
+      } catch (kcErr: any) {
+        console.error("Keycloak provisioning failed:", kcErr);
+        toast.error(
+          "Keycloak Provisioning Failed",
+          kcErr.response?.data?.message || "Failed to create Keycloak identity. You can retry via Reset Password."
+        );
+      }
+    }
+
+    setShowCreateModal(false);
+    fetchUsers();
   };
 
   const handleCreateServiceProvider = async (
