@@ -10,18 +10,24 @@ import { useCreateLeaveMutation } from '@/hooks/mutations/use-create-leave-mutat
 import { useApproveLeaveMutation } from '@/hooks/mutations/use-approve-leave-mutation';
 import { useRejectLeaveMutation } from '@/hooks/mutations/use-reject-leave-mutation';
 import {
-  CalendarIcon,
-  PlusIcon,
-  ClockIcon,
-  CheckCircleIcon,
-  XCircleIcon,
-  DocumentArrowUpIcon,
-  UserIcon,
-} from '@heroicons/react/24/outline';
+  Calendar,
+  Plus,
+  Clock,
+  CheckCircle2,
+  XCircle,
+  Upload,
+  User,
+  AlertTriangle,
+  History,
+  FileSpreadsheet,
+} from 'lucide-react';
 import { format, isWeekend, isSameDay, startOfDay, endOfDay } from 'date-fns';
 import DateRangePicker from '@/components/DateRangePicker';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
+import { BottomSheet } from '@/components/ui/BottomSheet';
+import { Card, CardHeader } from '@/components/ui/Card';
+import { Button } from '@/components/ui/Button';
 
 type Tab = 'balance' | 'request' | 'history' | 'approvals';
 
@@ -30,6 +36,7 @@ export default function LeavesPage() {
   const [activeTab, setActiveTab] = useState<Tab>('balance');
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [isMobileSheetOpen, setIsMobileSheetOpen] = useState(false);
 
   // Request form state
   const [formData, setFormData] = useState({
@@ -110,7 +117,6 @@ export default function LeavesPage() {
     const end = new Date(formData.end_date);
     if (end < start) return 0;
     
-    // Get all dates in the range manually
     const dates: Date[] = [];
     const current = new Date(start);
     while (current <= end) {
@@ -118,13 +124,10 @@ export default function LeavesPage() {
       current.setDate(current.getDate() + 1);
     }
     
-    // Filter out weekends and holidays
     const workingDays = dates.filter(date => {
-      // Exclude weekends
       if (isWeekend(date)) {
         return false;
       }
-      // Exclude custom holidays
       const isHoliday = holidays.some(h => {
         const holidayDate = new Date(h.date);
         return isSameDay(holidayDate, date);
@@ -167,7 +170,7 @@ export default function LeavesPage() {
   }, [formData.start_date, formData.end_date, formData.is_half_day]);
 
   // Day class name for calendar styling with range highlighting
-  const getDayClassName = (date: Date, isStartPicker: boolean = false) => {
+  const getDayClassName = (date: Date) => {
     const classes: string[] = [];
     const isWeekendDay = isWeekend(date);
     const isHoliday = holidays.some(h => {
@@ -182,14 +185,11 @@ export default function LeavesPage() {
       classes.push('holiday-day');
     }
 
-    // Add range highlighting if both dates are selected (show full range including weekends/holidays)
     if (startDatePicker && endDatePicker) {
       const dateStart = startOfDay(date);
       const rangeStart = startOfDay(startDatePicker);
       const rangeEnd = endOfDay(endDatePicker);
       
-      // Highlight all dates in range (including weekends and holidays for visual reference)
-      // Manual check if date is within interval
       if (dateStart >= rangeStart && dateStart <= rangeEnd) {
         classes.push('react-datepicker__day--in-range');
       }
@@ -208,7 +208,6 @@ export default function LeavesPage() {
     return classes.join(' ');
   };
 
-  // Handle date range change from picker
   const handleDateRangeChange = (start: Date | null, end: Date | null) => {
     setStartDatePicker(start);
     setEndDatePicker(end);
@@ -218,7 +217,6 @@ export default function LeavesPage() {
     if (end) {
       setFormData(prev => ({ ...prev, end_date: format(end, 'yyyy-MM-dd') }));
     } else if (start && formData.is_half_day) {
-      // For half-day, end date should be same as start
       setFormData(prev => ({ ...prev, end_date: format(start, 'yyyy-MM-dd') }));
     }
   };
@@ -231,7 +229,6 @@ export default function LeavesPage() {
     const formDataToSend = new FormData();
     formDataToSend.append('leave_type_id', formData.leave_type_id);
     formDataToSend.append('start_date', formData.start_date);
-    // For half-day, end_date should be same as start_date
     formDataToSend.append('end_date', formData.is_half_day ? formData.start_date : formData.end_date);
     if (formData.reason) {
       formDataToSend.append('reason', formData.reason);
@@ -256,6 +253,7 @@ export default function LeavesPage() {
         half_day_period: '',
       });
       setAttachment(null);
+      setIsMobileSheetOpen(false);
       setActiveTab('history');
     } catch (err) {
       const message =
@@ -293,11 +291,11 @@ export default function LeavesPage() {
 
   const getStatusBadge = (status: string) => {
     const styles = {
-      pending: 'bg-amber-100 text-amber-700',
-      team_leader_approved: 'bg-blue-100 text-blue-700',
-      hr_approved: 'bg-emerald-100 text-emerald-700',
-      rejected: 'bg-red-100 text-red-700',
-      cancelled: 'bg-gray-100 text-gray-700',
+      pending: 'bg-amber-100 dark:bg-amber-950/30 text-amber-700 dark:text-amber-300',
+      team_leader_approved: 'bg-blue-100 dark:bg-blue-950/30 text-blue-700 dark:text-blue-300',
+      hr_approved: 'bg-emerald-100 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-300',
+      rejected: 'bg-red-100 dark:bg-red-950/30 text-red-700 dark:text-red-300',
+      cancelled: 'bg-gray-100 dark:bg-slate-950/30 text-gray-700 dark:text-slate-300',
     };
     return styles[status as keyof typeof styles] || styles.pending;
   };
@@ -305,7 +303,7 @@ export default function LeavesPage() {
   const getStatusLabel = (status: string) => {
     const labels: Record<string, string> = {
       pending: 'Pending',
-      team_leader_approved: 'Team Leader Approved',
+      team_leader_approved: 'TL Approved',
       hr_approved: 'Approved',
       rejected: 'Rejected',
       cancelled: 'Cancelled',
@@ -313,75 +311,323 @@ export default function LeavesPage() {
     return labels[status] || status;
   };
 
+  const handleRequestClick = () => {
+    if (window.innerWidth < 1024) {
+      setIsMobileSheetOpen(true);
+    } else {
+      setActiveTab('request');
+    }
+  };
+
+  const formContent = (
+    <form onSubmit={handleSubmitRequest} className="space-y-5">
+      <div className="space-y-4">
+        <div>
+          <label className="block text-xs font-bold text-[var(--gray-500)] uppercase tracking-wider mb-2">
+            Leave Type *
+          </label>
+          <select
+            required
+            value={formData.leave_type_id}
+            onChange={(e) => setFormData({ ...formData, leave_type_id: e.target.value })}
+            className="block w-full px-3 py-2.5 border border-[var(--gray-100)] rounded-xl text-sm font-semibold text-[var(--foreground)] bg-[var(--card-bg)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)]"
+          >
+            <option value="">Select leave type</option>
+            {leaveTypes
+              .filter((type) => type.is_active)
+              .map((type) => {
+                const balance = balances.find((b) => b.leave_type_id === type.id);
+                return (
+                  <option key={type.id} value={type.id}>
+                    {type.name} {balance && `(${balance.remaining_days} days remaining)`}
+                  </option>
+                );
+              })}
+          </select>
+          {selectedBalance && (
+            <div className="mt-2 p-3 bg-blue-500/10 rounded-xl border border-blue-500/10">
+              <div className="flex items-center justify-between text-xs font-bold text-[var(--primary)]">
+                <span>Available Balance:</span>
+                <span>{selectedBalance.remaining_days} days</span>
+              </div>
+            </div>
+          )}
+        </div>
+
+        <div>
+          <label className="block text-xs font-bold text-[var(--gray-500)] uppercase tracking-wider mb-2">
+            Attachment (Optional)
+          </label>
+          <label className="block cursor-pointer">
+            <input
+              type="file"
+              accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
+              onChange={(e) => setAttachment(e.target.files?.[0] || null)}
+              className="hidden"
+            />
+            <div className="flex items-center gap-2 px-3 py-2.5 border border-dashed border-[var(--gray-200)] rounded-xl text-sm text-[var(--gray-400)] hover:bg-[var(--gray-50)] transition-colors">
+              <Upload className="h-4 w-4 text-[var(--gray-400)] shrink-0" />
+              <span className="truncate">{attachment ? attachment.name : 'Click to upload document'}</span>
+            </div>
+          </label>
+        </div>
+
+        <div>
+          <label className="block text-xs font-bold text-[var(--gray-500)] uppercase tracking-wider mb-2">
+            Leave Date Range {formData.is_half_day ? '(Half Day)' : '*'}
+          </label>
+          <div className="space-y-3">
+            <div className="flex flex-col sm:flex-row gap-3">
+              <div className="flex-1 relative">
+                <label className="block text-[10px] text-[var(--gray-400)] font-bold uppercase tracking-wider mb-1">Start Date</label>
+                <div className="relative">
+                  <DatePicker
+                    selected={startDatePicker}
+                    onChange={(date: Date | null) => {
+                      setStartDatePicker(date);
+                      if (date) {
+                        setFormData({ ...formData, start_date: format(date, 'yyyy-MM-dd') });
+                      }
+                      setOpenStartCalendar(false);
+                    }}
+                    minDate={new Date()}
+                    filterDate={(date) => {
+                      if (isWeekend(date)) return false;
+                      const isHoliday = holidays.some(h => isSameDay(new Date(h.date), date));
+                      return !isHoliday;
+                    }}
+                    calendarClassName="holiday-calendar"
+                    dayClassName={getDayClassName}
+                    dateFormat="yyyy-MM-dd"
+                    open={openStartCalendar}
+                    onClickOutside={() => setOpenStartCalendar(false)}
+                    showMonthDropdown
+                    showYearDropdown
+                    dropdownMode="select"
+                    calendarStartDay={1}
+                    customInput={
+                      <input
+                        type="text"
+                        readOnly
+                        value={formData.start_date || ''}
+                        placeholder="Select start date"
+                        className="block w-full px-3 py-2.5 pr-10 border border-[var(--gray-100)] rounded-xl text-sm font-semibold text-[var(--foreground)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)] cursor-pointer bg-[var(--card-bg)]"
+                        onClick={() => setOpenStartCalendar(true)}
+                      />
+                    }
+                  />
+                  <Calendar className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[var(--gray-400)] pointer-events-none" />
+                </div>
+              </div>
+
+              <div className="flex-1 relative">
+                <label className="block text-[10px] text-[var(--gray-400)] font-bold uppercase tracking-wider mb-1">
+                  End Date {formData.is_half_day ? '(Auto)' : ''}
+                </label>
+                <div className="relative">
+                  <DatePicker
+                    selected={endDatePicker}
+                    onChange={(date: Date | null) => {
+                      setEndDatePicker(date);
+                      if (date) {
+                        setFormData({ ...formData, end_date: format(date, 'yyyy-MM-dd') });
+                      }
+                      setOpenEndCalendar(false);
+                    }}
+                    minDate={startDatePicker || new Date()}
+                    disabled={formData.is_half_day}
+                    filterDate={(date) => {
+                      if (isWeekend(date)) return false;
+                      const isHoliday = holidays.some(h => isSameDay(new Date(h.date), date));
+                      return !isHoliday;
+                    }}
+                    calendarClassName="holiday-calendar"
+                    dayClassName={getDayClassName}
+                    dateFormat="yyyy-MM-dd"
+                    open={openEndCalendar}
+                    onClickOutside={() => setOpenEndCalendar(false)}
+                    showMonthDropdown
+                    showYearDropdown
+                    dropdownMode="select"
+                    calendarStartDay={1}
+                    customInput={
+                      <input
+                        type="text"
+                        readOnly
+                        value={formData.is_half_day ? formData.start_date : (formData.end_date || '')}
+                        placeholder="Select end date"
+                        disabled={formData.is_half_day}
+                        className="block w-full px-3 py-2.5 pr-10 border border-[var(--gray-100)] rounded-xl text-sm font-semibold text-[var(--foreground)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)] disabled:bg-[var(--gray-50)] disabled:cursor-not-allowed disabled:text-[var(--gray-300)] cursor-pointer bg-[var(--card-bg)]"
+                        onClick={() => !formData.is_half_day && setOpenEndCalendar(true)}
+                      />
+                    }
+                  />
+                  <Calendar className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[var(--gray-400)] pointer-events-none" />
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="space-y-3">
+          <div className="flex items-center gap-2">
+            <input
+              type="checkbox"
+              id="is_half_day"
+              checked={formData.is_half_day}
+              onChange={(e) => {
+                const isHalfDay = e.target.checked;
+                setFormData({ 
+                  ...formData, 
+                  is_half_day: isHalfDay,
+                  end_date: isHalfDay ? formData.start_date : formData.end_date,
+                  half_day_period: isHalfDay ? formData.half_day_period : ''
+                });
+              }}
+              className="h-4 w-4 text-[var(--primary)] border-[var(--gray-200)] rounded focus:ring-[var(--primary)] cursor-pointer"
+            />
+            <label htmlFor="is_half_day" className="text-sm font-bold text-[var(--foreground)] cursor-pointer select-none">
+              Half-day leave
+            </label>
+          </div>
+          
+          {formData.is_half_day && (
+            <div>
+              <label className="block text-xs font-bold text-[var(--gray-500)] uppercase tracking-wider mb-2">
+                Time Period *
+              </label>
+              <select
+                required={formData.is_half_day}
+                value={formData.half_day_period}
+                onChange={(e) => setFormData({ ...formData, half_day_period: e.target.value as 'morning' | 'evening' })}
+                className="block w-full px-3 py-2.5 border border-[var(--gray-100)] rounded-xl text-sm font-semibold text-[var(--foreground)] bg-[var(--card-bg)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)]"
+              >
+                <option value="">Select time period</option>
+                <option value="morning">Morning</option>
+                <option value="evening">Evening</option>
+              </select>
+            </div>
+          )}
+        </div>
+
+        {formData.start_date && (formData.end_date || formData.is_half_day) && (
+          <div className="p-4 bg-[var(--gray-25)] border border-[var(--gray-100)] rounded-xl">
+            <div className="flex items-center justify-between">
+              <span className={`text-base font-extrabold ${hasInsufficientBalance ? 'text-red-500' : 'text-[var(--primary)]'}`}>
+                {requestedDays === 0.5 ? '0.5 day' : `${requestedDays} ${requestedDays === 1 ? 'day' : 'days'}`} requested
+              </span>
+            </div>
+            {hasInsufficientBalance && selectedBalance && (
+              <div className="mt-2 flex items-start gap-2 text-xs font-medium text-red-600 dark:text-red-400">
+                <AlertTriangle className="h-4 w-4 shrink-0" />
+                <span>Insufficient Balance: You only have {selectedBalance.remaining_days} days left.</span>
+              </div>
+            )}
+            {selectedBalance && !hasInsufficientBalance && requestedDays > 0 && (
+              <div className="mt-2 flex items-start gap-2 text-xs font-medium text-emerald-600 dark:text-emerald-400">
+                <CheckCircle2 className="h-4 w-4 shrink-0" />
+                <span>Sufficient Balance: {selectedBalance.remaining_days - requestedDays} days remaining after approval.</span>
+              </div>
+            )}
+          </div>
+        )}
+
+        <div>
+          <label className="block text-xs font-bold text-[var(--gray-500)] uppercase tracking-wider mb-2">
+            Reason *
+          </label>
+          <textarea
+            required
+            rows={4}
+            value={formData.reason}
+            onChange={(e) => setFormData({ ...formData, reason: e.target.value })}
+            placeholder="Please explain the reason for your request..."
+            className="block w-full px-3 py-2.5 border border-[var(--gray-100)] rounded-xl text-sm font-semibold text-[var(--foreground)] placeholder:text-[var(--gray-300)] bg-[var(--card-bg)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)]"
+          />
+        </div>
+      </div>
+
+      <div className="flex items-center justify-end gap-3 pt-2">
+        <Button
+          type="button"
+          variant="outline"
+          onClick={() => {
+            setFormData({ 
+              leave_type_id: '', 
+              start_date: '', 
+              end_date: '', 
+              reason: '',
+              is_half_day: false,
+              half_day_period: ''
+            });
+            setAttachment(null);
+            setIsMobileSheetOpen(false);
+          }}
+        >
+          Cancel
+        </Button>
+        <Button
+          type="submit"
+          disabled={submitting || hasInsufficientBalance || !formData.leave_type_id || !formData.start_date || (!formData.end_date && !formData.is_half_day) || !formData.reason || (formData.is_half_day && !formData.half_day_period)}
+          isLoading={submitting}
+        >
+          Submit
+        </Button>
+      </div>
+    </form>
+  );
+
   return (
-    <div className="space-y-6 animate-fade-in">
+    <div className="space-y-6 animate-fade-in pb-8">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-[#101828]">Leave Management</h1>
-          <p className="mt-2 text-[#475467]">Manage your leave requests and balances</p>
+          <h1 className="text-2xl lg:text-3xl font-extrabold text-[var(--foreground)] tracking-tight">Leave Management</h1>
+          <p className="text-sm text-[var(--gray-400)] font-medium mt-1">Manage leave requests, view balances, and approve time-off.</p>
         </div>
-        <button
-          onClick={() => setActiveTab('request')}
-          className="inline-flex items-center space-x-2 px-4 py-2.5 bg-[#465FFF] text-white rounded-xl font-semibold hover:bg-[#3641F5] transition-colors shadow-sm hover:shadow-md"
+        <Button
+          onClick={handleRequestClick}
+          leftIcon={<Plus className="h-4 w-4" />}
         >
-          <PlusIcon className="h-5 w-5" />
-          <span>Request Leave</span>
-        </button>
+          Request Leave
+        </Button>
       </div>
 
       {/* Alerts */}
       {error && (
-        <div className="bg-red-50 border-l-4 border-red-500 text-red-700 p-4 rounded-lg">
-          <p className="text-sm font-medium">{error}</p>
+        <div className="bg-red-500/10 border-l-4 border-red-500 text-red-600 dark:text-red-400 p-4 rounded-xl text-xs font-semibold animate-fade-in">
+          {error}
         </div>
       )}
       {success && (
-        <div className="bg-emerald-50 border-l-4 border-emerald-500 text-emerald-700 p-4 rounded-lg">
-          <p className="text-sm font-medium">{success}</p>
+        <div className="bg-emerald-500/10 border-l-4 border-emerald-500 text-emerald-600 dark:text-emerald-400 p-4 rounded-xl text-xs font-semibold animate-fade-in">
+          {success}
         </div>
       )}
 
       {/* Tabs */}
-      <div className="border-b border-[#E4E7EC]">
-        <nav className="-mb-px flex space-x-8">
-          <button
-            onClick={() => setActiveTab('balance')}
-            className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors ${
-              activeTab === 'balance'
-                ? 'border-[#465FFF] text-[#465FFF]'
-                : 'border-transparent text-[#475467] hover:text-[#344054] hover:border-[#D0D5DD]'
-            }`}
-          >
-            Leave Balance
-          </button>
-          <button
-            onClick={() => setActiveTab('request')}
-            className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors ${
-              activeTab === 'request'
-                ? 'border-[#465FFF] text-[#465FFF]'
-                : 'border-transparent text-[#475467] hover:text-[#344054] hover:border-[#D0D5DD]'
-            }`}
-          >
-            Request Leave
-          </button>
-          <button
-            onClick={() => setActiveTab('history')}
-            className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors ${
-              activeTab === 'history'
-                ? 'border-[#465FFF] text-[#465FFF]'
-                : 'border-transparent text-[#475467] hover:text-[#344054] hover:border-[#D0D5DD]'
-            }`}
-          >
-            My Requests
-          </button>
+      <div className="border-b border-[var(--gray-100)]">
+        <nav className="-mb-px flex gap-6 overflow-x-auto">
+          {(['balance', 'request', 'history'] as const).map((tab) => (
+            <button
+              key={tab}
+              onClick={() => setActiveTab(tab)}
+              className={`py-3 px-1 border-b-2 font-bold text-xs uppercase tracking-wider whitespace-nowrap transition-colors cursor-pointer ${
+                activeTab === tab
+                  ? 'border-[var(--primary)] text-[var(--primary)]'
+                  : 'border-transparent text-[var(--gray-400)] hover:text-[var(--foreground)]'
+              }`}
+            >
+              {tab === 'balance' ? 'Balances' : tab === 'request' ? 'Request Leave' : 'My Requests'}
+            </button>
+          ))}
           {isHR && (
             <button
               onClick={() => setActiveTab('approvals')}
-              className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors ${
+              className={`py-3 px-1 border-b-2 font-bold text-xs uppercase tracking-wider whitespace-nowrap transition-colors cursor-pointer ${
                 activeTab === 'approvals'
-                  ? 'border-[#465FFF] text-[#465FFF]'
-                  : 'border-transparent text-[#475467] hover:text-[#344054] hover:border-[#D0D5DD]'
+                  ? 'border-[var(--primary)] text-[var(--primary)]'
+                  : 'border-transparent text-[var(--gray-400)] hover:text-[var(--foreground)]'
               }`}
             >
               Pending Approvals
@@ -393,7 +639,7 @@ export default function LeavesPage() {
       {/* Tab Content */}
       {loading ? (
         <div className="flex items-center justify-center min-h-64">
-          <div className="animate-spin rounded-full h-12 w-12 border-4 border-[#465FFF] border-t-transparent"></div>
+          <div className="animate-spin rounded-full h-10 w-10 border-2 border-[var(--primary)] border-t-transparent" />
         </div>
       ) : (
         <>
@@ -401,452 +647,91 @@ export default function LeavesPage() {
           {activeTab === 'balance' && (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {balances.map((balance) => (
-                <div
-                  key={balance.id}
-                  className="bg-white rounded-2xl shadow-sm border border-[#E4E7EC] p-6"
-                >
-                  <div className="flex items-start justify-between mb-4">
+                <Card hover key={balance.id} className="relative overflow-hidden">
+                  <div className="absolute top-0 left-0 h-1.5 w-full bg-[var(--primary)]" />
+                  <div className="flex items-start justify-between gap-4 mb-5">
                     <div>
-                      <h3 className="text-lg font-bold text-[#101828]">{balance.leave_type?.name || 'Unknown Leave Type'}</h3>
-                      <p className="text-sm text-[#475467] mt-1">{balance.leave_type?.description || ''}</p>
+                      <h3 className="text-base font-bold text-[var(--foreground)]">{balance.leave_type?.name}</h3>
+                      <p className="text-xs text-[var(--gray-400)] mt-1 font-medium leading-relaxed">{balance.leave_type?.description}</p>
                     </div>
-                    <div className="p-3 rounded-xl bg-[#ECF3FF]">
-                      <CalendarIcon className="h-6 w-6 text-[#465FFF]" />
+                    <div className="p-2.5 rounded-xl bg-[var(--primary-light)] text-[var(--primary)] shrink-0">
+                      <Calendar className="h-5 w-5" />
                     </div>
                   </div>
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm text-[#475467]">Total Days</span>
-                      <span className="text-sm font-semibold text-[#101828]">{balance.total_days}</span>
+                  <div className="space-y-3 pt-3 border-t border-[var(--gray-50)]">
+                    <div className="flex items-center justify-between text-xs font-semibold">
+                      <span className="text-[var(--gray-400)]">Total Entitled</span>
+                      <span className="text-[var(--foreground)]">{balance.total_days} days</span>
                     </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm text-[#475467]">Used Days</span>
-                      <span className="text-sm font-semibold text-[#101828]">{balance.used_days}</span>
+                    <div className="flex items-center justify-between text-xs font-semibold">
+                      <span className="text-[var(--gray-400)]">Taken</span>
+                      <span className="text-[var(--foreground)]">{balance.used_days} days</span>
                     </div>
-                    <div className="pt-3 border-t border-[#E4E7EC]">
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm font-semibold text-[#344054]">Remaining</span>
-                        <span className="text-lg font-bold text-[#465FFF]">{balance.remaining_days} days</span>
+                    <div className="pt-2">
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="font-bold text-[var(--foreground)]">Remaining</span>
+                        <span className="font-extrabold text-[var(--primary)] text-base">{balance.remaining_days} days</span>
                       </div>
                     </div>
                   </div>
-                </div>
+                </Card>
               ))}
             </div>
           )}
 
-          {/* Request Leave Tab */}
+          {/* Request Leave Tab (Desktop layout) */}
           {activeTab === 'request' && (
-            <div className="bg-white rounded-2xl shadow-sm border border-[#E4E7EC] p-6 lg:p-8">
-              <h2 className="text-xl font-bold text-[#101828] mb-6">Submit Leave Request</h2>
-              <form onSubmit={handleSubmitRequest} className="space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div>
-                    <label className="block text-sm font-semibold text-[#344054] mb-2">
-                      Leave Type *
-                    </label>
-                    <select
-                      required
-                      value={formData.leave_type_id}
-                      onChange={(e) => setFormData({ ...formData, leave_type_id: e.target.value })}
-                      className="block w-full px-3 py-2.5 border border-[#D0D5DD] rounded-lg text-sm font-medium text-[#344054] bg-white focus:outline-none focus:ring-2 focus:ring-[#465FFF] focus:border-transparent"
-                    >
-                      <option value="">Select leave type</option>
-                      {leaveTypes
-                        .filter((type) => type.is_active)
-                        .map((type) => {
-                          const balance = balances.find((b) => b.leave_type_id === type.id);
-                          return (
-                            <option key={type.id} value={type.id}>
-                              {type.name} {balance && `(${balance.remaining_days} days remaining)`}
-                            </option>
-                          );
-                        })}
-                    </select>
-                    {selectedBalance && (
-                      <div className="mt-2 p-3 bg-[#ECF3FF] border border-[#DDE9FF] rounded-lg">
-                        <div className="flex items-center justify-between">
-                          <span className="text-sm text-[#344054]">Available Balance:</span>
-                          <span className="text-sm font-bold text-[#465FFF]">{selectedBalance.remaining_days} days</span>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                  <div>
-                    <label className="block text-sm font-semibold text-[#344054] mb-2">
-                      Attachment (Optional)
-                    </label>
-                    <div className="flex items-center space-x-3">
-                      <label className="flex-1 cursor-pointer">
-                        <input
-                          type="file"
-                          accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
-                          onChange={(e) => setAttachment(e.target.files?.[0] || null)}
-                          className="hidden"
-                        />
-                        <div className="flex items-center space-x-2 px-3 py-2.5 border border-[#D0D5DD] rounded-lg text-sm text-[#475467] hover:bg-[#F9FAFB] transition-colors">
-                          <DocumentArrowUpIcon className="h-5 w-5" />
-                          <span>{attachment ? attachment.name : 'Choose file'}</span>
-                        </div>
-                      </label>
-                    </div>
-                  </div>
-                </div>
-                <div>
-                  <label className="block text-sm font-semibold text-[#344054] mb-2">
-                    Leave Date Range {formData.is_half_day ? '(Half Day)' : '*'}
-                  </label>
-                  <div className="relative">
-                    {!showDatePicker ? (
-                      <div className="space-y-3">
-                        <div className="flex items-center gap-3">
-                          <div className="flex-1 relative">
-                            <label className="block text-xs text-[#667085] mb-1">Start Date</label>
-                            <div className="relative">
-                              <DatePicker
-                                selected={startDatePicker}
-                                onChange={(date: Date | null) => {
-                                  setStartDatePicker(date);
-                                  if (date) {
-                                    const dateStr = format(date, 'yyyy-MM-dd');
-                                    setFormData({ ...formData, start_date: dateStr });
-                                  }
-                                  setOpenStartCalendar(false);
-                                }}
-                                startDate={startDatePicker}
-                                endDate={endDatePicker}
-                                minDate={new Date()}
-                                filterDate={(date) => {
-                                  if (isWeekend(date)) return false;
-                                  const isHoliday = holidays.some(h => {
-                                    const holidayDate = new Date(h.date);
-                                    return isSameDay(holidayDate, date);
-                                  });
-                                  return !isHoliday;
-                                }}
-                                calendarClassName="holiday-calendar"
-                                dayClassName={(date) => getDayClassName(date, true)}
-                                dateFormat="yyyy-MM-dd"
-                                placeholderText="Select start date"
-                                open={openStartCalendar}
-                                onInputClick={() => setOpenStartCalendar(true)}
-                                onClickOutside={() => setOpenStartCalendar(false)}
-                                showMonthDropdown
-                                showYearDropdown
-                                dropdownMode="select"
-                                calendarStartDay={1}
-                                highlightDates={endDatePicker ? [endDatePicker] : []}
-                                customInput={
-                                  <input
-                                    type="text"
-                                    readOnly
-                                    value={formData.start_date || ''}
-                                    placeholder="Select start date"
-                                    className="block w-full px-3 py-2.5 pr-10 border border-[#D0D5DD] rounded-lg text-sm text-[#101828] focus:outline-none focus:ring-2 focus:ring-[#465FFF] focus:border-transparent cursor-pointer"
-                                    onClick={() => setOpenStartCalendar(true)}
-                                  />
-                                }
-                                popperContainer={({ children }) => (
-                                  <div className="z-50">{children}</div>
-                                )}
-                                popperPlacement="bottom-start"
-                              />
-                              <button
-                                type="button"
-                                onClick={() => setOpenStartCalendar(true)}
-                                className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-[#667085] hover:text-[#465FFF]"
-                              >
-                                <CalendarIcon className="h-5 w-5" />
-                              </button>
-                            </div>
-                          </div>
-                          <div className="flex-1 relative">
-                            <label className="block text-xs text-[#667085] mb-1">
-                              End Date {formData.is_half_day ? '(Auto)' : ''}
-                            </label>
-                            <div className="relative">
-                              <DatePicker
-                                selected={endDatePicker}
-                                onChange={(date: Date | null) => {
-                                  setEndDatePicker(date);
-                                  if (date) {
-                                    const dateStr = format(date, 'yyyy-MM-dd');
-                                    setFormData({ ...formData, end_date: dateStr });
-                                  }
-                                  setOpenEndCalendar(false);
-                                }}
-                                startDate={startDatePicker}
-                                endDate={endDatePicker}
-                                minDate={startDatePicker || new Date()}
-                                disabled={formData.is_half_day}
-                                filterDate={(date) => {
-                                  if (isWeekend(date)) return false;
-                                  const isHoliday = holidays.some(h => {
-                                    const holidayDate = new Date(h.date);
-                                    return isSameDay(holidayDate, date);
-                                  });
-                                  return !isHoliday;
-                                }}
-                                calendarClassName="holiday-calendar"
-                                dayClassName={(date) => getDayClassName(date, false)}
-                                dateFormat="yyyy-MM-dd"
-                                placeholderText="Select end date"
-                                open={openEndCalendar}
-                                onInputClick={() => !formData.is_half_day && setOpenEndCalendar(true)}
-                                onClickOutside={() => setOpenEndCalendar(false)}
-                                showMonthDropdown
-                                showYearDropdown
-                                dropdownMode="select"
-                                calendarStartDay={1}
-                                highlightDates={startDatePicker ? [startDatePicker] : []}
-                                customInput={
-                                  <input
-                                    type="text"
-                                    readOnly
-                                    value={formData.is_half_day ? formData.start_date : (formData.end_date || '')}
-                                    placeholder="Select end date"
-                                    disabled={formData.is_half_day}
-                                    className="block w-full px-3 py-2.5 pr-10 border border-[#D0D5DD] rounded-lg text-sm text-[#101828] focus:outline-none focus:ring-2 focus:ring-[#465FFF] focus:border-transparent disabled:bg-[#F9FAFB] disabled:cursor-not-allowed disabled:text-[#98A2B3] cursor-pointer"
-                                    onClick={() => !formData.is_half_day && setOpenEndCalendar(true)}
-                                  />
-                                }
-                                popperContainer={({ children }) => (
-                                  <div className="z-50">{children}</div>
-                                )}
-                                popperPlacement="bottom-start"
-                              />
-                              <button
-                                type="button"
-                                onClick={() => !formData.is_half_day && setOpenEndCalendar(true)}
-                                disabled={formData.is_half_day}
-                                className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-[#667085] hover:text-[#465FFF] disabled:text-[#98A2B3] disabled:cursor-not-allowed"
-                              >
-                                <CalendarIcon className="h-5 w-5" />
-                              </button>
-                            </div>
-                            {formData.is_half_day && (
-                              <p className="mt-1 text-xs text-[#475467]">End date is automatically set to start date for half-day leave</p>
-                            )}
-                          </div>
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() => setShowDatePicker(true)}
-                          className="w-full px-4 py-2.5 border-2 border-dashed border-[#D0D5DD] rounded-lg text-sm font-medium text-[#465FFF] hover:border-[#465FFF] hover:bg-[#ECF3FF] transition-colors flex items-center justify-center gap-2"
-                        >
-                          <CalendarIcon className="h-5 w-5" />
-                          <span>Open Calendar Picker</span>
-                        </button>
-                      </div>
-                    ) : (
-                      <div className="border border-[#D0D5DD] rounded-lg p-4 bg-white">
-                        <div className="flex items-center justify-between mb-3">
-                          <h3 className="text-sm font-semibold text-[#344054]">Select Date Range</h3>
-                          <button
-                            type="button"
-                            onClick={() => setShowDatePicker(false)}
-                            className="text-sm text-[#465FFF] hover:text-[#3641F5] font-medium"
-                          >
-                            Use Text Inputs
-                          </button>
-                        </div>
-                        <DateRangePicker
-                          startDate={startDatePicker}
-                          endDate={endDatePicker}
-                          onChange={handleDateRangeChange}
-                          selectsRange={!formData.is_half_day}
-                          inline={true}
-                          monthsShown={2}
-                          showHolidays={true}
-                          minDate={new Date()}
-                          disabled={formData.is_half_day}
-                        />
-                        {formData.is_half_day && (
-                          <p className="mt-2 text-xs text-[#475467] bg-amber-50 p-2 rounded">
-                            Half-day leave: End date is automatically set to start date
-                          </p>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                </div>
-                <div className="space-y-4">
-                  <div className="flex items-center space-x-3">
-                    <input
-                      type="checkbox"
-                      id="is_half_day"
-                      checked={formData.is_half_day}
-                      onChange={(e) => {
-                        const isHalfDay = e.target.checked;
-                        setFormData({ 
-                          ...formData, 
-                          is_half_day: isHalfDay,
-                          end_date: isHalfDay ? formData.start_date : formData.end_date,
-                          half_day_period: isHalfDay ? formData.half_day_period : ''
-                        });
-                      }}
-                      className="h-4 w-4 text-[#465FFF] border-[#D0D5DD] rounded focus:ring-[#465FFF]"
-                    />
-                    <label htmlFor="is_half_day" className="text-sm font-semibold text-[#344054] cursor-pointer">
-                      Half-day leave
-                    </label>
-                  </div>
-                  {formData.is_half_day && (
-                    <div>
-                      <label className="block text-sm font-semibold text-[#344054] mb-2">
-                        Time Period *
-                      </label>
-                      <select
-                        required={formData.is_half_day}
-                        value={formData.half_day_period}
-                        onChange={(e) => setFormData({ ...formData, half_day_period: e.target.value as 'morning' | 'evening' })}
-                        className="block w-full px-3 py-2.5 border border-[#D0D5DD] rounded-lg text-sm font-medium text-[#344054] bg-white focus:outline-none focus:ring-2 focus:ring-[#465FFF] focus:border-transparent"
-                      >
-                        <option value="">Select time period</option>
-                        <option value="morning">Morning</option>
-                        <option value="evening">Evening</option>
-                      </select>
-                    </div>
-                  )}
-                </div>
-                {formData.start_date && (formData.end_date || formData.is_half_day) && (
-                  <div className="p-4 bg-[#F9FAFB] border border-[#E4E7EC] rounded-lg">
-                    <div className="flex items-center justify-between mb-2">
-                      <span className={`text-lg font-bold ${hasInsufficientBalance ? 'text-[#F04438]' : 'text-[#465FFF]'}`}>
-                        {requestedDays === 0.5 ? '0.5 day' : `${requestedDays} ${requestedDays === 1 ? 'day' : 'days'}`}
-                        {formData.is_half_day && formData.half_day_period && (
-                          <span className="ml-2 text-sm font-normal text-[#475467]">
-                            ({formData.half_day_period === 'morning' ? 'Morning' : 'Evening'})
-                          </span>
-                        )}
-                      </span>
-                    </div>
-                    <p className="text-xs text-[#667085] mt-2">
-                      * Weekends (Saturday/Sunday) and holidays are automatically excluded from the calculation
-                    </p>
-                    {hasInsufficientBalance && selectedBalance && (
-                      <div className="mt-2 p-3 bg-[#FEF3C7] border border-[#FCD34D] rounded-lg">
-                        <p className="text-sm text-[#92400E]">
-                          <strong>⚠️ Insufficient Balance:</strong> You are requesting {requestedDays} days, but only {selectedBalance.remaining_days} days are available.
-                        </p>
-                      </div>
-                    )}
-                    {selectedBalance && !hasInsufficientBalance && requestedDays > 0 && (
-                      <div className="mt-2 p-3 bg-[#D1FADF] border border-[#6EE7B7] rounded-lg">
-                        <p className="text-sm text-[#065F46]">
-                          <strong>✓ Sufficient Balance:</strong> {selectedBalance.remaining_days - requestedDays} days will remain after this request.
-                        </p>
-                      </div>
-                    )}
-                  </div>
-                )}
-                <div>
-                  <label className="block text-sm font-semibold text-[#344054] mb-2">
-                    Reason *
-                  </label>
-                  <textarea
-                    required
-                    rows={4}
-                    value={formData.reason}
-                    onChange={(e) => setFormData({ ...formData, reason: e.target.value })}
-                    placeholder="Please provide a reason for your leave request..."
-                    className="block w-full px-3 py-2.5 border border-[#D0D5DD] rounded-lg text-sm text-[#101828] placeholder:text-[#98A2B3] focus:outline-none focus:ring-2 focus:ring-[#465FFF] focus:border-transparent"
-                  />
-                </div>
-                <div className="flex items-center justify-end space-x-3 pt-4">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setFormData({ 
-                        leave_type_id: '', 
-                        start_date: '', 
-                        end_date: '', 
-                        reason: '',
-                        is_half_day: false,
-                        half_day_period: ''
-                      });
-                      setAttachment(null);
-                    }}
-                    className="px-4 py-2.5 text-sm font-semibold text-[#344054] bg-white border border-[#D0D5DD] rounded-lg hover:bg-[#F9FAFB] transition-colors"
-                  >
-                    Clear
-                  </button>
-                  <button
-                    type="submit"
-                    disabled={submitting || hasInsufficientBalance || !formData.leave_type_id || !formData.start_date || (!formData.end_date && !formData.is_half_day) || !formData.reason || (formData.is_half_day && !formData.half_day_period)}
-                    className="px-4 py-2.5 text-sm font-semibold text-white bg-[#465FFF] rounded-lg hover:bg-[#3641F5] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    {submitting ? 'Submitting...' : 'Submit Request'}
-                  </button>
-                </div>
-              </form>
+            <div className="hidden lg:block">
+              <Card className="max-w-2xl mx-auto shadow-md">
+                <CardHeader title="Submit Leave Request" subtitle="Select your date range and options below." />
+                {formContent}
+              </Card>
             </div>
           )}
 
           {/* History Tab */}
           {activeTab === 'history' && (
-            <div className="bg-white rounded-2xl shadow-sm border border-[#E4E7EC] overflow-hidden">
+            <Card padding="none" className="overflow-hidden shadow-sm">
               <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-[#E4E7EC]">
-                  <thead className="bg-[#F9FAFB]">
+                <table className="min-w-full divide-y divide-[var(--gray-100)]">
+                  <thead className="bg-[var(--gray-25)]">
                     <tr>
-                      <th className="px-6 py-4 text-left text-xs font-bold text-[#344054] uppercase tracking-wider">
-                        Leave Type
-                      </th>
-                      <th className="px-6 py-4 text-left text-xs font-bold text-[#344054] uppercase tracking-wider">
-                        Dates
-                      </th>
-                      <th className="px-6 py-4 text-left text-xs font-bold text-[#344054] uppercase tracking-wider">
-                        Days
-                      </th>
-                      <th className="px-6 py-4 text-left text-xs font-bold text-[#344054] uppercase tracking-wider">
-                        Status
-                      </th>
-                      <th className="px-6 py-4 text-left text-xs font-bold text-[#344054] uppercase tracking-wider">
-                        Submitted
-                      </th>
+                      <th className="px-6 py-3.5 text-left text-xs font-bold text-[var(--gray-400)] uppercase tracking-wider">Leave Type</th>
+                      <th className="px-6 py-3.5 text-left text-xs font-bold text-[var(--gray-400)] uppercase tracking-wider">Duration</th>
+                      <th className="px-6 py-3.5 text-left text-xs font-bold text-[var(--gray-400)] uppercase tracking-wider">Days</th>
+                      <th className="px-6 py-3.5 text-left text-xs font-bold text-[var(--gray-400)] uppercase tracking-wider">Status</th>
+                      <th className="px-6 py-3.5 text-left text-xs font-bold text-[var(--gray-400)] uppercase tracking-wider">Requested</th>
                     </tr>
                   </thead>
-                  <tbody className="bg-white divide-y divide-[#E4E7EC]">
+                  <tbody className="bg-[var(--card-bg)] divide-y divide-[var(--gray-100)]">
                     {requests.length === 0 ? (
                       <tr>
                         <td colSpan={5} className="px-6 py-12 text-center">
-                          <ClockIcon className="h-12 w-12 text-[#98A2B3] mx-auto mb-4" />
-                          <p className="text-sm font-medium text-[#344054]">No leave requests found</p>
+                          <History className="h-10 w-10 text-[var(--gray-300)] mx-auto mb-3" />
+                          <p className="text-sm font-bold text-[var(--gray-400)]">No leave history found</p>
                         </td>
                       </tr>
                     ) : (
                       requests.map((request) => (
-                        <tr key={request.id} className="hover:bg-[#F9FAFB] transition-colors">
+                        <tr key={request.id} className="hover:bg-[var(--gray-25)] transition-colors">
                           <td className="px-6 py-4 whitespace-nowrap">
-                            <div>
-                              <p className="text-sm font-semibold text-[#101828]">{request.leave_type?.name || 'Unknown Leave Type'}</p>
-                              {request.reason && (
-                                <p className="text-xs text-[#475467] mt-1 line-clamp-1">{request.reason}</p>
-                              )}
-                            </div>
+                            <p className="text-sm font-bold text-[var(--foreground)]">{request.leave_type?.name}</p>
+                            {request.reason && (
+                              <p className="text-xs text-[var(--gray-400)] mt-0.5 max-w-xs truncate">{request.reason}</p>
+                            )}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-[var(--gray-500)]">
+                            {format(new Date(request.start_date), 'MMM dd, yyyy')} - {format(new Date(request.end_date), 'MMM dd, yyyy')}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-[var(--foreground)]">
+                            {request.total_days === 0.5 ? '0.5 day' : `${request.total_days} days`}
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap">
-                            <p className="text-sm text-[#344054]">
-                              {format(new Date(request.start_date), 'MMM dd, yyyy')} - {format(new Date(request.end_date), 'MMM dd, yyyy')}
-                            </p>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <span className="text-sm font-medium text-[#101828]">
-                              {request.total_days === 0.5 ? '0.5 day' : `${request.total_days} days`}
-                              {request.is_half_day && request.half_day_period && (
-                                <span className="ml-2 text-xs text-[#475467]">
-                                  ({request.half_day_period === 'morning' ? 'Morning' : 'Evening'})
-                                </span>
-                              )}
-                            </span>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold ${getStatusBadge(request.status)}`}>
+                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${getStatusBadge(request.status)}`}>
                               {getStatusLabel(request.status)}
                             </span>
                           </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-[#475467]">
+                          <td className="px-6 py-4 whitespace-nowrap text-xs font-medium text-[var(--gray-400)]">
                             {format(new Date(request.created_at), 'MMM dd, yyyy')}
                           </td>
                         </tr>
@@ -855,88 +740,93 @@ export default function LeavesPage() {
                   </tbody>
                 </table>
               </div>
-            </div>
+            </Card>
           )}
 
           {/* Approvals Tab (HR Only) */}
           {activeTab === 'approvals' && isHR && (
-            <div className="space-y-4">
+            <div className="space-y-4 max-w-3xl mx-auto">
               {requests.length === 0 ? (
-                <div className="bg-white rounded-2xl shadow-sm border border-[#E4E7EC] p-12 text-center">
-                  <CheckCircleIcon className="h-12 w-12 text-[#98A2B3] mx-auto mb-4" />
-                  <p className="text-sm font-medium text-[#344054]">No pending approvals</p>
-                </div>
+                <Card className="text-center p-12">
+                  <CheckCircle2 className="h-10 w-10 text-[var(--gray-300)] mx-auto mb-3" />
+                  <p className="text-sm font-bold text-[var(--gray-400)]">No pending approvals left</p>
+                </Card>
               ) : (
                 requests.map((request) => (
-                  <div
-                    key={request.id}
-                    className="bg-white rounded-2xl shadow-sm border border-[#E4E7EC] p-6"
-                  >
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <div className="flex items-center space-x-3 mb-3">
-                          <div className="p-2 rounded-lg bg-[#ECF3FF]">
-                            <UserIcon className="h-5 w-5 text-[#465FFF]" />
+                  <Card key={request.id} className="relative">
+                    <div className="flex flex-col md:flex-row md:items-start justify-between gap-6">
+                      <div className="flex-1 space-y-4">
+                        {/* Profile Info */}
+                        <div className="flex items-center gap-3">
+                          <div className="p-2 rounded-xl bg-[var(--primary-light)] text-[var(--primary)] shrink-0">
+                            <User className="h-5 w-5" />
                           </div>
                           <div>
-                            <p className="text-sm font-bold text-[#101828]">
+                            <p className="text-sm font-bold text-[var(--foreground)]">
                               {request.user?.first_name} {request.user?.last_name}
                             </p>
-                            <p className="text-xs text-[#475467]">{request.user?.email}</p>
+                            <p className="text-xs text-[var(--gray-400)] mt-0.5 font-medium">{request.user?.email}</p>
                           </div>
                         </div>
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+
+                        {/* Grid Details */}
+                        <div className="grid grid-cols-2 md:grid-cols-3 gap-4 p-3.5 bg-[var(--gray-25)] border border-[var(--gray-100)] rounded-xl">
                           <div>
-                            <p className="text-xs text-[#98A2B3] mb-1">Leave Type</p>
-                            <p className="text-sm font-semibold text-[#344054]">{request.leave_type?.name || 'Unknown Leave Type'}</p>
+                            <p className="text-[10px] text-[var(--gray-400)] font-bold uppercase tracking-wider mb-0.5">Leave Type</p>
+                            <p className="text-xs font-bold text-[var(--foreground)]">{request.leave_type?.name}</p>
                           </div>
                           <div>
-                            <p className="text-xs text-[#98A2B3] mb-1">Dates</p>
-                            <p className="text-sm font-semibold text-[#344054]">
+                            <p className="text-[10px] text-[var(--gray-400)] font-bold uppercase tracking-wider mb-0.5">Dates</p>
+                            <p className="text-xs font-bold text-[var(--foreground)]">
                               {format(new Date(request.start_date), 'MMM dd')} - {format(new Date(request.end_date), 'MMM dd, yyyy')}
                             </p>
                           </div>
                           <div>
-                            <p className="text-xs text-[#98A2B3] mb-1">Total Days</p>
-                            <p className="text-sm font-semibold text-[#344054]">{request.total_days} days</p>
+                            <p className="text-[10px] text-[var(--gray-400)] font-bold uppercase tracking-wider mb-0.5">Requested Days</p>
+                            <p className="text-xs font-extrabold text-[var(--primary)]">{request.total_days} days</p>
                           </div>
                         </div>
+
                         {request.reason && (
-                          <div className="mb-4">
-                            <p className="text-xs text-[#98A2B3] mb-1">Reason</p>
-                            <p className="text-sm text-[#475467]">{request.reason}</p>
+                          <div className="text-xs">
+                            <span className="font-bold text-[var(--gray-400)] uppercase tracking-wider block mb-1">Reason</span>
+                            <p className="text-[var(--gray-500)] bg-[var(--gray-25)] p-3 rounded-xl border border-[var(--gray-100)] leading-relaxed">{request.reason}</p>
                           </div>
                         )}
+
                         {request.attachment_url && (
-                          <div className="mb-4">
+                          <div className="pt-2">
                             <a
                               href={request.attachment_url}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="inline-flex items-center space-x-2 text-sm text-[#465FFF] hover:text-[#3641F5]"
+                              className="inline-flex items-center gap-1.5 text-xs font-bold text-[var(--primary)] hover:underline"
                             >
-                              <DocumentArrowUpIcon className="h-4 w-4" />
-                              <span>View Attachment</span>
+                              <FileSpreadsheet className="h-4 w-4" />
+                              <span>View Attachment Doc</span>
                             </a>
                           </div>
                         )}
-                        <div className="flex items-center space-x-2">
-                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold ${getStatusBadge(request.status)}`}>
+
+                        <div className="flex items-center gap-2">
+                          <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${getStatusBadge(request.status)}`}>
                             {getStatusLabel(request.status)}
                           </span>
                           {request.team_leader_approval_date && (
-                            <span className="text-xs text-[#475467]">
-                              Team Leader approved on {format(new Date(request.team_leader_approval_date), 'MMM dd, yyyy')}
+                            <span className="text-[10px] text-[var(--gray-400)] font-semibold">
+                              TL Approved: {format(new Date(request.team_leader_approval_date), 'MMM dd, yyyy')}
                             </span>
                           )}
                         </div>
                       </div>
-                      <div className="flex flex-col space-y-2 ml-4">
+
+                      {/* Actions */}
+                      <div className="flex md:flex-col gap-2 shrink-0 justify-end">
                         {request.status === 'pending' && (
                           <>
                             <button
                               onClick={() => handleApprove(request.id, 'hr')}
-                              className="px-4 py-2 text-sm font-semibold text-white bg-[#10B981] rounded-lg hover:bg-[#059669] transition-colors"
+                              className="px-4 py-2 text-xs font-bold text-white bg-emerald-500 hover:bg-emerald-600 rounded-xl transition-colors cursor-pointer"
                             >
                               Approve
                             </button>
@@ -945,7 +835,7 @@ export default function LeavesPage() {
                                 const reason = prompt('Please provide a rejection reason:');
                                 if (reason) handleReject(request.id, reason);
                               }}
-                              className="px-4 py-2 text-sm font-semibold text-white bg-red-600 rounded-lg hover:bg-red-700 transition-colors"
+                              className="px-4 py-2 text-xs font-bold text-white bg-red-500 hover:bg-red-600 rounded-xl transition-colors cursor-pointer"
                             >
                               Reject
                             </button>
@@ -955,7 +845,7 @@ export default function LeavesPage() {
                           <>
                             <button
                               onClick={() => handleApprove(request.id, 'hr')}
-                              className="px-4 py-2 text-sm font-semibold text-white bg-[#10B981] rounded-lg hover:bg-[#059669] transition-colors"
+                              className="px-4 py-2 text-xs font-bold text-white bg-emerald-500 hover:bg-emerald-600 rounded-xl transition-colors cursor-pointer"
                             >
                               Final Approve
                             </button>
@@ -964,7 +854,7 @@ export default function LeavesPage() {
                                 const reason = prompt('Please provide a rejection reason:');
                                 if (reason) handleReject(request.id, reason);
                               }}
-                              className="px-4 py-2 text-sm font-semibold text-white bg-red-600 rounded-lg hover:bg-red-700 transition-colors"
+                              className="px-4 py-2 text-xs font-bold text-white bg-red-500 hover:bg-red-600 rounded-xl transition-colors cursor-pointer"
                             >
                               Reject
                             </button>
@@ -972,13 +862,22 @@ export default function LeavesPage() {
                         )}
                       </div>
                     </div>
-                  </div>
+                  </Card>
                 ))
               )}
             </div>
           )}
         </>
       )}
+
+      {/* Mobile Leave Request Slide-up Sheet */}
+      <BottomSheet
+        isOpen={isMobileSheetOpen}
+        onClose={() => setIsMobileSheetOpen(false)}
+        title="Submit Leave Request"
+      >
+        {formContent}
+      </BottomSheet>
     </div>
   );
 }

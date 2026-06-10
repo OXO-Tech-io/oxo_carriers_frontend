@@ -8,36 +8,25 @@ import { Suspense, useEffect, useMemo, useState } from "react";
 import api from "@/lib/api";
 import Image from "next/image";
 import {
-  HomeIcon,
-  UsersIcon,
-  CalendarIcon,
-  DocumentTextIcon,
-  ChartBarIcon,
-  BuildingOfficeIcon,
-  WrenchScrewdriverIcon,
-  HeartIcon,
-  BriefcaseIcon,
-  BanknotesIcon,
-  ChevronDownIcon,
-  ChevronLeftIcon,
-  ChevronRightIcon,
-  Bars3Icon,
-  XMarkIcon,
-  ShieldCheckIcon,
-} from "@heroicons/react/24/outline";
-import {
-  HomeIcon as HomeIconSolid,
-  UsersIcon as UsersIconSolid,
-  CalendarIcon as CalendarIconSolid,
-  DocumentTextIcon as DocumentTextIconSolid,
-  ChartBarIcon as ChartBarIconSolid,
-  BuildingOfficeIcon as BuildingOfficeIconSolid,
-  WrenchScrewdriverIcon as WrenchScrewdriverIconSolid,
-  HeartIcon as HeartIconSolid,
-  BriefcaseIcon as BriefcaseIconSolid,
-  BanknotesIcon as BanknotesIconSolid,
-  ShieldCheckIcon as ShieldCheckIconSolid,
-} from "@heroicons/react/24/solid";
+  LayoutDashboard,
+  Receipt,
+  Briefcase,
+  Calendar,
+  Heart,
+  FileText,
+  Building,
+  BarChart3,
+  Users,
+  ShieldCheck,
+  CalendarDays,
+  Wrench,
+  Upload,
+  ChevronDown,
+  ChevronLeft,
+  ChevronRight,
+  Menu,
+  X,
+} from "lucide-react";
 
 type AccessLevel = "read" | "write";
 
@@ -45,7 +34,6 @@ type MenuItem = {
   name: string;
   href: string;
   icon: any;
-  iconSolid: any;
   children?: { name: string; href: string }[];
   permissionKeys?: string[];
   requiredLevel?: AccessLevel;
@@ -56,16 +44,14 @@ const navigation: MenuItem[] = [
   {
     name: "Dashboard",
     href: "/",
-    icon: HomeIcon,
-    iconSolid: HomeIconSolid,
+    icon: LayoutDashboard,
     permissionKeys: ["dashboard"],
     requiredLevel: "read",
   },
   {
     name: "Voucher",
     href: "/vouchers",
-    icon: BanknotesIcon,
-    iconSolid: BanknotesIconSolid,
+    icon: Receipt,
     permissionKeys: [
       "vouchers.view",
       "vouchers.create",
@@ -89,48 +75,42 @@ const navigation: MenuItem[] = [
   {
     name: "Work Submissions",
     href: "/work-submissions",
-    icon: BriefcaseIcon,
-    iconSolid: BriefcaseIconSolid,
+    icon: Briefcase,
     permissionKeys: ["consultant_submissions"],
     requiredLevel: "read",
   },
   {
     name: "Leaves",
     href: "/leaves",
-    icon: CalendarIcon,
-    iconSolid: CalendarIconSolid,
+    icon: Calendar,
     permissionKeys: ["leaves"],
     requiredLevel: "read",
   },
   {
     name: "Medical Insurance",
     href: "/medical-insurance",
-    icon: HeartIcon,
-    iconSolid: HeartIconSolid,
+    icon: Heart,
     permissionKeys: ["medical_claims"],
     requiredLevel: "read",
   },
   {
     name: "Salary",
     href: "/salary",
-    icon: DocumentTextIcon,
-    iconSolid: DocumentTextIconSolid,
+    icon: FileText,
     permissionKeys: ["salaries"],
     requiredLevel: "read",
   },
   {
     name: "Facilities",
     href: "/facilities",
-    icon: BuildingOfficeIcon,
-    iconSolid: BuildingOfficeIconSolid,
+    icon: Building,
     permissionKeys: ["facilities"],
     requiredLevel: "read",
   },
   {
     name: "Reports",
     href: "/reports",
-    icon: ChartBarIcon,
-    iconSolid: ChartBarIconSolid,
+    icon: BarChart3,
     permissionKeys: ["reports"],
     requiredLevel: "read",
   },
@@ -140,63 +120,55 @@ const adminNavigation: MenuItem[] = [
   {
     name: "Users",
     href: "/admin/users",
-    icon: UsersIcon,
-    iconSolid: UsersIconSolid,
+    icon: Users,
     permissionKeys: ["users"],
     requiredLevel: "read",
   },
   {
     name: "Permissions",
     href: "/admin/permissions",
-    icon: ShieldCheckIcon,
-    iconSolid: ShieldCheckIconSolid,
+    icon: ShieldCheck,
     superAdminOnly: true,
   },
   {
     name: "Leave Calendar",
     href: "/admin/leave-calendar",
-    icon: CalendarIcon,
-    iconSolid: CalendarIconSolid,
+    icon: CalendarDays,
     permissionKeys: ["leaves"],
     requiredLevel: "write",
   },
   {
     name: "Consultant Submissions",
     href: "/admin/consultant-submissions",
-    icon: BriefcaseIcon,
-    iconSolid: BriefcaseIconSolid,
+    icon: Briefcase,
     permissionKeys: ["consultant_submissions"],
     requiredLevel: "write",
   },
   {
     name: "Medical Insurance",
     href: "/admin/medical-insurance",
-    icon: HeartIcon,
-    iconSolid: HeartIconSolid,
+    icon: Heart,
     permissionKeys: ["medical_claims"],
     requiredLevel: "write",
   },
   {
     name: "Facility Management",
     href: "/admin/facilities",
-    icon: WrenchScrewdriverIcon,
-    iconSolid: WrenchScrewdriverIconSolid,
+    icon: Wrench,
     permissionKeys: ["facilities"],
     requiredLevel: "write",
   },
   {
     name: "Booking Calendar",
     href: "/admin/facilities/calendar",
-    icon: CalendarIcon,
-    iconSolid: CalendarIconSolid,
+    icon: Calendar,
     permissionKeys: ["facilities"],
     requiredLevel: "read",
   },
   {
     name: "Bulk Upload",
     href: "/admin/upload",
-    icon: DocumentTextIcon,
-    iconSolid: DocumentTextIconSolid,
+    icon: Upload,
     permissionKeys: ["users"],
     requiredLevel: "write",
   },
@@ -221,7 +193,7 @@ function NavItems({
         const isParentActive =
           pathname === item.href ||
           (pathname.startsWith(item.href) && item.href !== "/");
-        const Icon = isParentActive ? item.iconSolid : item.icon;
+        const Icon = item.icon;
 
         return (
           <div key={item.href} className="space-y-0.5">
@@ -229,7 +201,7 @@ function NavItems({
               href={item.href}
               title={collapsed ? item.name : undefined}
               className={`
-                group relative flex items-center rounded-xl px-3 py-2.5 text-sm font-medium
+                group relative flex items-center rounded-xl px-3 py-2.5 text-sm font-semibold
                 transition-all duration-200 ease-out
                 ${collapsed ? "justify-center" : "gap-3"}
                 ${
@@ -242,24 +214,21 @@ function NavItems({
               {/* Active indicator bar */}
               {isParentActive && !collapsed && (
                 <span
-                  className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-8 rounded-r-full"
+                  className="absolute left-0 top-1/2 -translate-y-1/2 w-1.5 h-8 rounded-r-full"
                   style={{ backgroundColor: "var(--sidebar-indicator)" }}
                 />
               )}
               <Icon
-                className="h-5 w-5 shrink-0 transition-transform duration-200"
-                style={{
-                  color: isParentActive
-                    ? "var(--sidebar-indicator)"
-                    : undefined,
-                }}
+                className={`h-5 w-5 shrink-0 transition-transform duration-200 group-hover:scale-105 ${
+                  isParentActive ? "text-[var(--sidebar-indicator)]" : "text-[var(--sidebar-text)] group-hover:text-[var(--sidebar-text-active)]"
+                }`}
               />
               {!collapsed && (
                 <>
                   <span className="flex-1 truncate">{item.name}</span>
                   {hasChildren && (
-                    <ChevronDownIcon
-                      className={`h-4 w-4 shrink-0 transition-transform duration-200 ${
+                    <ChevronDown
+                      className={`h-4 w-4 shrink-0 text-[var(--gray-400)] transition-transform duration-200 ${
                         isParentActive ? "rotate-180" : ""
                       }`}
                     />
@@ -282,10 +251,10 @@ function NavItems({
                       key={child.href}
                       href={child.href}
                       className={`
-                        block rounded-lg px-3 py-2 text-xs font-medium transition-all duration-200
+                        block rounded-lg px-3 py-2 text-xs font-semibold transition-all duration-200
                         ${
                           isChildActive
-                            ? "text-[var(--sidebar-indicator)] font-semibold"
+                            ? "text-[var(--sidebar-indicator)]"
                             : "text-[var(--sidebar-text)] hover:bg-[var(--sidebar-hover)] hover:text-[var(--sidebar-text-active)]"
                         }
                       `}
@@ -391,30 +360,31 @@ export default function Sidebar() {
         >
           {collapsed ? (
             <div
-              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-white font-bold text-xs"
+              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-white font-bold text-xs shadow-md"
               style={{ background: "var(--primary)" }}
             >
               OXO
             </div>
           ) : (
-            <Image
-              src="/logo.png"
-              alt="OXO"
-              width={140}
-              height={40}
-              className="object-contain"
-              style={{ maxHeight: "44px" }}
-            />
+            <div className="relative h-10 w-32 shrink-0">
+              <Image
+                src="/logo.png"
+                alt="OXO"
+                fill
+                sizes="(max-width: 768px) 100vw, 128px"
+                className="object-contain dark:brightness-110"
+                priority
+              />
+            </div>
           )}
         </Link>
 
         <button
           type="button"
           onClick={() => setMobileOpen(false)}
-          className="lg:hidden p-2 rounded-lg transition-colors duration-200"
-          style={{ color: "var(--sidebar-text)" }}
+          className="lg:hidden p-2 rounded-xl text-[var(--sidebar-text)] hover:bg-[var(--sidebar-hover)] hover:text-[var(--sidebar-text-active)] transition-colors duration-200"
         >
-          <XMarkIcon className="h-5 w-5" />
+          <X className="h-5 w-5" />
         </button>
       </div>
 
@@ -422,15 +392,14 @@ export default function Sidebar() {
       <nav
         className={`flex-1 overflow-y-auto py-5 transition-[padding] duration-200 ${
           collapsed ? "px-2" : "px-3"
-        }`}
+        } scrollbar-thin`}
       >
         {/* Main */}
         <div className="space-y-1">
           <Suspense
             fallback={
               <div
-                className="h-10 rounded-xl animate-pulse"
-                style={{ background: "var(--sidebar-hover)" }}
+                className="h-10 rounded-xl animate-pulse bg-[var(--sidebar-hover)]"
               />
             }
           >
@@ -452,24 +421,21 @@ export default function Sidebar() {
             <div className="mt-6">
               {!collapsed && (
                 <p
-                  className="px-3 mb-2 text-[10px] font-bold uppercase tracking-widest"
-                  style={{ color: "rgba(165,180,252,0.5)" }}
+                  className="px-3 mb-2 text-[10px] font-bold uppercase tracking-widest text-[var(--gray-400)]"
                 >
                   Administration
                 </p>
               )}
               {collapsed && (
                 <div
-                  className="mx-auto mb-3 h-px w-8"
-                  style={{ background: "var(--sidebar-border)" }}
+                  className="mx-auto mb-3 h-px w-8 bg-[var(--sidebar-border)]"
                 />
               )}
               <div className="space-y-1">
                 <Suspense
                   fallback={
                     <div
-                      className="h-10 rounded-xl animate-pulse"
-                      style={{ background: "var(--sidebar-hover)" }}
+                      className="h-10 rounded-xl animate-pulse bg-[var(--sidebar-hover)]"
                     />
                   }
                 >
@@ -489,23 +455,21 @@ export default function Sidebar() {
       {/* User chip at bottom */}
       {!collapsed && (
         <div
-          className="mx-3 mb-4 flex items-center gap-3 rounded-xl px-3 py-3"
-          style={{ background: "var(--sidebar-hover)" }}
+          className="mx-3 mb-4 flex items-center gap-3 rounded-xl px-3 py-2.5 border border-[var(--sidebar-border)] bg-[var(--background)]"
         >
           <div
-            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-xs font-bold text-white"
+            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-xs font-bold text-white shadow-sm"
             style={{ background: "var(--primary)" }}
           >
             {user.first_name?.[0]}
             {user.last_name?.[0]}
           </div>
           <div className="min-w-0 flex-1">
-            <p className="truncate text-xs font-semibold text-[var(--sidebar-text-active)]">
+            <p className="truncate text-xs font-bold text-[var(--sidebar-text-active)]">
               {user.first_name} {user.last_name}
             </p>
             <p
-              className="truncate text-[10px] capitalize"
-              style={{ color: "var(--sidebar-text)" }}
+              className="truncate text-[10px] capitalize font-medium text-[var(--gray-400)]"
             >
               {user.role.replaceAll("_", " ")}
             </p>
@@ -516,7 +480,7 @@ export default function Sidebar() {
   );
 
   const widthClass = collapsed ? "w-20" : "w-64";
-  const baseSidebar = `fixed left-0 top-0 z-40 h-screen flex flex-col transition-[width] duration-200 ease-out ${widthClass}`;
+  const baseSidebar = `fixed left-0 top-0 z-40 h-screen flex flex-col transition-[width] duration-200 ease-out border-r border-[var(--sidebar-border)] ${widthClass}`;
   const sidebarStyle = { background: "var(--sidebar-bg)" };
 
   return (
@@ -532,19 +496,15 @@ export default function Sidebar() {
         <button
           type="button"
           onClick={toggle}
-          className="group absolute top-1/2 -right-5 -translate-y-1/2 h-5 w-4 flex items-center justify-center"
+          className="group absolute top-1/2 -right-3.5 -translate-y-1/2 h-7 w-7 rounded-full border border-[var(--sidebar-border)] bg-[var(--card-bg)] shadow-sm flex items-center justify-center cursor-pointer transition-transform hover:scale-105 active:scale-95 z-50"
           aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
         >
-          <span className="pointer-events-none absolute h-5 w-[3px] rounded-full bg-[var(--sidebar-border)] transition-all duration-200 group-hover:opacity-0" />
-          <span className="pointer-events-none absolute text-[var(--sidebar-indicator)] opacity-0 transition-opacity duration-200 group-hover:opacity-100">
+          <span className="text-[var(--sidebar-indicator)]">
             {collapsed ? (
-              <ChevronRightIcon className="h-3.5 w-3.5" />
+              <ChevronRight className="h-4 w-4" />
             ) : (
-              <ChevronLeftIcon className="h-3.5 w-3.5" />
+              <ChevronLeft className="h-4 w-4" />
             )}
-          </span>
-          <span className="pointer-events-none absolute left-1/2 top-full mt-2 -translate-x-1/2 whitespace-nowrap rounded-md bg-[var(--sidebar-hover)] px-2 py-1 text-[10px] font-medium text-[var(--sidebar-text-active)] opacity-0 shadow-sm transition-opacity duration-200 group-hover:opacity-100">
-            {collapsed ? "Expand" : "Collapse"}
           </span>
         </button>
       </aside>
@@ -552,7 +512,7 @@ export default function Sidebar() {
       {/* Mobile overlay */}
       {mobileOpen && (
         <div
-          className="fixed inset-0 z-30 bg-black/40 backdrop-blur-sm lg:hidden transition-opacity duration-200"
+          className="fixed inset-0 z-30 bg-black/40 backdrop-blur-xs lg:hidden transition-opacity duration-200"
           onClick={() => setMobileOpen(false)}
           aria-hidden
         />
@@ -570,31 +530,31 @@ export default function Sidebar() {
           style={{ borderBottom: "1px solid var(--sidebar-border)" }}
         >
           <Link href="/" className="flex items-center gap-3 min-w-0">
-            <Image
-              src="/logo.png"
-              alt="OXO"
-              width={120}
-              height={36}
-              className="object-contain"
-              style={{ maxHeight: "40px" }}
-            />
+            <div className="relative h-9 w-28 shrink-0">
+              <Image
+                src="/logo.png"
+                alt="OXO"
+                fill
+                sizes="112px"
+                className="object-contain dark:brightness-110"
+                priority
+              />
+            </div>
           </Link>
           <button
             type="button"
             onClick={() => setMobileOpen(false)}
-            className="p-2 rounded-lg transition-colors duration-200"
-            style={{ color: "var(--sidebar-text)" }}
+            className="p-2 rounded-xl text-[var(--sidebar-text)] hover:bg-[var(--sidebar-hover)] hover:text-[var(--sidebar-text-active)] transition-colors duration-200"
           >
-            <XMarkIcon className="h-5 w-5" />
+            <X className="h-5 w-5" />
           </button>
         </div>
-        <nav className="flex-1 overflow-y-auto px-3 py-5">
+        <nav className="flex-1 overflow-y-auto px-3 py-5 scrollbar-thin">
           <div className="space-y-1">
             <Suspense
               fallback={
                 <div
-                  className="h-10 rounded-xl animate-pulse"
-                  style={{ background: "var(--sidebar-hover)" }}
+                  className="h-10 rounded-xl animate-pulse bg-[var(--sidebar-hover)]"
                 />
               }
             >
@@ -612,10 +572,10 @@ export default function Sidebar() {
       <button
         type="button"
         onClick={() => setMobileOpen(true)}
-        className="fixed left-4 top-4 z-20 lg:hidden flex items-center justify-center w-10 h-10 rounded-xl bg-white border border-[var(--sidebar-border)] shadow-sm text-[var(--sidebar-text)]"
+        className="fixed left-4 top-3 z-30 lg:hidden flex items-center justify-center w-10 h-10 rounded-xl bg-[var(--card-bg)] border border-[var(--sidebar-border)] shadow-sm text-[var(--sidebar-text)] cursor-pointer hover:bg-[var(--sidebar-hover)] transition-colors duration-200"
         aria-label="Open menu"
       >
-        <Bars3Icon className="h-5 w-5" />
+        <Menu className="h-5 w-5" />
       </button>
     </>
   );

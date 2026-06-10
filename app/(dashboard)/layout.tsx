@@ -8,9 +8,11 @@ import { SidebarProvider, useSidebar } from '@/contexts/SidebarContext';
 function DashboardContent({ children }: { children: React.ReactNode }) {
   const { collapsed } = useSidebar();
   return (
-    <div className={`flex-1 flex flex-col min-w-0 transition-[padding-left] duration-200`}>
+    <div className={`flex-1 flex flex-col min-w-0 transition-[padding-left] duration-200 ${
+      collapsed ? 'lg:pl-20' : 'lg:pl-64'
+    }`}>
       <Header />
-      <main className="flex-1 overflow-y-auto pt-6 pb-8 px-4 lg:pt-8 lg:px-8">
+      <main className="flex-1 overflow-y-auto pt-6 pb-24 px-4 lg:pt-8 lg:pb-8 lg:px-8">
         <div className="max-w-full mx-auto">
           {children}
         </div>
@@ -18,6 +20,8 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
     </div>
   );
 }
+
+import BottomNavigation from '@/components/layout/BottomNavigation';
 
 export default function DashboardLayout({
   children,
@@ -30,6 +34,7 @@ export default function DashboardLayout({
         <div className="flex min-h-screen bg-[var(--background)]">
           <Sidebar />
           <DashboardContent>{children}</DashboardContent>
+          <BottomNavigation />
         </div>
       </SidebarProvider>
     </ProtectedRoute>

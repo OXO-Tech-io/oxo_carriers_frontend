@@ -4,8 +4,22 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import api from '@/lib/api';
 import Link from 'next/link';
-import { DocumentTextIcon, CalendarIcon } from '@heroicons/react/24/outline';
+import { motion } from 'framer-motion';
+import { 
+  FileText, 
+  Calendar, 
+  Download, 
+  Eye, 
+  DollarSign, 
+  TrendingDown, 
+  TrendingUp, 
+  CheckCircle,
+  HelpCircle,
+  ChevronRight
+} from 'lucide-react';
 import { format } from 'date-fns';
+import { Card } from '@/components/ui/Card';
+import { Button } from '@/components/ui/Button';
 
 interface Salary {
   id: number;
@@ -29,7 +43,6 @@ interface SalaryDetail {
   component_type?: string;
 }
 
-// Helper function to format numbers with thousand separators
 const formatCurrency = (value: number | string | undefined): string => {
   const numValue = typeof value === 'string' ? parseFloat(value) : (value || 0);
   return numValue.toLocaleString('en-US', {
@@ -57,7 +70,6 @@ export default function SalaryPage() {
       const response = await api.get(`/salary?year=${year}`);
       const salariesData = response.data.salaries || [];
       
-      // Fetch details for each salary to get component breakdown
       const salariesWithDetails = await Promise.all(
         salariesData.map(async (salary: Salary) => {
           try {
@@ -112,31 +124,58 @@ export default function SalaryPage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-64">
+      <div className="flex items-center justify-center min-h-96">
         <div className="flex flex-col items-center space-y-4">
-          <div className="animate-spin rounded-full h-12 w-12 border-4 border-blue-200 border-t-blue-600"></div>
-          <p className="text-sm text-gray-600">Loading salary slips...</p>
+          <div className="relative flex items-center justify-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-2 border-[var(--primary)] border-t-transparent" />
+            <div className="absolute h-6 w-6 rounded-full bg-[var(--primary-light)] animate-ping opacity-75" />
+          </div>
+          <p className="text-xs font-bold text-[var(--gray-400)] uppercase tracking-wider">Loading your slips...</p>
         </div>
       </div>
     );
   }
 
+  const containerVariants = {
+    hidden: { opacity: 0, y: 15 },
+    visible: {
+      opacity: 1,
+      y: 0,
+      transition: {
+        duration: 0.35,
+        when: "beforeChildren",
+        staggerChildren: 0.05
+      }
+    }
+  };
+
+  const itemVariants = {
+    hidden: { opacity: 0, y: 10 },
+    visible: { opacity: 1, y: 0 }
+  };
+
   return (
-    <div className="space-y-6 animate-fade-in">
-      {/* Header */}
+    <motion.div
+      variants={containerVariants}
+      initial="hidden"
+      animate="visible"
+      className="space-y-8 pb-12"
+    >
+      {/* Header section with clean visual hierarchy */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Salary Slips</h1>
-          <p className="mt-2 text-gray-600">View and download your salary slips</p>
+          <h1 className="text-2xl lg:text-3xl font-extrabold text-[var(--foreground)] tracking-tight">Salary Slips</h1>
+          <p className="text-sm text-[var(--gray-400)] font-medium mt-1">Access salary details, monthly payslips, and tax files.</p>
         </div>
-        <div className="flex items-center space-x-4">
+        <div className="flex items-center gap-3 bg-[var(--card-bg)] border border-[var(--gray-100)] p-1.5 rounded-2xl shadow-sm self-start sm:self-center">
+          <span className="text-xs font-bold text-[var(--gray-400)] uppercase tracking-wider pl-3 pr-1">Year</span>
           <select
             value={year}
             onChange={(e) => setYear(parseInt(e.target.value))}
-            className="px-4 py-2.5 border border-gray-300 rounded-xl text-sm font-medium text-gray-700 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all shadow-sm hover:shadow-md"
+            className="pl-2 pr-8 py-1.5 rounded-xl text-xs font-bold text-[var(--foreground)] bg-transparent focus:outline-none transition-all cursor-pointer border-0 ring-0 outline-none"
           >
             {Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - i).map((y) => (
-              <option key={y} value={y}>
+              <option key={y} value={y} className="bg-[var(--card-bg)]">
                 {y}
               </option>
             ))}
@@ -144,172 +183,270 @@ export default function SalaryPage() {
         </div>
       </div>
 
+      {/* YTD Summary Cards */}
       {ytdEarnings && (
-        <div className="bg-[var(--card-bg)] border border-[var(--gray-100)] rounded-2xl p-6 shadow-sm">
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-lg font-bold text-gray-900">Year-to-Date Summary ({year})</h2>
-            <div className="px-3 py-1 bg-blue-100 rounded-full">
-              <span className="text-sm font-semibold text-blue-700">
-                {ytdEarnings.salaryCount || 0} Slips
+        <motion.div variants={itemVariants}>
+          <Card padding="md" className="shadow-[var(--shadow-md)] relative overflow-hidden border-[var(--gray-100)]">
+            {/* Background design elements */}
+            <div className="absolute top-0 right-0 w-32 h-32 bg-[var(--primary)] opacity-[0.02] rounded-full blur-2xl pointer-events-none" />
+            <div className="absolute -bottom-8 -left-8 w-24 h-24 bg-[var(--secondary)] opacity-[0.02] rounded-full blur-xl pointer-events-none" />
+            
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+              <div>
+                <h2 className="text-base font-bold text-[var(--foreground)] tracking-tight">Year-to-Date Summary ({year})</h2>
+                <p className="text-xs font-medium text-[var(--gray-400)] mt-0.5">Calculated across your generated payslips this year.</p>
+              </div>
+              <span className="px-3 py-1 rounded-full text-xs font-bold bg-[var(--primary-light)] text-[var(--primary)] border border-[var(--primary-ring)] shrink-0 self-start sm:self-center">
+                {ytdEarnings.salaryCount || 0} payslips
               </span>
             </div>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="bg-white rounded-xl p-5 shadow-sm border border-white/50">
-              <p className="text-sm font-medium text-gray-600 mb-2">Total Earnings</p>
-              <p className="text-2xl font-bold text-emerald-600">
-                LKR {formatCurrency(ytdEarnings.totalEarnings)}
-              </p>
+            
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+              <div className="bg-[var(--gray-25)] border border-[var(--gray-50)] rounded-2xl p-5 flex items-start gap-4 hover:shadow-md hover:border-[var(--primary-ring)] transition-all duration-300">
+                <div className="p-3 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 rounded-xl shrink-0">
+                  <TrendingUp className="h-5 w-5" />
+                </div>
+                <div>
+                  <p className="text-[10px] font-bold text-[var(--gray-400)] uppercase tracking-wider mb-1">Total Earnings</p>
+                  <p className="text-xl font-extrabold text-emerald-600 dark:text-emerald-400">
+                    LKR {formatCurrency(ytdEarnings.totalEarnings)}
+                  </p>
+                </div>
+              </div>
+
+              <div className="bg-[var(--gray-25)] border border-[var(--gray-50)] rounded-2xl p-5 flex items-start gap-4 hover:shadow-md hover:border-red-500/10 transition-all duration-300">
+                <div className="p-3 bg-red-500/10 text-red-500 dark:text-red-400 rounded-xl shrink-0">
+                  <TrendingDown className="h-5 w-5" />
+                </div>
+                <div>
+                  <p className="text-[10px] font-bold text-[var(--gray-400)] uppercase tracking-wider mb-1">Total Deductions</p>
+                  <p className="text-xl font-extrabold text-red-500 dark:text-red-400">
+                    LKR {formatCurrency(ytdEarnings.totalDeductions)}
+                  </p>
+                </div>
+              </div>
+
+              <div className="bg-[var(--gray-25)] border border-[var(--gray-50)] rounded-2xl p-5 flex items-start gap-4 hover:shadow-md hover:border-[var(--primary-ring)] transition-all duration-300">
+                <div className="p-3 bg-[var(--primary-light)] text-[var(--primary)] rounded-xl shrink-0">
+                  <DollarSign className="h-5 w-5" />
+                </div>
+                <div>
+                  <p className="text-[10px] font-bold text-[var(--gray-400)] uppercase tracking-wider mb-1">Net Received</p>
+                  <p className="text-xl font-extrabold text-[var(--primary)]">
+                    LKR {formatCurrency(ytdEarnings.totalNet)}
+                  </p>
+                </div>
+              </div>
             </div>
-            <div className="bg-white rounded-xl p-5 shadow-sm border border-white/50">
-              <p className="text-sm font-medium text-gray-600 mb-2">Total Deductions</p>
-              <p className="text-2xl font-bold text-red-600">
-                LKR {formatCurrency(ytdEarnings.totalDeductions)}
-              </p>
-            </div>
-            <div className="bg-white rounded-xl p-5 shadow-sm border border-white/50">
-              <p className="text-sm font-medium text-gray-600 mb-2">Net Salary</p>
-              <p className="text-2xl font-bold text-blue-600">
-                LKR {formatCurrency(ytdEarnings.totalNet)}
-              </p>
-            </div>
-          </div>
-        </div>
+          </Card>
+        </motion.div>
       )}
 
       {error && (
-        <div className="bg-red-50 border-l-4 border-red-500 text-red-700 p-4 rounded-lg">
-          <p className="text-sm font-medium">{error}</p>
+        <div className="bg-[var(--error-light)] border-l-4 border-[var(--error)] text-[var(--error-text)] p-4 rounded-xl text-xs font-semibold">
+          {error}
         </div>
       )}
 
-      {salaries.length === 0 ? (
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-12 text-center">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gray-100 mb-4">
-            <DocumentTextIcon className="h-8 w-8 text-gray-400" />
-          </div>
-          <h3 className="text-lg font-semibold text-gray-900 mb-2">No salary slips found</h3>
-          <p className="text-gray-600">You don't have any salary slips for {year} yet.</p>
-        </div>
-      ) : (
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-[var(--gray-50)]">
-                <tr>
-                  <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
-                    Month
-                  </th>
-                  <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
-                    Full Salary
-                  </th>
-                  <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
-                    Local Salary
-                  </th>
-                  <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
-                    OXO International
-                  </th>
-                  <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
-                    EPF (8%)
-                  </th>
-                  <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
-                    Net Salary
-                  </th>
-                  <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
-                    Status
-                  </th>
-                  <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
-                    Actions
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-100">
-                {salaries.map((salary) => {
-                  // Extract component amounts from details
-                  const fullSalary = salary.details?.find(d => d.component_name === 'Full Salary')?.amount || salary.basic_salary || 0;
-                  const localSalary = salary.details?.find(d => d.component_name === 'Local Salary')?.amount || 0;
-                  const oxoSalary = salary.details?.find(d => d.component_name === 'OXO International Salary')?.amount || 0;
-                  const epfDeduction = salary.details?.find(d => d.component_name === 'Provident Fund' && d.type === 'deduction')?.amount || salary.total_deductions || 0;
-                  
-                  return (
-                    <tr key={salary.id} className="hover:bg-gray-50/50 transition-colors">
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="flex items-center space-x-3">
-                          <div className="flex-shrink-0 p-2 rounded-lg bg-blue-50">
-                            <CalendarIcon className="h-5 w-5 text-blue-600" />
-                          </div>
-                          <span className="text-sm font-semibold text-gray-900">
-                            {format(new Date(salary.month_year), 'MMMM yyyy')}
-                          </span>
+      {/* Salary Listing Section */}
+      <motion.div variants={itemVariants}>
+        {salaries.length === 0 ? (
+          <Card className="text-center p-12 shadow-sm border-[var(--gray-100)]">
+            <FileText className="h-10 w-10 text-[var(--gray-300)] mx-auto mb-3" />
+            <h3 className="text-sm font-bold text-[var(--foreground)] mb-1">No salary slips found</h3>
+            <p className="text-xs text-[var(--gray-400)]">You do not have any salary slips for {year} yet.</p>
+          </Card>
+        ) : (
+          <>
+            {/* Desktop Table View */}
+            <div className="hidden md:block">
+              <Card padding="none" className="overflow-hidden shadow-[var(--shadow-md)] border-[var(--gray-100)]">
+                <div className="overflow-x-auto">
+                  <table className="min-w-full divide-y divide-[var(--gray-100)]">
+                    <thead className="bg-[var(--gray-25)]">
+                      <tr>
+                        <th className="px-6 py-4 text-left text-xs font-bold text-[var(--gray-400)] uppercase tracking-wider">Month</th>
+                        <th className="px-6 py-4 text-left text-xs font-bold text-[var(--gray-400)] uppercase tracking-wider">Full Salary</th>
+                        <th className="px-6 py-4 text-left text-xs font-bold text-[var(--gray-400)] uppercase tracking-wider">Local Portion</th>
+                        <th className="px-6 py-4 text-left text-xs font-bold text-[var(--gray-400)] uppercase tracking-wider">International Portion</th>
+                        <th className="px-6 py-4 text-left text-xs font-bold text-[var(--gray-400)] uppercase tracking-wider">EPF (8%)</th>
+                        <th className="px-6 py-4 text-left text-xs font-bold text-[var(--gray-400)] uppercase tracking-wider">Net Amount</th>
+                        <th className="px-6 py-4 text-left text-xs font-bold text-[var(--gray-400)] uppercase tracking-wider">Status</th>
+                        <th className="px-6 py-4 text-left text-xs font-bold text-[var(--gray-400)] uppercase tracking-wider">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody className="bg-[var(--card-bg)] divide-y divide-[var(--gray-100)]">
+                      {salaries.map((salary) => {
+                        const fullSalary = salary.details?.find(d => d.component_name === 'Full Salary')?.amount || salary.basic_salary || 0;
+                        const localSalary = salary.details?.find(d => d.component_name === 'Local Salary')?.amount || 0;
+                        const oxoSalary = salary.details?.find(d => d.component_name === 'OXO International Salary')?.amount || 0;
+                        const epfDeduction = salary.details?.find(d => d.component_name === 'Provident Fund' && d.type === 'deduction')?.amount || salary.total_deductions || 0;
+                        
+                        const isPaid = salary.status === 'paid';
+                        const isGenerated = salary.status === 'generated';
+
+                        return (
+                          <tr key={salary.id} className="hover:bg-[var(--gray-25)] transition-colors">
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <div className="flex items-center gap-3">
+                                <div className="p-2 bg-[var(--primary-light)] text-[var(--primary)] rounded-xl">
+                                  <Calendar className="h-4 w-4" />
+                                </div>
+                                <span className="text-sm font-bold text-[var(--foreground)]">
+                                  {format(new Date(salary.month_year), 'MMMM yyyy')}
+                                </span>
+                              </div>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-[var(--gray-600)]">
+                              LKR {formatCurrency(fullSalary)}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-emerald-600 dark:text-emerald-400">
+                              LKR {formatCurrency(localSalary)}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-emerald-600 dark:text-emerald-400">
+                              LKR {formatCurrency(oxoSalary)}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <div className="flex flex-col">
+                                <span className="text-sm font-bold text-red-500 dark:text-red-400">
+                                  LKR {formatCurrency(epfDeduction)}
+                                </span>
+                                <span className="text-[10px] text-[var(--gray-400)] font-semibold mt-0.5">
+                                  (8% of Local)
+                                </span>
+                              </div>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm font-extrabold text-[var(--foreground)]">
+                              LKR {formatCurrency(salary.net_salary)}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <span
+                                className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${
+                                  isPaid
+                                    ? 'bg-[var(--success-light)] text-[var(--success-text)] border border-[var(--success-text)]/10'
+                                    : isGenerated
+                                    ? 'bg-[var(--primary-light)] text-[var(--primary)] border border-[var(--primary-ring)]'
+                                    : 'bg-[var(--warning-light)] text-[var(--warning-text)] border border-[var(--warning-text)]/10'
+                                }`}
+                              >
+                                {salary.status}
+                              </span>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <div className="flex items-center gap-3">
+                                <Link
+                                  href={`/salary/slips/${salary.id}`}
+                                  className="inline-flex items-center gap-1 text-xs font-bold text-[var(--primary)] hover:underline"
+                                >
+                                  <Eye className="h-3.5 w-3.5" />
+                                  <span>View</span>
+                                </Link>
+                                <button
+                                  onClick={() => downloadPDF(salary.id)}
+                                  className="inline-flex items-center gap-1 text-xs font-bold text-emerald-600 dark:text-emerald-400 hover:underline cursor-pointer"
+                                >
+                                  <Download className="h-3.5 w-3.5" />
+                                  <span>Download</span>
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </Card>
+            </div>
+
+            {/* Mobile Card / Wallet View - Native App Feel */}
+            <div className="md:hidden flex flex-col gap-4">
+              {salaries.map((salary) => {
+                const fullSalary = salary.details?.find(d => d.component_name === 'Full Salary')?.amount || salary.basic_salary || 0;
+                const localSalary = salary.details?.find(d => d.component_name === 'Local Salary')?.amount || 0;
+                const oxoSalary = salary.details?.find(d => d.component_name === 'OXO International Salary')?.amount || 0;
+                const epfDeduction = salary.details?.find(d => d.component_name === 'Provident Fund' && d.type === 'deduction')?.amount || salary.total_deductions || 0;
+                
+                const isPaid = salary.status === 'paid';
+                const isGenerated = salary.status === 'generated';
+
+                return (
+                  <Card key={salary.id} padding="md" className="shadow-sm hover:shadow-md border-[var(--gray-100)] flex flex-col gap-4">
+                    {/* Month & Status Badge */}
+                    <div className="flex justify-between items-center pb-3 border-b border-[var(--gray-50)]">
+                      <div className="flex items-center gap-2.5">
+                        <div className="p-2 bg-[var(--primary-light)] text-[var(--primary)] rounded-xl">
+                          <Calendar className="h-4 w-4" />
                         </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span className="text-sm font-medium text-gray-900">
-                          LKR {formatCurrency(fullSalary)}
+                        <span className="text-sm font-bold text-[var(--foreground)]">
+                          {format(new Date(salary.month_year), 'MMMM yyyy')}
                         </span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span className="text-sm font-medium text-emerald-600">
-                          LKR {formatCurrency(localSalary)}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span className="text-sm font-medium text-emerald-600">
-                          LKR {formatCurrency(oxoSalary)}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="flex flex-col">
-                          <span className="text-sm font-semibold text-red-600">
-                            LKR {formatCurrency(epfDeduction)}
-                          </span>
-                          <span className="text-xs text-gray-500">
-                            (8% of Local)
-                          </span>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span className="text-base font-bold text-gray-900">
-                          LKR {formatCurrency(salary.net_salary)}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
+                      </div>
                       <span
-                        className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold ${
-                          salary.status === 'paid'
-                            ? 'bg-emerald-100 text-emerald-700'
-                            : salary.status === 'generated'
-                            ? 'bg-blue-100 text-blue-700'
-                            : 'bg-amber-100 text-amber-700'
+                        className={`inline-flex items-center px-2 py-0.5 rounded-full text-[9px] font-extrabold uppercase tracking-wider ${
+                          isPaid
+                            ? 'bg-[var(--success-light)] text-[var(--success-text)]'
+                            : isGenerated
+                            ? 'bg-[var(--primary-light)] text-[var(--primary)]'
+                            : 'bg-[var(--warning-light)] text-[var(--warning-text)]'
                         }`}
                       >
-                        {salary.status.charAt(0).toUpperCase() + salary.status.slice(1)}
+                        {salary.status}
                       </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex items-center space-x-3">
-                        <Link
-                          href={`/salary/slips/${salary.id}`}
-                          className="text-sm font-medium text-blue-600 hover:text-blue-700 transition-colors"
-                        >
-                          View
-                        </Link>
-                        <button
-                          onClick={() => downloadPDF(salary.id)}
-                          className="text-sm font-medium text-emerald-600 hover:text-emerald-700 transition-colors"
-                        >
-                          Download
-                        </button>
+                    </div>
+
+                    {/* Financial details grid */}
+                    <div className="grid grid-cols-2 gap-y-3.5 gap-x-2 text-xs">
+                      <div>
+                        <p className="text-[10px] font-semibold text-[var(--gray-400)] mb-0.5">Full Salary</p>
+                        <p className="font-semibold text-[var(--gray-600)]">LKR {formatCurrency(fullSalary)}</p>
                       </div>
-                    </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
-    </div>
+                      <div>
+                        <p className="text-[10px] font-bold text-[var(--gray-400)] mb-0.5">Net Pay</p>
+                        <p className="font-extrabold text-[var(--foreground)]">LKR {formatCurrency(salary.net_salary)}</p>
+                      </div>
+                      <div>
+                        <p className="text-[10px] font-semibold text-[var(--gray-400)] mb-0.5">Local Portion</p>
+                        <p className="font-bold text-emerald-600 dark:text-emerald-400">LKR {formatCurrency(localSalary)}</p>
+                      </div>
+                      <div>
+                        <p className="text-[10px] font-semibold text-[var(--gray-400)] mb-0.5">Int'l Portion</p>
+                        <p className="font-bold text-emerald-600 dark:text-emerald-400">LKR {formatCurrency(oxoSalary)}</p>
+                      </div>
+                      <div className="col-span-2">
+                        <p className="text-[10px] font-semibold text-[var(--gray-400)] mb-0.5">EPF Deduction (8%)</p>
+                        <p className="font-bold text-red-500 dark:text-red-400">LKR {formatCurrency(epfDeduction)} <span className="text-[10px] font-normal text-[var(--gray-400)]">(8% of local)</span></p>
+                      </div>
+                    </div>
+
+                    {/* Bottom Action buttons */}
+                    <div className="flex gap-2 pt-2 border-t border-[var(--gray-50)]">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="flex-1 text-xs py-2 hover:bg-[var(--gray-25)] cursor-pointer"
+                        leftIcon={<Eye className="h-3.5 w-3.5" />}
+                        onClick={() => window.location.href = `/salary/slips/${salary.id}`}
+                      >
+                        View Slip
+                      </Button>
+                      <Button
+                        variant="primary"
+                        size="sm"
+                        className="flex-1 text-xs py-2 bg-[var(--primary)] hover:bg-[var(--primary-hover)] text-white cursor-pointer"
+                        leftIcon={<Download className="h-3.5 w-3.5" />}
+                        onClick={() => downloadPDF(salary.id)}
+                      >
+                        Download
+                      </Button>
+                    </div>
+                  </Card>
+                );
+              })}
+            </div>
+          </>
+        )}
+      </motion.div>
+    </motion.div>
   );
 }
