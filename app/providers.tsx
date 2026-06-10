@@ -81,14 +81,18 @@ function AuthHydrator({ children }: { children: ReactNode }) {
   return <>{children}</>;
 }
 
+import { ThemeProvider } from '@/contexts/ThemeContext';
+
 export function Providers({ children }: { children: ReactNode }) {
   return (
     <QueryClientProvider client={queryClient}>
-      <ToastProvider>
-        <KeycloakBootstrap>
-          <AuthHydrator>{children}</AuthHydrator>
-        </KeycloakBootstrap>
-      </ToastProvider>
+      <ThemeProvider>
+        <ToastProvider>
+          <KeycloakBootstrap>
+            <AuthHydrator>{children}</AuthHydrator>
+          </KeycloakBootstrap>
+        </ToastProvider>
+      </ThemeProvider>
     </QueryClientProvider>
   );
 }

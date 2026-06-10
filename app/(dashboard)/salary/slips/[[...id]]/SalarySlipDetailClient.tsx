@@ -5,8 +5,9 @@ import { useParams, useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
 import api from '@/lib/api';
 import { format } from 'date-fns';
-import { ArrowLeftIcon, DocumentArrowDownIcon } from '@heroicons/react/24/outline';
+import { ArrowLeft, Download } from 'lucide-react';
 import Image from 'next/image';
+import { Button } from '@/components/ui/Button';
 
 // Helper function to format currency with thousand separators
 const formatCurrency = (value: number | string | undefined): string => {
@@ -96,8 +97,14 @@ export default function SalarySlipDetailClient() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      <div className="flex items-center justify-center min-h-96">
+        <div className="flex flex-col items-center space-y-4">
+          <div className="relative flex items-center justify-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-2 border-[var(--primary)] border-t-transparent" />
+            <div className="absolute h-6 w-6 rounded-full bg-[var(--primary-light)] animate-ping opacity-75" />
+          </div>
+          <p className="text-xs font-bold text-[var(--gray-400)] uppercase tracking-wider">Loading details...</p>
+        </div>
       </div>
     );
   }
@@ -107,12 +114,12 @@ export default function SalarySlipDetailClient() {
       <div className="space-y-6">
         <button
           onClick={() => router.back()}
-          className="flex items-center text-gray-600 hover:text-gray-900"
+          className="flex items-center gap-2 text-sm font-semibold text-[var(--gray-500)] hover:text-[var(--foreground)] transition-colors cursor-pointer"
         >
-          <ArrowLeftIcon className="h-5 w-5 mr-2" />
+          <ArrowLeft className="h-4 w-4" />
           Back
         </button>
-        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">
+        <div className="bg-[var(--error-light)] border border-[var(--error-text)]/10 text-[var(--error-text)] px-4 py-3 rounded-xl text-sm font-medium">
           {error || 'Salary slip not found'}
         </div>
       </div>
@@ -131,10 +138,8 @@ export default function SalarySlipDetailClient() {
   const salaryAdvanceDeductions = Number(details.find(d => d.component_name === 'Salary Advance/Deductions' && d.type === 'deduction')?.amount || 0);
   
   // Calculate local and foreign earnings/deductions
-  // Gross Salary = Local Salary + Allowances
   const localEarnings = localSalary + allowances; // Local salary + allowances
   const foreignEarnings = oxoInternationalSalary;
-  // Calculate total deductions: EPF + Salary Advance/Deductions (use salary.total_deductions if available, otherwise calculate)
   const totalDeductions = salary?.total_deductions || (epfDeduction + salaryAdvanceDeductions);
   const localDeductions = totalDeductions; // All deductions are local
   const foreignDeductions = 0; // No deductions for foreign remittance typically
@@ -144,399 +149,397 @@ export default function SalarySlipDetailClient() {
   const monthlyTotalNetPay = netLocalPay + netForeignPay;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 pb-12">
       {/* Action Buttons */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <button
           onClick={() => router.back()}
-          className="flex items-center text-gray-600 hover:text-gray-900 transition-colors"
+          className="inline-flex items-center gap-2 text-sm font-bold text-[var(--gray-500)] hover:text-[var(--foreground)] transition-colors cursor-pointer"
         >
-          <ArrowLeftIcon className="h-5 w-5 mr-2" />
+          <ArrowLeft className="h-4 w-4" />
           Back to Salary Slips
         </button>
-        <button
+        <Button
           onClick={downloadPDF}
-          className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors shadow-sm"
+          className="bg-[var(--primary)] hover:bg-[var(--primary-hover)] text-white shadow-sm flex items-center justify-center cursor-pointer"
+          leftIcon={<Download className="h-4 w-4" />}
         >
-          <DocumentArrowDownIcon className="h-5 w-5 mr-2" />
           Download PDF
-        </button>
+        </Button>
       </div>
 
-      {/* Salary Slip Document - Exact HTML Structure */}
-      <div style={{ backgroundColor: '#ffffff', maxWidth: '600pt', margin: '0 auto' }}>
-        {/* Logo */}
-        <div className="flex justify-end items-center" style={{ textAlign: 'left', marginBottom: '8pt' }}>
-          <div style={{ display: 'inline-block', width: '106px', height: '59.14px', border: '0px solid #000000' }}>
-            <Image
-              src="/logo.png"
-              alt="OXO International Logo"
-              width={106}
-              height={59}
-              style={{ width: '106px', height: '59.14px', objectFit: 'contain' }}
-            />
+      {/* Salary Slip Document - Wrapped inside Scrollable Card */}
+      <div className="overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0">
+        <div className="min-w-[620pt] md:min-w-0 bg-white p-8 sm:p-12 rounded-2xl shadow-[var(--shadow-lg)] border border-[var(--gray-100)] mx-auto my-2" style={{ maxWidth: '600pt' }}>
+          {/* Logo */}
+          <div className="flex justify-end items-center" style={{ textAlign: 'left', marginBottom: '8pt' }}>
+            <div style={{ display: 'inline-block', width: '106px', height: '59.14px', border: '0px solid #000000' }}>
+              <Image
+                src="/logo.png"
+                alt="OXO International Logo"
+                width={106}
+                height={59}
+                style={{ width: '106px', height: '59.14px', objectFit: 'contain' }}
+              />
+            </div>
           </div>
-        </div>
 
-        {/* Company Header */}
-        <div style={{ textAlign: 'center', paddingTop: '0pt', paddingBottom: '8pt', lineHeight: 1.158 }}>
-          <p style={{ margin: 0, fontFamily: 'Garamond, serif', fontWeight: 700, fontSize: '11pt', color: '#000000' }}>
-            OXO International FZE
-          </p>
-          <p style={{ margin: 0, fontFamily: 'Garamond, serif', fontWeight: 400, fontSize: '11pt', color: '#000000', marginTop: '4pt' }}>
-            Business Centre, Sharjah Publishing City Free Zone, Sharjah,UAE.,<br />
-            E-mail: mahen@oxoholdings.biz Web: <a href="http://www.oxointernational.com" style={{ color: '#0563c1', textDecoration: 'underline' }}>www.oxointernational.com</a>
-          </p>
-        </div>
-
-        {/* Pay Slip Month */}
-        <div style={{ textAlign: 'center', paddingTop: '0pt', paddingBottom: '8pt', lineHeight: 1.158 }}>
-          <p style={{ margin: 0, fontFamily: 'Garamond, serif', fontWeight: 700, fontSize: '12pt', color: '#000000' }}>
-            Pay slip for the month of {format(new Date(salary.month_year), 'MMMM yyyy')}
-          </p>
-        </div>
-
-        {/* Employee Information Table */}
-        <table style={{ marginLeft: '8.8pt', borderSpacing: 0, borderCollapse: 'collapse', marginRight: 'auto', width: '100%', marginBottom: '8pt' }}>
-          <tbody>
-            <tr style={{ height: '0pt' }}>
-              <td style={{ border: '1pt solid #000000', padding: '0pt 5.4pt', width: '224.9pt', verticalAlign: 'top' }} colSpan={2}>
-                <p style={{ margin: 0, paddingTop: '0pt', paddingBottom: '0pt', lineHeight: 1.0, textAlign: 'left' }}>
-                  <span style={{ fontFamily: 'Garamond, serif', fontWeight: 700, fontSize: '11pt', color: '#000000' }}>Employee ID : {user?.employee_id}</span>
-                </p>
-                <p style={{ margin: 0, paddingTop: '0pt', paddingBottom: '0pt', lineHeight: 1.0, textAlign: 'left' }}>
-                  <span style={{ fontFamily: 'Garamond, serif', fontWeight: 700, fontSize: '11pt', color: '#000000' }}>Employee Name : {user?.first_name} {user?.last_name}</span>
-                </p>
-                <p style={{ margin: 0, paddingTop: '0pt', paddingBottom: '0pt', lineHeight: 1.0, textAlign: 'left' }}>
-                  <span style={{ fontFamily: 'Garamond, serif', fontWeight: 700, fontSize: '11pt', color: '#000000' }}>Designation : {user?.position || 'N/A'}</span>
-                </p>
-              </td>
-              <td style={{ border: '1pt solid #000000', padding: '0pt 5.4pt', width: '233.8pt', verticalAlign: 'top' }} colSpan={2}>
-                <p style={{ margin: 0, paddingTop: '0pt', paddingBottom: '0pt', lineHeight: 1.0, textAlign: 'left' }}>
-                  <span style={{ fontFamily: 'Garamond, serif', fontWeight: 700, fontSize: '11pt', color: '#000000' }}>Bank :</span>
-                  <span>&nbsp;</span>
-                </p>
-                <p style={{ margin: 0, paddingTop: '0pt', paddingBottom: '0pt', lineHeight: 1.0, textAlign: 'left' }}>
-                  <span style={{ fontFamily: 'Garamond, serif', fontWeight: 700, fontSize: '11pt', color: '#000000' }}>Branch :</span>
-                  <span style={{ fontFamily: 'Calibri, sans-serif', fontSize: '11pt' }}>&nbsp;</span>
-                </p>
-                <p style={{ margin: 0, paddingTop: '0pt', paddingBottom: '0pt', lineHeight: 1.0, textAlign: 'left' }}>
-                  <span style={{ fontFamily: 'Garamond, serif', fontWeight: 700, fontSize: '11pt', color: '#000000' }}>Account No :</span>
-                  <span style={{ fontFamily: 'Calibri, sans-serif', fontSize: '11pt' }}>&nbsp;</span>
-                </p>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-
-        {/* Local Remittance Section */}
-        <table style={{ marginLeft: '8.8pt', borderSpacing: 0, borderCollapse: 'collapse', marginRight: 'auto', width: '100%', marginBottom: '8pt' }}>
-          <tbody>
-            <tr style={{ height: '0pt' }}>
-              <td style={{ border: '1pt solid #000000', padding: '0pt 5.4pt', width: '458.8pt', verticalAlign: 'top' }} colSpan={4}>
-                <p style={{ margin: 0, paddingTop: '4pt', paddingBottom: '4pt', lineHeight: 1.0, textAlign: 'left' }}>
-                  <span style={{ fontFamily: 'Garamond, serif', fontWeight: 700, fontSize: '11pt', color: '#000000' }}>Local Remittance</span>
-                </p>
-              </td>
-            </tr>
-            <tr style={{ height: '0pt' }}>
-              <td style={{ border: '1pt solid #000000', padding: '0pt 5.4pt', width: '224.9pt', verticalAlign: 'top' }} colSpan={2}>
-                <p style={{ margin: 0, paddingTop: '0pt', paddingBottom: '0pt', lineHeight: 1.0, textAlign: 'center' }}>
-                  <span style={{ fontFamily: 'Garamond, serif', fontWeight: 700, fontSize: '11pt', color: '#000000' }}>Earnings</span>
-                </p>
-              </td>
-              <td style={{ border: '1pt solid #000000', padding: '0pt 5.4pt', width: '233.8pt', verticalAlign: 'top' }} colSpan={2}>
-                <p style={{ margin: 0, paddingTop: '0pt', paddingBottom: '0pt', lineHeight: 1.0, textAlign: 'center' }}>
-                  <span style={{ fontFamily: 'Garamond, serif', fontWeight: 700, fontSize: '11pt', color: '#000000' }}>Deductions</span>
-                </p>
-              </td>
-            </tr>
-            <tr style={{ height: '0pt' }}>
-              <td style={{ border: '1pt solid #000000', padding: '0pt 5.4pt', width: '108.1pt', verticalAlign: 'top' }}>
-                <p style={{ margin: 0, paddingTop: '4pt', paddingBottom: '4pt', lineHeight: 1.0, textAlign: 'left' }}>
-                  <span style={{ fontFamily: 'Garamond, serif', fontWeight: 700, fontSize: '11pt', color: '#000000' }}>Basic Salary</span>
-                </p>
-              </td>
-              <td style={{ border: '1pt solid #000000', padding: '0pt 5.4pt', width: '116.8pt', verticalAlign: 'top' }}>
-                <p style={{ margin: 0, paddingTop: '4pt', paddingBottom: '4pt', lineHeight: 1.0, textAlign: 'right' }}>
-                  <span style={{ fontFamily: 'Garamond, serif', fontWeight: 400, fontSize: '11pt', color: '#000000' }}>LKR {formatCurrency(localSalary)}</span>
-                </p>
-              </td>
-              <td style={{ border: '1pt solid #000000', padding: '0pt 5.4pt', width: '116.9pt', verticalAlign: 'top' }}>
-                <p style={{ margin: 0, paddingTop: '4pt', paddingBottom: '4pt', lineHeight: 1.0, textAlign: 'left' }}>
-                  <span style={{ fontFamily: 'Garamond, serif', fontWeight: 700, fontSize: '11pt', color: '#000000' }}>Loans/Advances</span>
-                </p>
-              </td>
-              <td style={{ border: '1pt solid #000000', padding: '0pt 5.4pt', width: '116.9pt', verticalAlign: 'top' }}>
-                <p style={{ margin: 0, paddingTop: '4pt', paddingBottom: '4pt', lineHeight: 1.0, textAlign: 'right' }}>
-                  <span style={{ fontFamily: 'Garamond, serif', fontWeight: 400, fontSize: '11pt', color: '#000000' }}>
-                    {salaryAdvanceDeductions > 0 ? `LKR ${formatCurrency(salaryAdvanceDeductions)}` : 'N/A'}
-                  </span>
-                </p>
-              </td>
-            </tr>
-            <tr style={{ height: '0pt' }}>
-              <td style={{ border: '1pt solid #000000', padding: '0pt 5.4pt', width: '108.1pt', verticalAlign: 'top' }}>
-                <p style={{ margin: 0, paddingTop: '4pt', paddingBottom: '4pt', lineHeight: 1.0, textAlign: 'left' }}>
-                  <span style={{ fontFamily: 'Garamond, serif', fontWeight: 700, fontSize: '11pt', color: '#000000' }}>Allowances</span>
-                </p>
-              </td>
-              <td style={{ border: '1pt solid #000000', padding: '0pt 5.4pt', width: '116.8pt', verticalAlign: 'top' }}>
-                <p style={{ margin: 0, paddingTop: '4pt', paddingBottom: '4pt', lineHeight: 1.0, textAlign: 'right' }}>
-                  <span style={{ fontFamily: 'Garamond, serif', fontWeight: 400, fontSize: '11pt', color: '#000000' }}>
-                    {allowances > 0 ? `LKR ${formatCurrency(allowances)}` : 'N/A'}
-                  </span>
-                </p>
-              </td>
-              <td style={{ border: '1pt solid #000000', padding: '0pt 5.4pt', width: '116.9pt', verticalAlign: 'top' }}>
-                <p style={{ margin: 0, paddingTop: '4pt', paddingBottom: '4pt', lineHeight: 1.0, textAlign: 'left' }}>
-                  <span style={{ fontFamily: 'Garamond, serif', fontWeight: 700, fontSize: '11pt', color: '#000000' }}>EPF 8%</span>
-                </p>
-              </td>
-              <td style={{ border: '1pt solid #000000', padding: '0pt 5.4pt', width: '116.9pt', verticalAlign: 'top' }}>
-                <p style={{ margin: 0, paddingTop: '4pt', paddingBottom: '4pt', lineHeight: 1.0, textAlign: 'right' }}>
-                  <span style={{ fontFamily: 'Garamond, serif', fontWeight: 400, fontSize: '11pt', color: '#000000' }}>LKR {formatCurrency(epfDeduction)}</span>
-                </p>
-              </td>
-            </tr>
-            <tr style={{ height: '0pt' }}>
-              <td style={{ border: '1pt solid #000000', padding: '0pt 5.4pt', width: '108.1pt', verticalAlign: 'top' }}>
-                <p style={{ margin: 0, paddingTop: '4pt', paddingBottom: '4pt', lineHeight: 1.0, textAlign: 'left' }}>
-                  <span style={{ fontFamily: 'Garamond, serif', fontWeight: 700, fontSize: '11pt', color: '#000000' }}>Arrears</span>
-                </p>
-              </td>
-              <td style={{ border: '1pt solid #000000', padding: '0pt 5.4pt', width: '116.8pt', verticalAlign: 'top' }}>
-                <p style={{ margin: 0, paddingTop: '4pt', paddingBottom: '4pt', lineHeight: 1.0, textAlign: 'right' }}>
-                  <span style={{ fontFamily: 'Garamond, serif', fontWeight: 400, fontSize: '11pt', color: '#000000' }}>N/A</span>
-                </p>
-              </td>
-              <td style={{ border: '1pt solid #000000', padding: '0pt 5.4pt', width: '116.9pt', verticalAlign: 'top' }}>
-                <p style={{ margin: 0, paddingTop: '4pt', paddingBottom: '4pt', lineHeight: 1.0, textAlign: 'left' }}>
-                  <span style={{ fontFamily: 'Garamond, serif', fontWeight: 700, fontSize: '11pt', color: '#000000' }}>Other Deductions</span>
-                </p>
-              </td>
-              <td style={{ border: '1pt solid #000000', padding: '0pt 5.4pt', width: '116.9pt', verticalAlign: 'top' }}>
-                <p style={{ margin: 0, paddingTop: '4pt', paddingBottom: '4pt', lineHeight: 1.0, textAlign: 'right' }}>
-                <span style={{ fontFamily: 'Garamond, serif', fontWeight: 400, fontSize: '11pt', color: '#000000' }}>N/A</span>
-                </p>
-              </td>
-            </tr>
-            <tr style={{ height: '0pt' }}>
-              <td style={{ border: '1pt solid #000000', padding: '0pt 5.4pt', width: '108.1pt', verticalAlign: 'top' }}>
-                <p style={{ margin: 0, paddingTop: '4pt', paddingBottom: '4pt', lineHeight: 1.0, textAlign: 'left' }}>
-                  <span style={{ fontFamily: 'Garamond, serif', fontWeight: 700, fontSize: '11pt', color: '#000000' }}>Gross Salary</span>
-                </p>
-              </td>
-              <td style={{ border: '1pt solid #000000', padding: '0pt 5.4pt', width: '116.8pt', verticalAlign: 'top' }}>
-                <p style={{ margin: 0, paddingTop: '4pt', paddingBottom: '4pt', lineHeight: 1.0, textAlign: 'right' }}>
-                  <span style={{ fontFamily: 'Garamond, serif', fontWeight: 400, fontSize: '11pt', color: '#000000' }}>LKR {formatCurrency(localEarnings)}</span>
-                </p>
-              </td>
-              <td style={{ border: '1pt solid #000000', padding: '0pt 5.4pt', width: '116.9pt', verticalAlign: 'top' }}>
-                <p style={{ margin: 0, paddingTop: '4pt', paddingBottom: '4pt', lineHeight: 1.0, textAlign: 'left' }}>
-                  <span style={{ fontFamily: 'Garamond, serif', fontWeight: 700, fontSize: '11pt', color: '#000000' }}>Total Deductions</span>
-                </p>
-              </td>
-              <td style={{ border: '1pt solid #000000', padding: '0pt 5.4pt', width: '116.9pt', verticalAlign: 'top' }}>
-                <p style={{ margin: 0, paddingTop: '4pt', paddingBottom: '4pt', lineHeight: 1.0, textAlign: 'right' }}>
-                  <span style={{ fontFamily: 'Garamond, serif', fontWeight: 400, fontSize: '11pt', color: '#000000' }}>
-                    LKR {formatCurrency(totalDeductions)}
-                  </span> 
-                </p>
-              </td>
-            </tr>
-            <tr style={{ height: '0pt' }}>
-              <td style={{ border: '1pt solid #000000', padding: '0pt 5.4pt', width: '108.1pt', verticalAlign: 'top' }}>
-                <p style={{ margin: 0, paddingTop: '4pt', paddingBottom: '4pt', lineHeight: 1.0, textAlign: 'left' }}>
-                  <span style={{ fontFamily: 'Garamond, serif', fontWeight: 700, fontSize: '11pt', color: '#000000' }}>Net Local Pay </span>
-                </p>
-              </td>
-              <td style={{ border: '1pt solid #000000', padding: '0pt 5.4pt', width: '350.6pt', verticalAlign: 'top' }} colSpan={3}>
-                <p style={{ margin: 0, paddingTop: '4pt', paddingBottom: '4pt', lineHeight: 1.0, textAlign: 'right' }}>
-                  <span style={{ fontFamily: 'Garamond, serif', fontWeight: 400, fontSize: '11pt', color: '#000000' }}>LKR {formatCurrency(netLocalPay)}</span>
-                </p>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-
-        {/* Foreign Remittance Section */}
-        <table style={{ marginLeft: '8.8pt', borderSpacing: 0, borderCollapse: 'collapse', marginRight: 'auto', width: '100%', marginBottom: '8pt' }}>
-          <tbody>
-            <tr style={{ height: '0pt' }}>
-              <td style={{ border: '1pt solid #000000', padding: '0pt 5.4pt', width: '458.8pt', verticalAlign: 'top' }} colSpan={4}>
-                <p style={{ margin: 0, paddingTop: '4pt', paddingBottom: '4pt', lineHeight: 1.0, textAlign: 'left' }}>
-                  <span style={{ fontFamily: 'Garamond, serif', fontWeight: 700, fontSize: '11pt', color: '#000000' }}>Foreign Remittance</span>
-                </p>
-              </td>
-            </tr>
-            <tr style={{ height: '0pt' }}>
-              <td style={{ border: '1pt solid #000000', padding: '0pt 5.4pt', width: '224.9pt', verticalAlign: 'top' }} colSpan={2}>
-                <p style={{ margin: 0, paddingTop: '4pt', paddingBottom: '4pt', lineHeight: 1.0, textAlign: 'center' }}>
-                  <span style={{ fontFamily: 'Garamond, serif', fontWeight: 700, fontSize: '11pt', color: '#000000' }}>Earnings</span>
-                </p>
-              </td>
-              <td style={{ border: '1pt solid #000000', padding: '0pt 5.4pt', width: '233.8pt', verticalAlign: 'top' }} colSpan={2}>
-                <p style={{ margin: 0, paddingTop: '4pt', paddingBottom: '4pt', lineHeight: 1.0, textAlign: 'center' }}>
-                  <span style={{ fontFamily: 'Garamond, serif', fontWeight: 700, fontSize: '11pt', color: '#000000' }}>Deductions</span>
-                </p>
-              </td>
-            </tr>
-            <tr style={{ height: '0pt' }}>
-              <td style={{ border: '1pt solid #000000', padding: '0pt 5.4pt', width: '108.1pt', verticalAlign: 'top' }}>
-                <p style={{ margin: 0, paddingTop: '4pt', paddingBottom: '4pt', lineHeight: 1.0, textAlign: 'left' }}>
-                  <span style={{ fontFamily: 'Garamond, serif', fontWeight: 700, fontSize: '11pt', color: '#000000' }}>Basic Salary</span>
-                </p>
-              </td>
-              <td style={{ border: '1pt solid #000000', padding: '0pt 5.4pt', width: '116.8pt', verticalAlign: 'top' }}>
-                <p style={{ margin: 0, paddingTop: '4pt', paddingBottom: '4pt', lineHeight: 1.0, textAlign: 'right' }}>
-                  <span style={{ fontFamily: 'Garamond, serif', fontWeight: 400, fontSize: '11pt', color: '#000000' }}>LKR {formatCurrency(oxoInternationalSalary)}</span>
-                </p>
-              </td>
-              <td style={{ border: '1pt solid #000000', padding: '0pt 5.4pt', width: '116.9pt', verticalAlign: 'top' }}>
-                <p style={{ margin: 0, paddingTop: '4pt', paddingBottom: '4pt', lineHeight: 1.0, textAlign: 'left' }}>
-                  <span style={{ fontFamily: 'Garamond, serif', fontWeight: 700, fontSize: '11pt', color: '#000000' }}>Loans/Advances</span>
-                </p>
-              </td>
-              <td style={{ border: '1pt solid #000000', padding: '0pt 5.4pt', width: '116.9pt', verticalAlign: 'top' }}>
-                <p style={{ margin: 0, paddingTop: '4pt', paddingBottom: '4pt', lineHeight: 1.0, textAlign: 'right' }}>
-                  <span style={{ fontFamily: 'Garamond, serif', fontWeight: 400, fontSize: '11pt', color: '#000000' }}>N/A</span>
-                </p>
-              </td>
-            </tr>
-            <tr style={{ height: '0pt' }}>
-              <td style={{ border: '1pt solid #000000', padding: '0pt 5.4pt', width: '108.1pt', verticalAlign: 'top' }}>
-                <p style={{ margin: 0, paddingTop: '4pt', paddingBottom: '4pt', lineHeight: 1.0, textAlign: 'left' }}>
-                  <span style={{ fontFamily: 'Garamond, serif', fontWeight: 700, fontSize: '11pt', color: '#000000' }}>Allowances (Fixed)</span>
-                </p>
-              </td>
-              <td style={{ border: '1pt solid #000000', padding: '0pt 5.4pt', width: '116.8pt', verticalAlign: 'top' }}>
-                <p style={{ margin: 0, paddingTop: '4pt', paddingBottom: '4pt', lineHeight: 1.0, textAlign: 'right' }}>
-                  <span style={{ fontFamily: 'Garamond, serif', fontWeight: 400, fontSize: '11pt', color: '#000000' }}>N/A</span>
-                </p>
-              </td>
-              <td style={{ border: '1pt solid #000000', padding: '0pt 5.4pt', width: '116.9pt', verticalAlign: 'top' }}>
-                <p style={{ margin: 0, paddingTop: '4pt', paddingBottom: '4pt', lineHeight: 1.0, textAlign: 'left' }}>
-                  <span style={{ fontFamily: 'Garamond, serif', fontWeight: 700, fontSize: '11pt', color: '#000000' }}>Other Deductions</span>
-                </p>
-              </td>
-              <td style={{ border: '1pt solid #000000', padding: '0pt 5.4pt', width: '116.9pt', verticalAlign: 'top' }}>
-                <p style={{ margin: 0, paddingTop: '4pt', paddingBottom: '4pt', lineHeight: 1.0, textAlign: 'right' }}>
-                  <span style={{ fontFamily: 'Garamond, serif', fontWeight: 400, fontSize: '11pt', color: '#000000' }}>N/A</span>
-                </p>
-              </td>
-            </tr>
-            <tr style={{ height: '0pt' }}>
-              <td style={{ border: '1pt solid #000000', padding: '0pt 5.4pt', width: '108.1pt', verticalAlign: 'top' }}>
-                <p style={{ margin: 0, paddingTop: '4pt', paddingBottom: '4pt', lineHeight: 1.0, textAlign: 'left' }}>
-                  <span style={{ fontFamily: 'Garamond, serif', fontWeight: 700, fontSize: '11pt', color: '#000000' }}>Allowances (Variable) </span>
-                </p>
-              </td>
-              <td style={{ border: '1pt solid #000000', padding: '0pt 5.4pt', width: '116.8pt', verticalAlign: 'top' }}>
-                <p style={{ margin: 0, paddingTop: '4pt', paddingBottom: '4pt', lineHeight: 1.0, textAlign: 'right' }}>
-                  <span style={{ fontFamily: 'Garamond, serif', fontWeight: 400, fontSize: '11pt', color: '#000000' }}>N/A</span>
-                </p>
-              </td>
-              <td style={{ border: '1pt solid #000000', padding: '0pt 5.4pt', width: '116.9pt', verticalAlign: 'top' }}>
-                <p style={{ margin: 0, paddingTop: '4pt', paddingBottom: '4pt', lineHeight: 1.0, textAlign: 'left', height: '12pt' }}>
-                  <span style={{ fontFamily: 'Garamond, serif', fontWeight: 700, fontSize: '11pt', color: '#000000' }}></span>
-                </p>
-              </td>
-              <td style={{ border: '1pt solid #000000', padding: '0pt 5.4pt', width: '116.9pt', verticalAlign: 'top' }}>
-                <p style={{ margin: 0, paddingTop: '4pt', paddingBottom: '4pt', lineHeight: 1.0, textAlign: 'right' }}>
-                  <span style={{ fontFamily: 'Garamond, serif', fontWeight: 400, fontSize: '11pt', color: '#000000' }}>N/A</span>
-                </p>
-              </td>
-            </tr>
-            <tr style={{ height: '0pt' }}>
-              <td style={{ border: '1pt solid #000000', padding: '0pt 5.4pt', width: '108.1pt', verticalAlign: 'top' }}>
-                <p style={{ margin: 0, paddingTop: '4pt', paddingBottom: '4pt', lineHeight: 1.0, textAlign: 'left' }}>
-                  <span style={{ fontFamily: 'Garamond, serif', fontWeight: 700, fontSize: '11pt', color: '#000000' }}>Arrears</span>
-                </p>
-              </td>
-              <td style={{ border: '1pt solid #000000', padding: '0pt 5.4pt', width: '116.8pt', verticalAlign: 'top' }}>
-                <p style={{ margin: 0, paddingTop: '4pt', paddingBottom: '4pt', lineHeight: 1.0, textAlign: 'right' }}>
-                  <span style={{ fontFamily: 'Garamond, serif', fontWeight: 400, fontSize: '11pt', color: '#000000' }}>N/A</span>
-                </p>
-              </td>
-              <td style={{ border: '1pt solid #000000', padding: '0pt 5.4pt', width: '116.9pt', verticalAlign: 'top' }}>
-                <p style={{ margin: 0, paddingTop: '4pt', paddingBottom: '4pt', lineHeight: 1.0, textAlign: 'left', height: '12pt' }}>
-                  <span style={{ fontFamily: 'Garamond, serif', fontWeight: 700, fontSize: '11pt', color: '#000000' }}></span>
-                </p>
-              </td>
-              <td style={{ border: '1pt solid #000000', padding: '0pt 5.4pt', width: '116.9pt', verticalAlign: 'top' }}>
-                <p style={{ margin: 0, paddingTop: '4pt', paddingBottom: '4pt', lineHeight: 1.0, textAlign: 'right' }}>
-                  <span style={{ fontFamily: 'Garamond, serif', fontWeight: 400, fontSize: '11pt', color: '#000000' }}>N/A</span>
-                </p>
-              </td>
-            </tr>
-            <tr style={{ height: '0pt' }}>
-              <td style={{ border: '1pt solid #000000', padding: '0pt 5.4pt', width: '108.1pt', verticalAlign: 'top' }}>
-                <p style={{ margin: 0, paddingTop: '4pt', paddingBottom: '4pt', lineHeight: 1.0, textAlign: 'left' }}>
-                  <span style={{ fontFamily: 'Garamond, serif', fontWeight: 700, fontSize: '11pt', color: '#000000' }}>OXO International Salary</span>
-                </p>
-              </td>
-              <td style={{ border: '1pt solid #000000', padding: '0pt 5.4pt', width: '116.8pt', verticalAlign: 'top' }}>
-                <p style={{ margin: 0, paddingTop: '4pt', paddingBottom: '4pt', lineHeight: 1.0, textAlign: 'right' }}>
-                  <span style={{ fontFamily: 'Garamond, serif', fontWeight: 400, fontSize: '11pt', color: '#000000' }}>LKR {formatCurrency(oxoInternationalSalary)}</span>
-                </p>
-              </td>
-              <td style={{ border: '1pt solid #000000', padding: '0pt 5.4pt', width: '116.9pt', verticalAlign: 'top' }}>
-                <p style={{ margin: 0, paddingTop: '4pt', paddingBottom: '4pt', lineHeight: 1.0, textAlign: 'left' }}>
-                  <span style={{ fontFamily: 'Garamond, serif', fontWeight: 700, fontSize: '11pt', color: '#000000' }}>Total Deductions</span>
-                </p>
-              </td>
-              <td style={{ border: '1pt solid #000000', padding: '0pt 5.4pt', width: '116.9pt', verticalAlign: 'top' }}>
-                <p style={{ margin: 0, paddingTop: '4pt', paddingBottom: '4pt', lineHeight: 1.0, textAlign: 'right' }}>
-                  <span style={{ fontFamily: 'Garamond, serif', fontWeight: 400, fontSize: '11pt', color: '#000000' }}>LKR {formatCurrency(foreignDeductions)}</span>
-                </p>
-              </td>
-            </tr>
-            <tr style={{ height: '0pt' }}>
-              <td style={{ border: '1pt solid #000000', padding: '0pt 5.4pt', width: '108.1pt', verticalAlign: 'top' }}>
-                <p style={{ margin: 0, paddingTop: '4pt', paddingBottom: '4pt', lineHeight: 1.0, textAlign: 'left' }}>
-                  <span style={{ fontFamily: 'Garamond, serif', fontWeight: 700, fontSize: '11pt', color: '#000000' }}>Net Foreign Pay </span>
-                </p>
-              </td>
-              <td style={{ border: '1pt solid #000000', padding: '0pt 5.4pt', width: '350.6pt', verticalAlign: 'top' }} colSpan={3}>
-                <p style={{ margin: 0, paddingTop: '4pt', paddingBottom: '4pt', lineHeight: 1.0, textAlign: 'right' }}>
-                  <span style={{ fontFamily: 'Garamond, serif', fontWeight: 400, fontSize: '11pt', color: '#000000' }}>LKR {formatCurrency(netForeignPay)}</span>
-                </p>
-              </td>
-            </tr>
-            <tr style={{ height: '0pt' }}>
-              <td style={{ border: '1pt solid #000000', padding: '0pt 5.4pt', width: '108.1pt', verticalAlign: 'top' }}>
-                <p style={{ margin: 0, paddingTop: '4pt', paddingBottom: '4pt', lineHeight: 1.0, textAlign: 'left' }}>
-                  <span style={{ fontFamily: 'Garamond, serif', fontWeight: 700, fontSize: '11pt', color: '#000000' }}>Monthly Total Net Pay</span>
-                </p>
-              </td>
-              <td style={{ border: '1pt solid #000000', padding: '0pt 5.4pt', width: '350.6pt', verticalAlign: 'top' }} colSpan={3}>
-                <p style={{ margin: 0, paddingTop: '4pt', paddingBottom: '4pt', lineHeight: 1.0, textAlign: 'right' }}>
-                  <span style={{ fontFamily: 'Garamond, serif', fontWeight: 700, fontSize: '11pt', color: '#000000' }}>LKR {formatCurrency(monthlyTotalNetPay)}</span>
-                </p>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-
-        {/* Signature Section */}
-        <div className="flex justify-end items-center" style={{ paddingTop: '0pt', paddingBottom: '8pt', lineHeight: 1.158, textAlign: 'left', marginTop: '16pt' }}>
-          <div style={{ display: 'inline-block', width: '208px', height: '208px', border: '0px solid #000000' }}>
-            <Image
-              src="/seal.png"
-              alt="OXO International Seal"
-              width={208}
-              height={208}
-              style={{ width: '208px', height: '208px', objectFit: 'contain' }}
-            />
+          {/* Company Header */}
+          <div style={{ textAlign: 'center', paddingTop: '0pt', paddingBottom: '8pt', lineHeight: 1.158 }}>
+            <p style={{ margin: 0, fontFamily: 'Garamond, serif', fontWeight: 700, fontSize: '11pt', color: '#000000' }}>
+              OXO International FZE
+            </p>
+            <p style={{ margin: 0, fontFamily: 'Garamond, serif', fontWeight: 400, fontSize: '11pt', color: '#000000', marginTop: '4pt' }}>
+              Business Centre, Sharjah Publishing City Free Zone, Sharjah,UAE.,<br />
+              E-mail: mahen@oxoholdings.biz Web: <a href="http://www.oxointernational.com" style={{ color: '#0563c1', textDecoration: 'underline' }}>www.oxointernational.com</a>
+            </p>
           </div>
-        </div>
 
-        {/* Footer */}
-        <div style={{ paddingTop: '1pt', borderTop: '0.5pt solid #000000', paddingBottom: '0pt', lineHeight: 1.0, textAlign: 'left', marginTop: '8pt' }}>
-          <p style={{ margin: 0 }}>
-            <span style={{ fontFamily: 'Calibri, sans-serif', fontSize: '12pt', color: '#000000' }}>OXO International FZE</span>
-          </p>
+          {/* Pay Slip Month */}
+          <div style={{ textAlign: 'center', paddingTop: '0pt', paddingBottom: '8pt', lineHeight: 1.158 }}>
+            <p style={{ margin: 0, fontFamily: 'Garamond, serif', fontWeight: 700, fontSize: '12pt', color: '#000000' }}>
+              Pay slip for the month of {format(new Date(salary.month_year), 'MMMM yyyy')}
+            </p>
+          </div>
+
+          {/* Employee Information Table */}
+          <table style={{ borderSpacing: 0, borderCollapse: 'collapse', width: '100%', marginBottom: '8pt' }}>
+            <tbody>
+              <tr style={{ height: '0pt' }}>
+                <td style={{ border: '1pt solid #000000', padding: '6pt 8pt', width: '50%', verticalAlign: 'top' }}>
+                  <p style={{ margin: 0, lineHeight: 1.4, textAlign: 'left' }}>
+                    <span style={{ fontFamily: 'Garamond, serif', fontWeight: 700, fontSize: '11pt', color: '#000000' }}>Employee ID : {user?.employee_id}</span>
+                  </p>
+                  <p style={{ margin: 0, lineHeight: 1.4, textAlign: 'left' }}>
+                    <span style={{ fontFamily: 'Garamond, serif', fontWeight: 700, fontSize: '11pt', color: '#000000' }}>Employee Name : {user?.first_name} {user?.last_name}</span>
+                  </p>
+                  <p style={{ margin: 0, lineHeight: 1.4, textAlign: 'left' }}>
+                    <span style={{ fontFamily: 'Garamond, serif', fontWeight: 700, fontSize: '11pt', color: '#000000' }}>Designation : {user?.position || 'N/A'}</span>
+                  </p>
+                </td>
+                <td style={{ border: '1pt solid #000000', padding: '6pt 8pt', width: '50%', verticalAlign: 'top' }}>
+                  <p style={{ margin: 0, lineHeight: 1.4, textAlign: 'left' }}>
+                    <span style={{ fontFamily: 'Garamond, serif', fontWeight: 700, fontSize: '11pt', color: '#000000' }}>Bank :</span>
+                    <span>&nbsp;</span>
+                  </p>
+                  <p style={{ margin: 0, lineHeight: 1.4, textAlign: 'left' }}>
+                    <span style={{ fontFamily: 'Garamond, serif', fontWeight: 700, fontSize: '11pt', color: '#000000' }}>Branch :</span>
+                    <span style={{ fontFamily: 'Calibri, sans-serif', fontSize: '11pt' }}>&nbsp;</span>
+                  </p>
+                  <p style={{ margin: 0, lineHeight: 1.4, textAlign: 'left' }}>
+                    <span style={{ fontFamily: 'Garamond, serif', fontWeight: 700, fontSize: '11pt', color: '#000000' }}>Account No :</span>
+                    <span style={{ fontFamily: 'Calibri, sans-serif', fontSize: '11pt' }}>&nbsp;</span>
+                  </p>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+
+          {/* Local Remittance Section */}
+          <table style={{ borderSpacing: 0, borderCollapse: 'collapse', width: '100%', marginBottom: '8pt' }}>
+            <tbody>
+              <tr style={{ height: '0pt' }}>
+                <td style={{ border: '1pt solid #000000', padding: '6pt 8pt', width: '100%', verticalAlign: 'top', backgroundColor: '#f9fafb' }} colSpan={4}>
+                  <p style={{ margin: 0, lineHeight: 1.0, textAlign: 'left' }}>
+                    <span style={{ fontFamily: 'Garamond, serif', fontWeight: 700, fontSize: '11pt', color: '#000000' }}>Local Remittance</span>
+                  </p>
+                </td>
+              </tr>
+              <tr style={{ height: '0pt' }}>
+                <td style={{ border: '1pt solid #000000', padding: '4pt 8pt', width: '50%', verticalAlign: 'top', backgroundColor: '#f3f4f6' }} colSpan={2}>
+                  <p style={{ margin: 0, lineHeight: 1.0, textAlign: 'center' }}>
+                    <span style={{ fontFamily: 'Garamond, serif', fontWeight: 700, fontSize: '11pt', color: '#000000' }}>Earnings</span>
+                  </p>
+                </td>
+                <td style={{ border: '1pt solid #000000', padding: '4pt 8pt', width: '50%', verticalAlign: 'top', backgroundColor: '#f3f4f6' }} colSpan={2}>
+                  <p style={{ margin: 0, lineHeight: 1.0, textAlign: 'center' }}>
+                    <span style={{ fontFamily: 'Garamond, serif', fontWeight: 700, fontSize: '11pt', color: '#000000' }}>Deductions</span>
+                  </p>
+                </td>
+              </tr>
+              <tr style={{ height: '0pt' }}>
+                <td style={{ border: '1pt solid #000000', padding: '6pt 8pt', width: '25%', verticalAlign: 'top' }}>
+                  <p style={{ margin: 0, lineHeight: 1.0, textAlign: 'left' }}>
+                    <span style={{ fontFamily: 'Garamond, serif', fontWeight: 700, fontSize: '11pt', color: '#000000' }}>Basic Salary</span>
+                  </p>
+                </td>
+                <td style={{ border: '1pt solid #000000', padding: '6pt 8pt', width: '25%', verticalAlign: 'top' }}>
+                  <p style={{ margin: 0, lineHeight: 1.0, textAlign: 'right' }}>
+                    <span style={{ fontFamily: 'Garamond, serif', fontWeight: 400, fontSize: '11pt', color: '#000000' }}>LKR {formatCurrency(localSalary)}</span>
+                  </p>
+                </td>
+                <td style={{ border: '1pt solid #000000', padding: '6pt 8pt', width: '25%', verticalAlign: 'top' }}>
+                  <p style={{ margin: 0, lineHeight: 1.0, textAlign: 'left' }}>
+                    <span style={{ fontFamily: 'Garamond, serif', fontWeight: 700, fontSize: '11pt', color: '#000000' }}>Loans/Advances</span>
+                  </p>
+                </td>
+                <td style={{ border: '1pt solid #000000', padding: '6pt 8pt', width: '25%', verticalAlign: 'top' }}>
+                  <p style={{ margin: 0, lineHeight: 1.0, textAlign: 'right' }}>
+                    <span style={{ fontFamily: 'Garamond, serif', fontWeight: 400, fontSize: '11pt', color: '#000000' }}>
+                      {salaryAdvanceDeductions > 0 ? `LKR ${formatCurrency(salaryAdvanceDeductions)}` : 'N/A'}
+                    </span>
+                  </p>
+                </td>
+              </tr>
+              <tr style={{ height: '0pt' }}>
+                <td style={{ border: '1pt solid #000000', padding: '6pt 8pt', width: '25%', verticalAlign: 'top' }}>
+                  <p style={{ margin: 0, lineHeight: 1.0, textAlign: 'left' }}>
+                    <span style={{ fontFamily: 'Garamond, serif', fontWeight: 700, fontSize: '11pt', color: '#000000' }}>Allowances</span>
+                  </p>
+                </td>
+                <td style={{ border: '1pt solid #000000', padding: '6pt 8pt', width: '25%', verticalAlign: 'top' }}>
+                  <p style={{ margin: 0, lineHeight: 1.0, textAlign: 'right' }}>
+                    <span style={{ fontFamily: 'Garamond, serif', fontWeight: 400, fontSize: '11pt', color: '#000000' }}>
+                      {allowances > 0 ? `LKR ${formatCurrency(allowances)}` : 'N/A'}
+                    </span>
+                  </p>
+                </td>
+                <td style={{ border: '1pt solid #000000', padding: '6pt 8pt', width: '25%', verticalAlign: 'top' }}>
+                  <p style={{ margin: 0, lineHeight: 1.0, textAlign: 'left' }}>
+                    <span style={{ fontFamily: 'Garamond, serif', fontWeight: 700, fontSize: '11pt', color: '#000000' }}>EPF 8%</span>
+                  </p>
+                </td>
+                <td style={{ border: '1pt solid #000000', padding: '6pt 8pt', width: '25%', verticalAlign: 'top' }}>
+                  <p style={{ margin: 0, lineHeight: 1.0, textAlign: 'right' }}>
+                    <span style={{ fontFamily: 'Garamond, serif', fontWeight: 400, fontSize: '11pt', color: '#000000' }}>LKR {formatCurrency(epfDeduction)}</span>
+                  </p>
+                </td>
+              </tr>
+              <tr style={{ height: '0pt' }}>
+                <td style={{ border: '1pt solid #000000', padding: '6pt 8pt', width: '25%', verticalAlign: 'top' }}>
+                  <p style={{ margin: 0, lineHeight: 1.0, textAlign: 'left' }}>
+                    <span style={{ fontFamily: 'Garamond, serif', fontWeight: 700, fontSize: '11pt', color: '#000000' }}>Arrears</span>
+                  </p>
+                </td>
+                <td style={{ border: '1pt solid #000000', padding: '6pt 8pt', width: '25%', verticalAlign: 'top' }}>
+                  <p style={{ margin: 0, lineHeight: 1.0, textAlign: 'right' }}>
+                    <span style={{ fontFamily: 'Garamond, serif', fontWeight: 400, fontSize: '11pt', color: '#000000' }}>N/A</span>
+                  </p>
+                </td>
+                <td style={{ border: '1pt solid #000000', padding: '6pt 8pt', width: '25%', verticalAlign: 'top' }}>
+                  <p style={{ margin: 0, lineHeight: 1.0, textAlign: 'left' }}>
+                    <span style={{ fontFamily: 'Garamond, serif', fontWeight: 700, fontSize: '11pt', color: '#000000' }}>Other Deductions</span>
+                  </p>
+                </td>
+                <td style={{ border: '1pt solid #000000', padding: '6pt 8pt', width: '25%', verticalAlign: 'top' }}>
+                  <p style={{ margin: 0, lineHeight: 1.0, textAlign: 'right' }}>
+                    <span style={{ fontFamily: 'Garamond, serif', fontWeight: 400, fontSize: '11pt', color: '#000000' }}>N/A</span>
+                  </p>
+                </td>
+              </tr>
+              <tr style={{ height: '0pt' }}>
+                <td style={{ border: '1pt solid #000000', padding: '6pt 8pt', width: '25%', verticalAlign: 'top', fontWeight: 700 }}>
+                  <p style={{ margin: 0, lineHeight: 1.0, textAlign: 'left' }}>
+                    <span style={{ fontFamily: 'Garamond, serif', fontWeight: 700, fontSize: '11pt', color: '#000000' }}>Gross Salary</span>
+                  </p>
+                </td>
+                <td style={{ border: '1pt solid #000000', padding: '6pt 8pt', width: '25%', verticalAlign: 'top' }}>
+                  <p style={{ margin: 0, lineHeight: 1.0, textAlign: 'right' }}>
+                    <span style={{ fontFamily: 'Garamond, serif', fontWeight: 700, fontSize: '11pt', color: '#000000' }}>LKR {formatCurrency(localEarnings)}</span>
+                  </p>
+                </td>
+                <td style={{ border: '1pt solid #000000', padding: '6pt 8pt', width: '25%', verticalAlign: 'top', fontWeight: 700 }}>
+                  <p style={{ margin: 0, lineHeight: 1.0, textAlign: 'left' }}>
+                    <span style={{ fontFamily: 'Garamond, serif', fontWeight: 700, fontSize: '11pt', color: '#000000' }}>Total Deductions</span>
+                  </p>
+                </td>
+                <td style={{ border: '1pt solid #000000', padding: '6pt 8pt', width: '25%', verticalAlign: 'top' }}>
+                  <p style={{ margin: 0, lineHeight: 1.0, textAlign: 'right' }}>
+                    <span style={{ fontFamily: 'Garamond, serif', fontWeight: 700, fontSize: '11pt', color: '#000000' }}>
+                      LKR {formatCurrency(totalDeductions)}
+                    </span> 
+                  </p>
+                </td>
+              </tr>
+              <tr style={{ height: '0pt' }}>
+                <td style={{ border: '1pt solid #000000', padding: '6pt 8pt', width: '25%', verticalAlign: 'top', backgroundColor: '#f9fafb' }}>
+                  <p style={{ margin: 0, lineHeight: 1.0, textAlign: 'left' }}>
+                    <span style={{ fontFamily: 'Garamond, serif', fontWeight: 700, fontSize: '11pt', color: '#000000' }}>Net Local Pay </span>
+                  </p>
+                </td>
+                <td style={{ border: '1pt solid #000000', padding: '6pt 8pt', width: '75%', verticalAlign: 'top', backgroundColor: '#f9fafb' }} colSpan={3}>
+                  <p style={{ margin: 0, lineHeight: 1.0, textAlign: 'right' }}>
+                    <span style={{ fontFamily: 'Garamond, serif', fontWeight: 700, fontSize: '11pt', color: '#000000' }}>LKR {formatCurrency(netLocalPay)}</span>
+                  </p>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+
+          {/* Foreign Remittance Section */}
+          <table style={{ borderSpacing: 0, borderCollapse: 'collapse', width: '100%', marginBottom: '8pt' }}>
+            <tbody>
+              <tr style={{ height: '0pt' }}>
+                <td style={{ border: '1pt solid #000000', padding: '6pt 8pt', width: '100%', verticalAlign: 'top', backgroundColor: '#f9fafb' }} colSpan={4}>
+                  <p style={{ margin: 0, lineHeight: 1.0, textAlign: 'left' }}>
+                    <span style={{ fontFamily: 'Garamond, serif', fontWeight: 700, fontSize: '11pt', color: '#000000' }}>Foreign Remittance</span>
+                  </p>
+                </td>
+              </tr>
+              <tr style={{ height: '0pt' }}>
+                <td style={{ border: '1pt solid #000000', padding: '4pt 8pt', width: '50%', verticalAlign: 'top', backgroundColor: '#f3f4f6' }} colSpan={2}>
+                  <p style={{ margin: 0, lineHeight: 1.0, textAlign: 'center' }}>
+                    <span style={{ fontFamily: 'Garamond, serif', fontWeight: 700, fontSize: '11pt', color: '#000000' }}>Earnings</span>
+                  </p>
+                </td>
+                <td style={{ border: '1pt solid #000000', padding: '4pt 8pt', width: '50%', verticalAlign: 'top', backgroundColor: '#f3f4f6' }} colSpan={2}>
+                  <p style={{ margin: 0, lineHeight: 1.0, textAlign: 'center' }}>
+                    <span style={{ fontFamily: 'Garamond, serif', fontWeight: 700, fontSize: '11pt', color: '#000000' }}>Deductions</span>
+                  </p>
+                </td>
+              </tr>
+              <tr style={{ height: '0pt' }}>
+                <td style={{ border: '1pt solid #000000', padding: '6pt 8pt', width: '25%', verticalAlign: 'top' }}>
+                  <p style={{ margin: 0, lineHeight: 1.0, textAlign: 'left' }}>
+                    <span style={{ fontFamily: 'Garamond, serif', fontWeight: 700, fontSize: '11pt', color: '#000000' }}>Basic Salary</span>
+                  </p>
+                </td>
+                <td style={{ border: '1pt solid #000000', padding: '6pt 8pt', width: '25%', verticalAlign: 'top' }}>
+                  <p style={{ margin: 0, lineHeight: 1.0, textAlign: 'right' }}>
+                    <span style={{ fontFamily: 'Garamond, serif', fontWeight: 400, fontSize: '11pt', color: '#000000' }}>LKR {formatCurrency(oxoInternationalSalary)}</span>
+                  </p>
+                </td>
+                <td style={{ border: '1pt solid #000000', padding: '6pt 8pt', width: '25%', verticalAlign: 'top' }}>
+                  <p style={{ margin: 0, lineHeight: 1.0, textAlign: 'left' }}>
+                    <span style={{ fontFamily: 'Garamond, serif', fontWeight: 700, fontSize: '11pt', color: '#000000' }}>Loans/Advances</span>
+                  </p>
+                </td>
+                <td style={{ border: '1pt solid #000000', padding: '6pt 8pt', width: '25%', verticalAlign: 'top' }}>
+                  <p style={{ margin: 0, lineHeight: 1.0, textAlign: 'right' }}>
+                    <span style={{ fontFamily: 'Garamond, serif', fontWeight: 400, fontSize: '11pt', color: '#000000' }}>N/A</span>
+                  </p>
+                </td>
+              </tr>
+              <tr style={{ height: '0pt' }}>
+                <td style={{ border: '1pt solid #000000', padding: '6pt 8pt', width: '25%', verticalAlign: 'top' }}>
+                  <p style={{ margin: 0, lineHeight: 1.0, textAlign: 'left' }}>
+                    <span style={{ fontFamily: 'Garamond, serif', fontWeight: 700, fontSize: '11pt', color: '#000000' }}>Allowances (Fixed)</span>
+                  </p>
+                </td>
+                <td style={{ border: '1pt solid #000000', padding: '6pt 8pt', width: '25%', verticalAlign: 'top' }}>
+                  <p style={{ margin: 0, lineHeight: 1.0, textAlign: 'right' }}>
+                    <span style={{ fontFamily: 'Garamond, serif', fontWeight: 400, fontSize: '11pt', color: '#000000' }}>N/A</span>
+                  </p>
+                </td>
+                <td style={{ border: '1pt solid #000000', padding: '6pt 8pt', width: '25%', verticalAlign: 'top' }}>
+                  <p style={{ margin: 0, lineHeight: 1.0, textAlign: 'left' }}>
+                    <span style={{ fontFamily: 'Garamond, serif', fontWeight: 700, fontSize: '11pt', color: '#000000' }}>Other Deductions</span>
+                  </p>
+                </td>
+                <td style={{ border: '1pt solid #000000', padding: '6pt 8pt', width: '25%', verticalAlign: 'top' }}>
+                  <p style={{ margin: 0, lineHeight: 1.0, textAlign: 'right' }}>
+                    <span style={{ fontFamily: 'Garamond, serif', fontWeight: 400, fontSize: '11pt', color: '#000000' }}>N/A</span>
+                  </p>
+                </td>
+              </tr>
+              <tr style={{ height: '0pt' }}>
+                <td style={{ border: '1pt solid #000000', padding: '6pt 8pt', width: '25%', verticalAlign: 'top' }}>
+                  <p style={{ margin: 0, lineHeight: 1.0, textAlign: 'left' }}>
+                    <span style={{ fontFamily: 'Garamond, serif', fontWeight: 700, fontSize: '11pt', color: '#000000' }}>Allowances (Variable) </span>
+                  </p>
+                </td>
+                <td style={{ border: '1pt solid #000000', padding: '6pt 8pt', width: '25%', verticalAlign: 'top' }}>
+                  <p style={{ margin: 0, lineHeight: 1.0, textAlign: 'right' }}>
+                    <span style={{ fontFamily: 'Garamond, serif', fontWeight: 400, fontSize: '11pt', color: '#000000' }}>N/A</span>
+                  </p>
+                </td>
+                <td style={{ border: '1pt solid #000000', padding: '6pt 8pt', width: '25%', verticalAlign: 'top' }}>
+                  <p style={{ margin: 0, lineHeight: 1.0, textAlign: 'left' }}>&nbsp;</p>
+                </td>
+                <td style={{ border: '1pt solid #000000', padding: '6pt 8pt', width: '25%', verticalAlign: 'top' }}>
+                  <p style={{ margin: 0, lineHeight: 1.0, textAlign: 'right' }}>
+                    <span style={{ fontFamily: 'Garamond, serif', fontWeight: 400, fontSize: '11pt', color: '#000000' }}>N/A</span>
+                  </p>
+                </td>
+              </tr>
+              <tr style={{ height: '0pt' }}>
+                <td style={{ border: '1pt solid #000000', padding: '6pt 8pt', width: '25%', verticalAlign: 'top' }}>
+                  <p style={{ margin: 0, lineHeight: 1.0, textAlign: 'left' }}>
+                    <span style={{ fontFamily: 'Garamond, serif', fontWeight: 700, fontSize: '11pt', color: '#000000' }}>Arrears</span>
+                  </p>
+                </td>
+                <td style={{ border: '1pt solid #000000', padding: '6pt 8pt', width: '25%', verticalAlign: 'top' }}>
+                  <p style={{ margin: 0, lineHeight: 1.0, textAlign: 'right' }}>
+                    <span style={{ fontFamily: 'Garamond, serif', fontWeight: 400, fontSize: '11pt', color: '#000000' }}>N/A</span>
+                  </p>
+                </td>
+                <td style={{ border: '1pt solid #000000', padding: '6pt 8pt', width: '25%', verticalAlign: 'top' }}>
+                  <p style={{ margin: 0, lineHeight: 1.0, textAlign: 'left' }}>&nbsp;</p>
+                </td>
+                <td style={{ border: '1pt solid #000000', padding: '6pt 8pt', width: '25%', verticalAlign: 'top' }}>
+                  <p style={{ margin: 0, lineHeight: 1.0, textAlign: 'right' }}>
+                    <span style={{ fontFamily: 'Garamond, serif', fontWeight: 400, fontSize: '11pt', color: '#000000' }}>N/A</span>
+                  </p>
+                </td>
+              </tr>
+              <tr style={{ height: '0pt' }}>
+                <td style={{ border: '1pt solid #000000', padding: '6pt 8pt', width: '25%', verticalAlign: 'top', fontWeight: 700 }}>
+                  <p style={{ margin: 0, lineHeight: 1.0, textAlign: 'left' }}>
+                    <span style={{ fontFamily: 'Garamond, serif', fontWeight: 700, fontSize: '11pt', color: '#000000' }}>OXO International Salary</span>
+                  </p>
+                </td>
+                <td style={{ border: '1pt solid #000000', padding: '6pt 8pt', width: '25%', verticalAlign: 'top' }}>
+                  <p style={{ margin: 0, lineHeight: 1.0, textAlign: 'right' }}>
+                    <span style={{ fontFamily: 'Garamond, serif', fontWeight: 400, fontSize: '11pt', color: '#000000' }}>LKR {formatCurrency(oxoInternationalSalary)}</span>
+                  </p>
+                </td>
+                <td style={{ border: '1pt solid #000000', padding: '6pt 8pt', width: '25%', verticalAlign: 'top', fontWeight: 700 }}>
+                  <p style={{ margin: 0, lineHeight: 1.0, textAlign: 'left' }}>
+                    <span style={{ fontFamily: 'Garamond, serif', fontWeight: 700, fontSize: '11pt', color: '#000000' }}>Total Deductions</span>
+                  </p>
+                </td>
+                <td style={{ border: '1pt solid #000000', padding: '6pt 8pt', width: '25%', verticalAlign: 'top' }}>
+                  <p style={{ margin: 0, lineHeight: 1.0, textAlign: 'right' }}>
+                    <span style={{ fontFamily: 'Garamond, serif', fontWeight: 400, fontSize: '11pt', color: '#000000' }}>LKR {formatCurrency(foreignDeductions)}</span>
+                  </p>
+                </td>
+              </tr>
+              <tr style={{ height: '0pt' }}>
+                <td style={{ border: '1pt solid #000000', padding: '6pt 8pt', width: '25%', verticalAlign: 'top', backgroundColor: '#f9fafb' }}>
+                  <p style={{ margin: 0, lineHeight: 1.0, textAlign: 'left' }}>
+                    <span style={{ fontFamily: 'Garamond, serif', fontWeight: 700, fontSize: '11pt', color: '#000000' }}>Net Foreign Pay </span>
+                  </p>
+                </td>
+                <td style={{ border: '1pt solid #000000', padding: '6pt 8pt', width: '75%', verticalAlign: 'top', backgroundColor: '#f9fafb' }} colSpan={3}>
+                  <p style={{ margin: 0, lineHeight: 1.0, textAlign: 'right' }}>
+                    <span style={{ fontFamily: 'Garamond, serif', fontWeight: 700, fontSize: '11pt', color: '#000000' }}>LKR {formatCurrency(netForeignPay)}</span>
+                  </p>
+                </td>
+              </tr>
+              <tr style={{ height: '0pt' }}>
+                <td style={{ border: '1.5pt solid #000000', padding: '6pt 8pt', width: '25%', verticalAlign: 'top', backgroundColor: '#f3f4f6' }}>
+                  <p style={{ margin: 0, lineHeight: 1.0, textAlign: 'left' }}>
+                    <span style={{ fontFamily: 'Garamond, serif', fontWeight: 700, fontSize: '11pt', color: '#000000' }}>Monthly Total Net Pay</span>
+                  </p>
+                </td>
+                <td style={{ border: '1.5pt solid #000000', padding: '6pt 8pt', width: '75%', verticalAlign: 'top', backgroundColor: '#f3f4f6' }} colSpan={3}>
+                  <p style={{ margin: 0, lineHeight: 1.0, textAlign: 'right' }}>
+                    <span style={{ fontFamily: 'Garamond, serif', fontWeight: 700, fontSize: '11.5pt', color: '#000000' }}>LKR {formatCurrency(monthlyTotalNetPay)}</span>
+                  </p>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+
+          {/* Signature Section */}
+          <div className="flex justify-end items-center" style={{ paddingTop: '0pt', paddingBottom: '8pt', lineHeight: 1.158, textAlign: 'left', marginTop: '24pt' }}>
+            <div style={{ display: 'inline-block', width: '160px', height: '160px', border: '0px solid #000000' }}>
+              <Image
+                src="/seal.png"
+                alt="OXO International Seal"
+                width={160}
+                height={160}
+                style={{ width: '160px', height: '160px', objectFit: 'contain' }}
+              />
+            </div>
+          </div>
+
+          {/* Footer */}
+          <div style={{ paddingTop: '8pt', borderTop: '0.5pt solid #e5e7eb', paddingBottom: '0pt', lineHeight: 1.0, textAlign: 'left', marginTop: '16pt' }}>
+            <p style={{ margin: 0 }}>
+              <span style={{ fontFamily: 'Calibri, sans-serif', fontSize: '10pt', color: '#6b7280' }}>OXO International FZE — Confidential Salary Document</span>
+            </p>
+          </div>
         </div>
       </div>
     </div>
