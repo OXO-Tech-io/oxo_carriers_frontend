@@ -23,8 +23,7 @@ import {
 } from 'lucide-react';
 import { format, isWeekend, isSameDay, startOfDay, endOfDay } from 'date-fns';
 import DateRangePicker from '@/components/DateRangePicker';
-import DatePicker from 'react-datepicker';
-import 'react-datepicker/dist/react-datepicker.css';
+
 import { BottomSheet } from '@/components/ui/BottomSheet';
 import { Card, CardHeader } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -48,11 +47,8 @@ export default function LeavesPage() {
     half_day_period: '' as 'morning' | 'evening' | '',
   });
   const [attachment, setAttachment] = useState<File | null>(null);
-  const [showDatePicker, setShowDatePicker] = useState(false);
   const [startDatePicker, setStartDatePicker] = useState<Date | null>(null);
   const [endDatePicker, setEndDatePicker] = useState<Date | null>(null);
-  const [openStartCalendar, setOpenStartCalendar] = useState(false);
-  const [openEndCalendar, setOpenEndCalendar] = useState(false);
 
   // Server state via React Query
   const { yearStart, yearEnd } = useMemo(() => {
@@ -169,44 +165,7 @@ export default function LeavesPage() {
     }
   }, [formData.start_date, formData.end_date, formData.is_half_day]);
 
-  // Day class name for calendar styling with range highlighting
-  const getDayClassName = (date: Date) => {
-    const classes: string[] = [];
-    const isWeekendDay = isWeekend(date);
-    const isHoliday = holidays.some(h => {
-      const holidayDate = new Date(h.date);
-      return isSameDay(holidayDate, date);
-    });
-    
-    if (isWeekendDay) {
-      classes.push('react-datepicker__day--weekend');
-    }
-    if (isHoliday && !isWeekendDay) {
-      classes.push('holiday-day');
-    }
 
-    if (startDatePicker && endDatePicker) {
-      const dateStart = startOfDay(date);
-      const rangeStart = startOfDay(startDatePicker);
-      const rangeEnd = endOfDay(endDatePicker);
-      
-      if (dateStart >= rangeStart && dateStart <= rangeEnd) {
-        classes.push('react-datepicker__day--in-range');
-      }
-      
-      if (isSameDay(date, startDatePicker)) {
-        classes.push('react-datepicker__day--range-start');
-      }
-      
-      if (isSameDay(date, endDatePicker)) {
-        classes.push('react-datepicker__day--range-end');
-      }
-    } else if (startDatePicker && !endDatePicker && isSameDay(date, startDatePicker)) {
-      classes.push('react-datepicker__day--range-start');
-    }
-    
-    return classes.join(' ');
-  };
 
   const handleDateRangeChange = (start: Date | null, end: Date | null) => {
     setStartDatePicker(start);
@@ -376,97 +335,36 @@ export default function LeavesPage() {
           <label className="block text-xs font-bold text-[var(--gray-500)] uppercase tracking-wider mb-2">
             Leave Date Range {formData.is_half_day ? '(Half Day)' : '*'}
           </label>
-          <div className="space-y-3">
-            <div className="flex flex-col sm:flex-row gap-3">
-              <div className="flex-1 relative">
-                <label className="block text-[10px] text-[var(--gray-400)] font-bold uppercase tracking-wider mb-1">Start Date</label>
-                <div className="relative">
-                  <DatePicker
-                    selected={startDatePicker}
-                    onChange={(date: Date | null) => {
-                      setStartDatePicker(date);
-                      if (date) {
-                        setFormData({ ...formData, start_date: format(date, 'yyyy-MM-dd') });
-                      }
-                      setOpenStartCalendar(false);
-                    }}
-                    minDate={new Date()}
-                    filterDate={(date) => {
-                      if (isWeekend(date)) return false;
-                      const isHoliday = holidays.some(h => isSameDay(new Date(h.date), date));
-                      return !isHoliday;
-                    }}
-                    calendarClassName="holiday-calendar"
-                    dayClassName={getDayClassName}
-                    dateFormat="yyyy-MM-dd"
-                    open={openStartCalendar}
-                    onClickOutside={() => setOpenStartCalendar(false)}
-                    showMonthDropdown
-                    showYearDropdown
-                    dropdownMode="select"
-                    calendarStartDay={1}
-                    customInput={
-                      <input
-                        type="text"
-                        readOnly
-                        value={formData.start_date || ''}
-                        placeholder="Select start date"
-                        className="block w-full px-3 py-2.5 pr-10 border border-[var(--gray-100)] rounded-xl text-sm font-semibold text-[var(--foreground)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)] cursor-pointer bg-[var(--card-bg)]"
-                        onClick={() => setOpenStartCalendar(true)}
-                      />
-                    }
-                  />
-                  <Calendar className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[var(--gray-400)] pointer-events-none" />
+          <div className="flex justify-center border border-[var(--gray-100)] rounded-xl p-4 bg-[var(--card-bg)]">
+            <DateRangePicker
+              startDate={startDatePicker}
+              endDate={formData.is_half_day ? startDatePicker : endDatePicker}
+              onChange={handleDateRangeChange}
+              minDate={new Date()}
+              selectsRange={!formData.is_half_day}
+              inline={true}
+              monthsShown={1}
+              showHolidays={true}
+            />
+          </div>
+          {formData.start_date && (
+            <div className="mt-3 grid grid-cols-2 gap-4">
+              <div>
+                <span className="block text-[10px] text-[var(--gray-400)] font-bold uppercase tracking-wider mb-1">Start Date</span>
+                <div className="px-3 py-2.5 border border-[var(--gray-100)] rounded-xl text-sm font-semibold text-[var(--foreground)] bg-[var(--gray-25)]">
+                  {formData.start_date}
                 </div>
               </div>
-
-              <div className="flex-1 relative">
-                <label className="block text-[10px] text-[var(--gray-400)] font-bold uppercase tracking-wider mb-1">
+              <div>
+                <span className="block text-[10px] text-[var(--gray-400)] font-bold uppercase tracking-wider mb-1">
                   End Date {formData.is_half_day ? '(Auto)' : ''}
-                </label>
-                <div className="relative">
-                  <DatePicker
-                    selected={endDatePicker}
-                    onChange={(date: Date | null) => {
-                      setEndDatePicker(date);
-                      if (date) {
-                        setFormData({ ...formData, end_date: format(date, 'yyyy-MM-dd') });
-                      }
-                      setOpenEndCalendar(false);
-                    }}
-                    minDate={startDatePicker || new Date()}
-                    disabled={formData.is_half_day}
-                    filterDate={(date) => {
-                      if (isWeekend(date)) return false;
-                      const isHoliday = holidays.some(h => isSameDay(new Date(h.date), date));
-                      return !isHoliday;
-                    }}
-                    calendarClassName="holiday-calendar"
-                    dayClassName={getDayClassName}
-                    dateFormat="yyyy-MM-dd"
-                    open={openEndCalendar}
-                    onClickOutside={() => setOpenEndCalendar(false)}
-                    showMonthDropdown
-                    showYearDropdown
-                    dropdownMode="select"
-                    calendarStartDay={1}
-                    customInput={
-                      <input
-                        type="text"
-                        readOnly
-                        value={formData.is_half_day ? formData.start_date : (formData.end_date || '')}
-                        placeholder="Select end date"
-                        disabled={formData.is_half_day}
-                        className="block w-full px-3 py-2.5 pr-10 border border-[var(--gray-100)] rounded-xl text-sm font-semibold text-[var(--foreground)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)] disabled:bg-[var(--gray-50)] disabled:cursor-not-allowed disabled:text-[var(--gray-300)] cursor-pointer bg-[var(--card-bg)]"
-                        onClick={() => !formData.is_half_day && setOpenEndCalendar(true)}
-                      />
-                    }
-                  />
-                  <Calendar className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[var(--gray-400)] pointer-events-none" />
+                </span>
+                <div className="px-3 py-2.5 border border-[var(--gray-100)] rounded-xl text-sm font-semibold text-[var(--foreground)] bg-[var(--gray-25)]">
+                  {formData.is_half_day ? formData.start_date : (formData.end_date || 'Not selected')}
                 </div>
               </div>
             </div>
-          </div>
+          )}
         </div>
 
         <div className="space-y-3">

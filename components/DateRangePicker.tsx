@@ -44,39 +44,29 @@ export default function DateRangePicker({
   const [holidays, setHolidays] = useState<LeaveCalendarEntry[]>([]);
   const [loadingHolidays, setLoadingHolidays] = useState(false);
 
-  useEffect(() => {
-    if (showHolidays) {
-      fetchHolidays();
-    }
-  }, [showHolidays, startDate, endDate]);
-
   const fetchHolidays = async () => {
     try {
       setLoadingHolidays(true);
       const currentYear = new Date().getFullYear();
-      const start = new Date(currentYear, 0, 1);
-      const end = new Date(currentYear, 11, 31);
+      const start = new Date(currentYear - 1, 0, 1);
+      const end = new Date(currentYear + 1, 11, 31);
       
-      // If we have a date range, fetch holidays for that range
-      if (startDate || endDate) {
-        const rangeStart = startDate || start;
-        const rangeEnd = endDate || end;
-        const response = await api.get(
-          `/leave-calendar/range?startDate=${format(rangeStart, 'yyyy-MM-dd')}&endDate=${format(rangeEnd, 'yyyy-MM-dd')}`
-        );
-        setHolidays(response.data.data || []);
-      } else {
-        const response = await api.get(
-          `/leave-calendar/range?startDate=${format(start, 'yyyy-MM-dd')}&endDate=${format(end, 'yyyy-MM-dd')}`
-        );
-        setHolidays(response.data.data || []);
-      }
+      const response = await api.get(
+        `/leave-calendar/range?startDate=${format(start, 'yyyy-MM-dd')}&endDate=${format(end, 'yyyy-MM-dd')}`
+      );
+      setHolidays(response.data.data || []);
     } catch (err) {
       console.error('Error fetching holidays:', err);
     } finally {
       setLoadingHolidays(false);
     }
   };
+
+  useEffect(() => {
+    if (showHolidays) {
+      fetchHolidays();
+    }
+  }, [showHolidays]);
 
   // Check if a date is a holiday (including weekends)
   const isHoliday = (date: Date): boolean => {
