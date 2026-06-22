@@ -5,8 +5,13 @@ import Keycloak from 'keycloak-js';
 const KC_URL = process.env.NEXT_PUBLIC_KEYCLOAK_URL;
 const KC_REALM = process.env.NEXT_PUBLIC_KEYCLOAK_REALM;
 const KC_CLIENT_ID = process.env.NEXT_PUBLIC_KEYCLOAK_CLIENT_ID;
+const KC_LOCALE = process.env.NEXT_PUBLIC_KEYCLOAK_LOCALE;
+const KC_IDP_HINT = process.env.NEXT_PUBLIC_KEYCLOAK_IDP_HINT;
 
-if (typeof window !== 'undefined' && (!KC_URL || !KC_REALM || !KC_CLIENT_ID)) {
+const isBrowser = (): boolean => globalThis.window !== undefined;
+const getOrigin = (): string | undefined => globalThis.window?.location.origin;
+
+if (isBrowser() && (!KC_URL || !KC_REALM || !KC_CLIENT_ID)) {
   throw new Error(
     'Missing NEXT_PUBLIC_KEYCLOAK_URL / NEXT_PUBLIC_KEYCLOAK_REALM / NEXT_PUBLIC_KEYCLOAK_CLIENT_ID',
   );
@@ -19,14 +24,12 @@ let initPromise: Promise<boolean> | null = null;
  * Singleton browser-only Keycloak instance. SSR-safe (returns null on the server).
  */
 export const getKeycloak = (): Keycloak | null => {
-  if (typeof window === 'undefined') return null;
-  if (!instance) {
-    instance = new Keycloak({
-      url: KC_URL!,
-      realm: KC_REALM!,
-      clientId: KC_CLIENT_ID!,
-    });
-  }
+  if (!isBrowser()) return null;
+  instance ??= new Keycloak({
+    url: KC_URL!,
+    realm: KC_REALM!,
+    clientId: KC_CLIENT_ID!,
+  });
   return instance;
 };
 
@@ -64,10 +67,9 @@ export const initKeycloak = (options: InitOptions = {}): Promise<boolean> => {
     onLoad: 'check-sso',
     pkceMethod: 'S256',
     checkLoginIframe: false,
-    silentCheckSsoRedirectUri:
-      typeof window !== 'undefined'
-        ? `${window.location.origin}/silent-check-sso.html`
-        : undefined,
+    silentCheckSsoRedirectUri: getOrigin()
+      ? `${getOrigin()}/silent-check-sso.html`
+      : undefined,
     silentCheckSsoFallback: false,
   });
 
@@ -81,10 +83,26 @@ export const initKeycloak = (options: InitOptions = {}): Promise<boolean> => {
 export const kcLogin = (redirectUri?: string): void => {
   const kc = getKeycloak();
   if (!kc) return;
+  const origin = getOrigin();
+
+  const loginOptions: {
+    redirectUri?: string;
+    locale?: string;
+    idpHint?: string;
+  } = {
+    redirectUri: redirectUri ?? (origin ? `${origin}/` : undefined),
+  };
+
+  if (KC_LOCALE) {
+    loginOptions.locale = KC_LOCALE;
+  }
+
+  if (KC_IDP_HINT) {
+    loginOptions.idpHint = KC_IDP_HINT;
+  }
+
   kc.login({
-    redirectUri:
-      redirectUri ??
-      (typeof window !== 'undefined' ? window.location.origin + '/' : undefined),
+    ...loginOptions,
   });
 };
 
@@ -95,10 +113,10 @@ export const kcLogin = (redirectUri?: string): void => {
 export const kcLogout = (redirectUri?: string): void => {
   const kc = getKeycloak();
   if (!kc) return;
+  const origin = getOrigin();
+
   kc.logout({
-    redirectUri:
-      redirectUri ??
-      (typeof window !== 'undefined' ? `${window.location.origin}/login/` : undefined),
+    redirectUri: redirectUri ?? (origin ? `${origin}/login/` : undefined),
   });
 };
 
@@ -110,7 +128,7 @@ export const kcUpdateToken = async (
   minValidity = 30,
 ): Promise<string | null> => {
   const kc = getKeycloak();
-  if (!kc || !kc.authenticated) return null;
+  if (!kc?.authenticated) return null;
   try {
     await kc.updateToken(minValidity);
     return kc.token ?? null;
