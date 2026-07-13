@@ -86,6 +86,13 @@ export interface User {
   hourly_rate?: number | null;
   must_change_password?: boolean;
   created_at: string;
+  contact_number?: string | null;
+  bank_name?: string | null;
+  account_holder_name?: string | null;
+  account_number?: string | null;
+  bank_branch?: string | null;
+  company_name?: string | null;
+  undergraduate_degree_completion_date?: string | null;
 }
 
 export type ConsultantSubmissionStatus = "pending" | "approved" | "rejected";

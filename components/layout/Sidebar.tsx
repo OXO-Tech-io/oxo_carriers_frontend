@@ -21,6 +21,7 @@ import {
   CalendarDays,
   Wrench,
   Upload,
+  UserCheck,
   ChevronDown,
   ChevronLeft,
   ChevronRight,
@@ -170,6 +171,13 @@ const adminNavigation: MenuItem[] = [
     href: "/admin/upload",
     icon: Upload,
     permissionKeys: ["users"],
+    requiredLevel: "write",
+  },
+  {
+    name: "Profile Approvals",
+    href: "/profile-approvals",
+    icon: UserCheck,
+    permissionKeys: ["profile_change_requests"],
     requiredLevel: "write",
   },
 ];
