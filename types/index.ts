@@ -63,10 +63,13 @@ export interface PaymentVoucher {
   reviewed_by_last_name?: string;
 }
 
+export type UserTitle = 'mr' | 'ms' | 'mrs' | 'dr' | 'prof';
+
 export interface User {
   id: number;
   employee_id: string;
   email: string;
+  title?: UserTitle | null;
   first_name: string;
   last_name: string;
   role:
@@ -86,6 +89,13 @@ export interface User {
   hourly_rate?: number | null;
   must_change_password?: boolean;
   created_at: string;
+  contact_number?: string | null;
+  bank_name?: string | null;
+  account_holder_name?: string | null;
+  account_number?: string | null;
+  bank_branch?: string | null;
+  company_name?: string | null;
+  undergraduate_degree_completion_date?: string | null;
 }
 
 export type ConsultantSubmissionStatus = "pending" | "approved" | "rejected";

@@ -6,6 +6,8 @@ export * from "./leave-calendar-admin.service";
 export * from "./leave-calendar.service";
 export * from "./leave.service";
 export * from "./medical-insurance.service";
+export * from "./notification.service";
+export * from "./profile.service";
 export * from "./reports.service";
 export * from "./salary.service";
 export * from "./user.service";

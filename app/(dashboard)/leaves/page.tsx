@@ -580,7 +580,7 @@ export default function LeavesPage() {
           {/* Request Leave Tab (Desktop layout) */}
           {activeTab === 'request' && (
             <div className="hidden lg:block">
-              <Card className="max-w-2xl mx-auto shadow-md">
+              <Card className="max-w-full shadow-md">
                 <CardHeader title="Submit Leave Request" subtitle="Select your date range and options below." />
                 {formContent}
               </Card>

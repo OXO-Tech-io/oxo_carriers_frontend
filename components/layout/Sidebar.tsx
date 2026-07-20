@@ -21,11 +21,16 @@ import {
   CalendarDays,
   Wrench,
   Upload,
+  UserCheck,
   ChevronDown,
   ChevronLeft,
   ChevronRight,
   Menu,
   X,
+  PartyPopper,
+  ClipboardList,
+  Mail,
+  FileSignature,
 } from "lucide-react";
 
 type AccessLevel = "read" | "write";
@@ -114,6 +119,27 @@ const navigation: MenuItem[] = [
     permissionKeys: ["reports"],
     requiredLevel: "read",
   },
+  {
+    name: "Work Log",
+    href: "/work-logs",
+    icon: ClipboardList,
+    permissionKeys: ["work_logs"],
+    requiredLevel: "read",
+  },
+  {
+    name: "My Communications",
+    href: "/my-communications",
+    icon: Mail,
+    permissionKeys: ["communications"],
+    requiredLevel: "read",
+  },
+  {
+    name: "My Forms",
+    href: "/my-forms",
+    icon: FileSignature,
+    permissionKeys: ["forms"],
+    requiredLevel: "read",
+  },
 ];
 
 const adminNavigation: MenuItem[] = [
@@ -170,6 +196,41 @@ const adminNavigation: MenuItem[] = [
     href: "/admin/upload",
     icon: Upload,
     permissionKeys: ["users"],
+    requiredLevel: "write",
+  },
+  {
+    name: "Profile Approvals",
+    href: "/profile-approvals",
+    icon: UserCheck,
+    permissionKeys: ["profile_change_requests"],
+    requiredLevel: "write",
+  },
+  {
+    name: "Events",
+    href: "/events",
+    icon: PartyPopper,
+    permissionKeys: ["events"],
+    requiredLevel: "write",
+  },
+  {
+    name: "Communications",
+    href: "/admin/communications",
+    icon: Mail,
+    permissionKeys: ["communications"],
+    requiredLevel: "write",
+  },
+  {
+    name: "Forms",
+    href: "/admin/forms",
+    icon: FileSignature,
+    permissionKeys: ["forms"],
+    requiredLevel: "write",
+  },
+  {
+    name: "All Work Logs",
+    href: "/admin/work-logs",
+    icon: ClipboardList,
+    permissionKeys: ["work_logs"],
     requiredLevel: "write",
   },
 ];

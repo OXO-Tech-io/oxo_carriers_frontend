@@ -11,6 +11,7 @@ import {
   KeyIcon,
   UserGroupIcon,
   FunnelIcon,
+  DocumentTextIcon,
 } from "@heroicons/react/24/outline";
 import { UserRole, Vendor } from "@/types";
 import CreateUserModal from "@/components/modals/CreateUserModal";
@@ -18,6 +19,7 @@ import CreateServiceProviderModal, {
   CreateServiceProviderPayload,
 } from "@/components/modals/CreateServiceProviderModal";
 import ResetPasswordModal from "@/components/modals/ResetPasswordModal";
+import { EmployeeNotesModal } from "@/components/modals/EmployeeNotesModal";
 
 interface User {
   id: number;
@@ -47,7 +49,12 @@ export default function AdminUsersPage() {
   const [showCreateServiceProviderModal, setShowCreateServiceProviderModal] =
     useState(false);
   const [showResetModal, setShowResetModal] = useState(false);
+  const [showNotesModal, setShowNotesModal] = useState(false);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
+  const canManageNotes =
+    currentUser?.role === UserRole.HR_EXECUTIVE ||
+    currentUser?.role === UserRole.HR_MANAGER ||
+    isSuperAdmin;
   const [searchTerm, setSearchTerm] = useState("");
   const [filterRole, setFilterRole] = useState<string>("");
   const [filterDepartment, setFilterDepartment] = useState<string>("");
@@ -456,6 +463,18 @@ export default function AdminUsersPage() {
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                           <div className="flex items-center justify-end space-x-2">
+                            {canManageNotes && (
+                              <button
+                                onClick={() => {
+                                  setSelectedUser(item);
+                                  setShowNotesModal(true);
+                                }}
+                                className="p-2 text-[#465FFF] hover:bg-[#ECF3FF] rounded-lg transition-colors"
+                                title="Employee Notes"
+                              >
+                                <DocumentTextIcon className="h-5 w-5" />
+                              </button>
+                            )}
                             <button
                               onClick={() => {
                                 setSelectedUser(item);
@@ -512,6 +531,19 @@ export default function AdminUsersPage() {
         onConfirm={handleResetPassword}
         userEmail={selectedUser?.email || ""}
       />
+
+      {/* Employee Notes Modal (HR Team can add-only; HR Manager can view/edit) */}
+      {selectedUser && !isVendor(selectedUser) && (
+        <EmployeeNotesModal
+          isOpen={showNotesModal}
+          onClose={() => {
+            setShowNotesModal(false);
+            setSelectedUser(null);
+          }}
+          employeeUserId={selectedUser.id}
+          employeeName={`${selectedUser.first_name} ${selectedUser.last_name}`}
+        />
+      )}
     </div>
   );
 }
