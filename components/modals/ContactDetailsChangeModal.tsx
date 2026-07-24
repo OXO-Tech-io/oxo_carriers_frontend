@@ -10,9 +10,6 @@ import { useSubmitProfileChangeMutation } from '@/hooks/mutations/use-submit-pro
 import { BLOOD_TYPE_OPTIONS, type BloodType, type EmployeePii, type ProfileChangeItem } from '@/types/profile';
 
 const contactDetailsSchema = z.object({
-  emergencyContactName: z.string().min(1, 'Emergency contact name is required'),
-  emergencyContactPhone: z.string().min(1, 'Emergency contact phone is required'),
-  emergencyContactRelationship: z.string().optional(),
   bloodType: z.string().optional(),
 });
 
@@ -24,6 +21,9 @@ interface ContactDetailsChangeModalProps {
   pii: EmployeePii | null | undefined;
 }
 
+// Emergency contacts moved to the multi-record Emergency Contacts section
+// (Tab D of the profile wizard) since tbl_employee_pii can only hold one
+// contact - this modal now only covers Blood Type.
 export default function ContactDetailsChangeModal({ isOpen, onClose, pii }: ContactDetailsChangeModalProps) {
   const toast = useToast();
   const submitChange = useSubmitProfileChangeMutation();
@@ -31,41 +31,16 @@ export default function ContactDetailsChangeModal({ isOpen, onClose, pii }: Cont
   const {
     register,
     handleSubmit,
-    formState: { errors, isSubmitting },
+    formState: { isSubmitting },
   } = useForm<ContactDetailsFormValues>({
     resolver: zodResolver(contactDetailsSchema) as any,
     defaultValues: {
-      emergencyContactName: pii?.emergencyContactName ?? '',
-      emergencyContactPhone: pii?.emergencyContactPhone ?? '',
-      emergencyContactRelationship: pii?.emergencyContactRelationship ?? '',
       bloodType: pii?.bloodType ?? '',
     } as DefaultValues<ContactDetailsFormValues>,
   });
 
   const handleFormSubmit: SubmitHandler<ContactDetailsFormValues> = async (data) => {
     const changes: ProfileChangeItem[] = [];
-
-    const contactBefore = pii
-      ? {
-          emergencyContactName: pii.emergencyContactName ?? '',
-          emergencyContactPhone: pii.emergencyContactPhone ?? '',
-          emergencyContactRelationship: pii.emergencyContactRelationship ?? null,
-        }
-      : null;
-    const contactAfter = {
-      emergencyContactName: data.emergencyContactName,
-      emergencyContactPhone: data.emergencyContactPhone,
-      emergencyContactRelationship: data.emergencyContactRelationship || null,
-    };
-    if (JSON.stringify(contactBefore) !== JSON.stringify(contactAfter)) {
-      changes.push({
-        entityType: 'employee_pii_field',
-        field: 'emergency_contact',
-        operation: 'update',
-        before: contactBefore,
-        after: contactAfter,
-      });
-    }
 
     const currentBloodType = pii?.bloodType ?? '';
     if (data.bloodType && data.bloodType !== currentBloodType) {
@@ -96,7 +71,7 @@ export default function ContactDetailsChangeModal({ isOpen, onClose, pii }: Cont
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title="Request Contact Detail Changes"
+      title="Request Blood Type Change"
       footer={
         <>
           <Button variant="outline" onClick={onClose} disabled={isSubmitting}>
@@ -110,48 +85,9 @@ export default function ContactDetailsChangeModal({ isOpen, onClose, pii }: Cont
     >
       <form id="contact-details-change-form" onSubmit={handleSubmit(handleFormSubmit)} className="space-y-5">
         <p className="text-xs text-[var(--gray-400)] font-medium bg-[var(--gray-25)] border border-[var(--gray-100)] rounded-xl p-3">
-          These fields require HR approval. Your current values stay unchanged until an HR Manager approves this request.
+          This field requires HR approval. Your current value stays unchanged until an HR Manager approves this
+          request. To add or edit emergency contacts, use Edit Profile.
         </p>
-
-        <div className="space-y-4">
-          <p className="text-[10px] font-bold text-[var(--gray-500)] uppercase tracking-wider">Emergency Contact</p>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-[10px] font-bold text-[var(--gray-400)] uppercase tracking-wider mb-2">
-                Name
-              </label>
-              <input
-                {...register('emergencyContactName')}
-                className="block w-full px-3.5 py-2.5 border border-[var(--gray-100)] rounded-xl text-sm font-semibold text-[var(--foreground)] bg-[var(--card-bg)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)]"
-              />
-              {errors.emergencyContactName && (
-                <p className="mt-1 text-xs text-red-500">{errors.emergencyContactName.message}</p>
-              )}
-            </div>
-            <div>
-              <label className="block text-[10px] font-bold text-[var(--gray-400)] uppercase tracking-wider mb-2">
-                Phone
-              </label>
-              <input
-                {...register('emergencyContactPhone')}
-                className="block w-full px-3.5 py-2.5 border border-[var(--gray-100)] rounded-xl text-sm font-semibold text-[var(--foreground)] bg-[var(--card-bg)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)]"
-              />
-              {errors.emergencyContactPhone && (
-                <p className="mt-1 text-xs text-red-500">{errors.emergencyContactPhone.message}</p>
-              )}
-            </div>
-          </div>
-          <div>
-            <label className="block text-[10px] font-bold text-[var(--gray-400)] uppercase tracking-wider mb-2">
-              Relationship
-            </label>
-            <input
-              {...register('emergencyContactRelationship')}
-              placeholder="e.g. Spouse, Parent, Sibling"
-              className="block w-full px-3.5 py-2.5 border border-[var(--gray-100)] rounded-xl text-sm font-semibold text-[var(--foreground)] bg-[var(--card-bg)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)]"
-            />
-          </div>
-        </div>
 
         <div>
           <label className="block text-[10px] font-bold text-[var(--gray-400)] uppercase tracking-wider mb-2">

@@ -94,6 +94,8 @@ export interface User {
   account_holder_name?: string | null;
   account_number?: string | null;
   bank_branch?: string | null;
+  bank_branch_code?: string | null;
+  swift_code?: string | null;
   company_name?: string | null;
   undergraduate_degree_completion_date?: string | null;
 }

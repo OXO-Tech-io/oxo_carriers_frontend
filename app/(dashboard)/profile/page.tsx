@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import Link from 'next/link';
 import { useAuth } from '@/hooks/useAuth';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -197,20 +198,46 @@ export default function ProfilePage() {
         const changes = row.original.changes;
         const first = changes[0];
         const PII_LABELS: Record<string, string> = {
-          address: 'Address',
-          emergency_contact: 'Emergency Contact',
+          address: 'Permanent Address',
+          residing_address: 'Residing Address',
           blood_type: 'Blood Type',
+          full_name_as_nic: 'Full Name as in NIC',
+          name_with_initials: 'Name with Initials',
+          date_of_birth: 'Date of Birth',
+          birth_place: 'Birth Place',
+          sex: 'Sex',
+          marital_status: 'Marital Status',
+          nationality: 'Nationality',
+          spouse_name: 'Spouse Name',
+          mother_name: 'Mother Name',
+          father_name: 'Father Name',
+          landline_number: 'Landline Number',
+          national_id: 'National Identity Card Number',
         };
-        const label =
-          first.entityType === 'user_field'
-            ? first.field === 'bank_account'
-              ? 'Bank Account'
-              : first.field
-            : first.entityType === 'employee_pii_field'
-            ? PII_LABELS[first.field]
-            : first.entityType === 'education'
-            ? 'Education'
-            : 'Work History';
+        const WELFARE_LABELS: Record<string, string> = {
+          anniversary_date: 'Wedding Anniversary Date',
+          hobbies: 'Hobbies',
+          community_activities: 'Community Activities',
+          professional_memberships: 'Professional Memberships',
+        };
+        let label: string;
+        if (first.entityType === 'user_field') {
+          label = first.field === 'bank_account' ? 'Bank Account' : first.field;
+        } else if (first.entityType === 'employee_pii_field') {
+          label = PII_LABELS[first.field] ?? first.field;
+        } else if (first.entityType === 'welfare_field') {
+          label = WELFARE_LABELS[first.field] ?? first.field;
+        } else if (first.entityType === 'education') {
+          label = 'Education';
+        } else if (first.entityType === 'work_history') {
+          label = 'Work History';
+        } else if (first.entityType === 'nominee') {
+          label = 'Nominee';
+        } else if (first.entityType === 'dependent') {
+          label = 'Dependent';
+        } else {
+          label = 'Emergency Contact';
+        }
         return (
           <span className="font-semibold">
             {label}
@@ -249,9 +276,14 @@ export default function ProfilePage() {
   return (
     <div className="space-y-8 pb-12 animate-fade-in">
       {/* Header */}
-      <div>
-        <h1 className="text-2xl lg:text-3xl font-extrabold text-[var(--foreground)] tracking-tight">Profile Settings</h1>
-        <p className="text-sm text-[var(--gray-400)] font-medium mt-1">Manage your personal details, view employment details, and access documents.</p>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <h1 className="text-2xl lg:text-3xl font-extrabold text-[var(--foreground)] tracking-tight">Profile Settings</h1>
+          <p className="text-sm text-[var(--gray-400)] font-medium mt-1">Manage your personal details, view employment details, and access documents.</p>
+        </div>
+        <Link href="/profile/wizard">
+          <Button>Edit Profile</Button>
+        </Link>
       </div>
 
       <AnimatePresence>

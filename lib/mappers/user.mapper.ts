@@ -23,6 +23,8 @@ export interface DbUserResponse {
   accountHolderName?: string | null;
   accountNumber?: string | null;
   bankBranch?: string | null;
+  bankBranchCode?: string | null;
+  swiftCode?: string | null;
   companyName?: string | null;
   contactNumber?: string | null;
   undergraduateDegreeCompletionDate?: string | null;
@@ -51,6 +53,8 @@ export function mapDbUserToAppUser(raw: DbUserResponse | null | undefined): User
     account_holder_name: raw.accountHolderName ?? null,
     account_number: raw.accountNumber ?? null,
     bank_branch: raw.bankBranch ?? null,
+    bank_branch_code: raw.bankBranchCode ?? null,
+    swift_code: raw.swiftCode ?? null,
     company_name: raw.companyName ?? null,
     undergraduate_degree_completion_date: raw.undergraduateDegreeCompletionDate ?? null,
   };

@@ -31,6 +31,7 @@ import {
   ClipboardList,
   Mail,
   FileSignature,
+  Users2,
 } from "lucide-react";
 
 type AccessLevel = "read" | "write";
@@ -224,6 +225,13 @@ const adminNavigation: MenuItem[] = [
     href: "/admin/forms",
     icon: FileSignature,
     permissionKeys: ["forms"],
+    requiredLevel: "write",
+  },
+  {
+    name: "Groups",
+    href: "/admin/groups",
+    icon: Users2,
+    permissionKeys: ["groups"],
     requiredLevel: "write",
   },
   {

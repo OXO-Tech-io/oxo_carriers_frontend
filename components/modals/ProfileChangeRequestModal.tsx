@@ -21,6 +21,8 @@ const requestSchema = z.object({
   accountHolderName: z.string().optional(),
   accountNumber: z.string().optional(),
   bankBranch: z.string().optional(),
+  bankBranchCode: z.string().optional(),
+  swiftCode: z.string().optional(),
 });
 
 type RequestFormValues = z.infer<typeof requestSchema>;
@@ -54,6 +56,8 @@ export default function ProfileChangeRequestModal({ isOpen, onClose, user, pii }
       accountHolderName: user?.account_holder_name ?? '',
       accountNumber: user?.account_number ?? '',
       bankBranch: user?.bank_branch ?? '',
+      bankBranchCode: user?.bank_branch_code ?? '',
+      swiftCode: user?.swift_code ?? '',
     } as DefaultValues<RequestFormValues>,
   });
 
@@ -111,12 +115,16 @@ export default function ProfileChangeRequestModal({ isOpen, onClose, user, pii }
       accountHolderName: user?.account_holder_name ?? null,
       accountNumber: user?.account_number ?? null,
       bankBranch: user?.bank_branch ?? null,
+      bankBranchCode: user?.bank_branch_code ?? null,
+      swiftCode: user?.swift_code ?? null,
     };
     const bankAfter = {
       bankName: data.bankName || null,
       accountHolderName: data.accountHolderName || null,
       accountNumber: data.accountNumber || null,
       bankBranch: data.bankBranch || null,
+      bankBranchCode: data.bankBranchCode || null,
+      swiftCode: data.swiftCode || null,
     };
     if (JSON.stringify(bankBefore) !== JSON.stringify(bankAfter)) {
       changes.push({
@@ -257,6 +265,20 @@ export default function ProfileChangeRequestModal({ isOpen, onClose, user, pii }
               <label className="block text-[10px] font-semibold text-[var(--gray-400)] mb-1.5">Bank Branch</label>
               <input
                 {...register('bankBranch')}
+                className="block w-full px-3.5 py-2 border border-[var(--gray-100)] rounded-xl text-xs font-semibold text-[var(--foreground)] bg-[var(--card-bg)] focus:outline-none"
+              />
+            </div>
+            <div>
+              <label className="block text-[10px] font-semibold text-[var(--gray-400)] mb-1.5">Branch Code</label>
+              <input
+                {...register('bankBranchCode')}
+                className="block w-full px-3.5 py-2 border border-[var(--gray-100)] rounded-xl text-xs font-semibold text-[var(--foreground)] bg-[var(--card-bg)] focus:outline-none"
+              />
+            </div>
+            <div>
+              <label className="block text-[10px] font-semibold text-[var(--gray-400)] mb-1.5">Swift Code</label>
+              <input
+                {...register('swiftCode')}
                 className="block w-full px-3.5 py-2 border border-[var(--gray-100)] rounded-xl text-xs font-semibold text-[var(--foreground)] bg-[var(--card-bg)] focus:outline-none"
               />
             </div>

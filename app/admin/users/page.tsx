@@ -14,7 +14,9 @@ import {
   DocumentTextIcon,
 } from "@heroicons/react/24/outline";
 import { UserRole, Vendor } from "@/types";
-import CreateUserModal from "@/components/modals/CreateUserModal";
+import CreateUserModal, {
+  CreateEmployeeProfilePayload,
+} from "@/components/modals/CreateUserModal";
 import CreateServiceProviderModal, {
   CreateServiceProviderPayload,
 } from "@/components/modals/CreateServiceProviderModal";
@@ -118,8 +120,11 @@ export default function AdminUsersPage() {
     account_holder_name?: string;
     account_number?: string;
     bank_branch?: string;
+    bank_branch_code?: string;
+    swift_code?: string;
     company_name?: string;
     contact_number?: string;
+    profile?: CreateEmployeeProfilePayload;
   }) => {
     let createdUser: any = null;
     try {

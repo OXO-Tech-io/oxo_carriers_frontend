@@ -58,6 +58,27 @@ export const TITLE_OPTIONS: { value: UserTitle; label: string }[] = [
   { value: 'prof', label: 'Prof.' },
 ];
 
+export type Sex = 'male' | 'female';
+
+export const SEX_OPTIONS: { value: Sex; label: string }[] = [
+  { value: 'male', label: 'Male' },
+  { value: 'female', label: 'Female' },
+];
+
+export type MaritalStatus = 'married' | 'single';
+
+export const MARITAL_STATUS_OPTIONS: { value: MaritalStatus; label: string }[] = [
+  { value: 'married', label: 'Married' },
+  { value: 'single', label: 'Single' },
+];
+
+export type DependentRelationship = 'spouse' | 'child';
+
+export const DEPENDENT_RELATIONSHIP_OPTIONS: { value: DependentRelationship; label: string }[] = [
+  { value: 'spouse', label: 'Spouse' },
+  { value: 'child', label: 'Child' },
+];
+
 export interface EmployeeEducation {
   id: number;
   userId: number;
@@ -97,6 +118,68 @@ export interface EmployeePii {
   emergencyContactName: string | null;
   emergencyContactPhone: string | null;
   emergencyContactRelationship: string | null;
+  // Tab 1 - statutory
+  fullNameAsNic: string | null;
+  nameWithInitials: string | null;
+  dateOfBirth: string | null;
+  birthPlace: string | null;
+  sex: Sex | null;
+  maritalStatus: MaritalStatus | null;
+  nationality: string | null;
+  spouseName: string | null;
+  motherName: string | null;
+  fatherName: string | null;
+  // Tab B - residing address (if different from permanent) + landline
+  residingAddressLine1: string | null;
+  residingAddressLine2: string | null;
+  residingCity: string | null;
+  residingDistrict: string | null;
+  landlineNumber: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface EmployeeNominee {
+  id: number;
+  userId: number;
+  nameWithInitials: string | null;
+  nic: string | null;
+  relationship: string;
+  proportionPercent: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface EmployeeDependent {
+  id: number;
+  userId: number;
+  fullName: string | null;
+  nic: string | null;
+  dateOfBirth: string;
+  gender: Sex;
+  relationship: DependentRelationship;
+  mobileNumber: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface EmployeeEmergencyContact {
+  id: number;
+  userId: number;
+  name: string | null;
+  relationship: string;
+  contactNumber: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface EmployeeWelfareInfo {
+  id: number;
+  userId: number;
+  weddingAnniversaryDate: string | null;
+  hobbies: string | null;
+  communityActivities: string | null;
+  professionalMemberships: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -106,6 +189,8 @@ export interface BankAccountValue {
   accountHolderName: string | null;
   accountNumber: string | null;
   bankBranch: string | null;
+  bankBranchCode: string | null;
+  swiftCode: string | null;
 }
 
 export interface AddressValue {
@@ -121,6 +206,28 @@ export interface EmergencyContactValue {
   emergencyContactRelationship: string | null;
 }
 
+export interface NomineeValue {
+  nameWithInitials: string;
+  nic: string;
+  relationship: string;
+  proportionPercent: number;
+}
+
+export interface DependentValue {
+  fullName: string;
+  nic?: string | null;
+  dateOfBirth: string;
+  gender: Sex;
+  relationship: DependentRelationship;
+  mobileNumber?: string | null;
+}
+
+export interface EmergencyContactRecordValue {
+  name: string;
+  relationship: string;
+  contactNumber: string;
+}
+
 export interface ExperienceSummary {
   totalExperienceYears: number;
   totalExperienceExclInternshipYears: number;
@@ -128,6 +235,18 @@ export interface ExperienceSummary {
   postDegreeExperienceExclInternshipYears: number;
   hasDegreeDate: boolean;
 }
+
+export type ScalarPiiField =
+  | 'full_name_as_nic'
+  | 'name_with_initials'
+  | 'date_of_birth'
+  | 'birth_place'
+  | 'nationality'
+  | 'spouse_name'
+  | 'mother_name'
+  | 'father_name'
+  | 'landline_number'
+  | 'national_id';
 
 export type ProfileChangeItem =
   | {
@@ -153,10 +272,10 @@ export type ProfileChangeItem =
     }
   | {
       entityType: 'employee_pii_field';
-      field: 'emergency_contact';
+      field: 'residing_address';
       operation: 'update';
-      before: EmergencyContactValue | null;
-      after: EmergencyContactValue;
+      before: AddressValue | null;
+      after: AddressValue | null;
     }
   | {
       entityType: 'employee_pii_field';
@@ -164,6 +283,34 @@ export type ProfileChangeItem =
       operation: 'update';
       before: BloodType | null;
       after: BloodType;
+    }
+  | {
+      entityType: 'employee_pii_field';
+      field: 'sex';
+      operation: 'update';
+      before: Sex | null;
+      after: Sex;
+    }
+  | {
+      entityType: 'employee_pii_field';
+      field: 'marital_status';
+      operation: 'update';
+      before: MaritalStatus | null;
+      after: MaritalStatus;
+    }
+  | {
+      entityType: 'employee_pii_field';
+      field: ScalarPiiField;
+      operation: 'update';
+      before: string | null;
+      after: string | null;
+    }
+  | {
+      entityType: 'welfare_field';
+      field: 'anniversary_date' | 'hobbies' | 'community_activities' | 'professional_memberships';
+      operation: 'update';
+      before: string | null;
+      after: string | null;
     }
   | {
       entityType: 'education';
@@ -178,6 +325,27 @@ export type ProfileChangeItem =
       recordId: number | null;
       before?: Omit<EmployeeWorkHistory, 'id' | 'userId' | 'createdAt' | 'updatedAt'> | null;
       after?: Omit<EmployeeWorkHistory, 'id' | 'userId' | 'createdAt' | 'updatedAt'> | null;
+    }
+  | {
+      entityType: 'nominee';
+      operation: 'create' | 'update' | 'delete';
+      recordId: number | null;
+      before?: NomineeValue | null;
+      after?: NomineeValue | null;
+    }
+  | {
+      entityType: 'dependent';
+      operation: 'create' | 'update' | 'delete';
+      recordId: number | null;
+      before?: DependentValue | null;
+      after?: DependentValue | null;
+    }
+  | {
+      entityType: 'emergency_contact_record';
+      operation: 'create' | 'update' | 'delete';
+      recordId: number | null;
+      before?: EmergencyContactRecordValue | null;
+      after?: EmergencyContactRecordValue | null;
     };
 
 export type ProfileChangeRequestStatus =

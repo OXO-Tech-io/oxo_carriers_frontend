@@ -1,7 +1,63 @@
 "use client";
 
 import { useState } from "react";
+import { useForm, type UseFormReturn } from "react-hook-form";
 import { UserRole } from "@/types";
+import { Stepper, StepPanel, type StepDefinition } from "@/components/ui/Stepper";
+import {
+  nomineeToValue,
+  dependentToValue,
+  emergencyContactToValue,
+} from "@/components/profile/wizard/wizardDiff";
+import type { WizardFormValues } from "@/components/profile/wizard/wizardTypes";
+import StepStatutory from "@/components/profile/wizard/StepStatutory";
+import StepRemittance from "@/components/profile/wizard/StepRemittance";
+import StepDependents from "@/components/profile/wizard/StepDependents";
+import StepEmergencyContacts from "@/components/profile/wizard/StepEmergencyContacts";
+import StepWelfare from "@/components/profile/wizard/StepWelfare";
+import StepBasicInfo from "./employee-wizard/StepBasicInfo";
+import StepEmployment from "./employee-wizard/StepEmployment";
+import StepBank from "./employee-wizard/StepBank";
+import StepReview from "./employee-wizard/StepReview";
+import { defaultEmployeeWizardValues, EmployeeWizardValues } from "./employee-wizard/wizardTypes";
+import type { NomineeValue, DependentValue, EmergencyContactRecordValue, BloodType } from "@/types/profile";
+
+export interface CreateEmployeeProfilePayload {
+  statutory: {
+    nationalId: string;
+    fullNameAsNic: string;
+    nameWithInitials: string;
+    addressLine1: string;
+    addressLine2: string | null;
+    city: string;
+    district: string;
+    dateOfBirth: string;
+    birthPlace: string;
+    sex: string;
+    maritalStatus: string;
+    nationality: string;
+    spouseName: string | null;
+    motherName: string;
+    fatherName: string;
+  };
+  nominees: NomineeValue[];
+  remittance: {
+    residingAddressLine1: string | null;
+    residingAddressLine2: string | null;
+    residingCity: string | null;
+    residingDistrict: string | null;
+    landlineNumber: string | null;
+  };
+  dependents: DependentValue[];
+  emergencyContacts: EmergencyContactRecordValue[];
+  bloodType?: BloodType;
+  welfare: {
+    weddingAnniversaryDate: string | null;
+    hobbies: string | null;
+    communityActivities: string | null;
+    professionalMemberships: string | null;
+  };
+}
 
 interface CreateUserModalProps {
   isOpen: boolean;
@@ -21,51 +77,75 @@ interface CreateUserModalProps {
     account_holder_name?: string;
     account_number?: string;
     bank_branch?: string;
+    bank_branch_code?: string;
+    swift_code?: string;
     company_name?: string;
     contact_number?: string;
+    profile?: CreateEmployeeProfilePayload;
   }) => Promise<void>;
   currentUserRole?: UserRole;
 }
 
-// Calculate leave days based on hire date
-const calculateLeaveEntitlement = (
-  hireDate: string,
-): {
-  firstYear: number;
-  secondYearOnwards: number;
-  quarter: string;
-  remainingMonths: number;
-} | null => {
-  if (!hireDate) return null;
+// Service Providers have no login/profile at all, so they get the original,
+// minimal 3-step flow. Everyone else fills in the full profile - the same
+// data an employee would otherwise have to submit themselves later via the
+// Employee Profile Wizard (components/profile/wizard) - directly at creation
+// time, reusing that wizard's own Step components verbatim.
+const SERVICE_PROVIDER_STEPS: StepDefinition[] = [
+  { key: "basic", label: "Basic Info" },
+  { key: "bank", label: "Bank Details" },
+  { key: "review", label: "Review & Confirm" },
+];
 
-  const date = new Date(hireDate);
-  const month = date.getMonth() + 1; // getMonth() returns 0-11 (Jan = 0, so add 1)
-  const hireMonth = date.getMonth(); // 0-11
+const EMPLOYEE_STEPS: StepDefinition[] = [
+  { key: "basic", label: "Basic Info" },
+  { key: "employment", label: "Employment Details" },
+  { key: "statutory", label: "Statutory Info" },
+  { key: "remittance", label: "Remittance" },
+  { key: "dependents", label: "Dependents" },
+  { key: "emergency", label: "Emergency Contacts" },
+  { key: "welfare", label: "Welfare" },
+  { key: "review", label: "Review & Confirm" },
+];
 
-  // Calculate first year: 0.5 days per remaining month
-  const remainingMonths = 12 - hireMonth;
-  const firstYear = Math.round(remainingMonths * 0.5 * 10) / 10; // 0.5 days per month
-
-  // Calculate second year onwards based on quarter
-  let secondYearOnwards: number;
-  let quarter: string;
-
-  if (month >= 1 && month <= 3) {
-    secondYearOnwards = 14;
-    quarter = "Q1 (Jan-Mar)";
-  } else if (month >= 4 && month <= 6) {
-    secondYearOnwards = 10;
-    quarter = "Q2 (Apr-Jun)";
-  } else if (month >= 7 && month <= 9) {
-    secondYearOnwards = 7;
-    quarter = "Q3 (Jul-Sep)";
-  } else {
-    secondYearOnwards = 4;
-    quarter = "Q4 (Oct-Dec)";
+// Fields validated (via RHF trigger) before "Next" advances past each step.
+// Mirrors STEP_FIELD_NAMES in app/(dashboard)/profile/wizard/page.tsx exactly
+// for the steps reused from that wizard.
+function stepFieldNames(stepKey: string, role: UserRole): (keyof EmployeeWizardValues)[] {
+  const isServiceProvider = role === UserRole.SERVICE_PROVIDER;
+  switch (stepKey) {
+    case "basic":
+      return isServiceProvider ? ["company_name", "email"] : ["first_name", "last_name", "email"];
+    case "employment":
+      return role === UserRole.CONSULTANT ? ["hourly_rate"] : [];
+    case "statutory":
+      return [
+        "nationalId",
+        "fullNameAsNic",
+        "nameWithInitials",
+        "permanentAddressLine1",
+        "permanentCity",
+        "permanentDistrict",
+        "dateOfBirth",
+        "birthPlace",
+        "sex",
+        "maritalStatus",
+        "nationality",
+        "mobileNumber",
+        "motherName",
+        "fatherName",
+        "nominees",
+      ];
+    case "remittance":
+      return ["accountHolderName", "accountNumber", "bankName", "bankBranch"];
+    case "dependents":
+      return ["dependents"];
+    case "emergency":
+      return ["emergencyContacts"];
+    default:
+      return [];
   }
-
-  return { firstYear, secondYearOnwards, quarter, remainingMonths };
-};
+}
 
 export default function CreateUserModal({
   isOpen,
@@ -73,68 +153,145 @@ export default function CreateUserModal({
   onSubmit,
   currentUserRole,
 }: CreateUserModalProps) {
-  const [formData, setFormData] = useState({
-    employee_id: "",
-    email: "",
-    first_name: "",
-    last_name: "",
-    role: UserRole.EMPLOYEE,
-    department: "",
-    position: "",
-    hire_date: "",
-    manager_id: "",
-    hourly_rate: "",
-    bank_name: "",
-    account_holder_name: "",
-    account_number: "",
-    bank_branch: "",
-    company_name: "",
-    contact_number: "",
-  });
+  const [stepIndex, setStepIndex] = useState(0);
   const [submitting, setSubmitting] = useState(false);
+  const form = useForm<EmployeeWizardValues>({ defaultValues: defaultEmployeeWizardValues });
+  // EmployeeWizardValues extends WizardFormValues (same field names/types, plus
+  // the basic/employment/bank fields), so this cast is structurally safe - it
+  // lets the profile-wizard's own Step components be reused verbatim without
+  // fighting react-hook-form's generic type inference across a bounded `T`.
+  const profileForm = form as unknown as UseFormReturn<WizardFormValues>;
+  const role = form.watch("role");
+  const isServiceProvider = role === UserRole.SERVICE_PROVIDER;
+  const maritalStatus = form.watch("maritalStatus");
+  const isMarried = maritalStatus === "married";
+  const email = form.watch("email");
+  const position = form.watch("position");
 
-  const leaveInfo = calculateLeaveEntitlement(formData.hire_date);
+  const baseSteps = isServiceProvider ? SERVICE_PROVIDER_STEPS : EMPLOYEE_STEPS;
+  const steps = baseSteps.map((s) => (s.key === "dependents" ? { ...s, disabled: !isMarried } : s));
+  const dependentsIndex = steps.findIndex((s) => s.key === "dependents");
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const resetWizard = () => {
+    form.reset(defaultEmployeeWizardValues);
+    setStepIndex(0);
+  };
+
+  const goNext = async () => {
+    const currentKey = steps[stepIndex].key;
+    const fieldNames = stepFieldNames(currentKey, role);
+    const valid = fieldNames.length === 0 ? true : await form.trigger(fieldNames as any);
+    if (!valid) return;
+    let nextIndex = stepIndex + 1;
+    if (nextIndex === dependentsIndex && !isMarried) nextIndex += 1;
+    setStepIndex(Math.min(nextIndex, steps.length - 1));
+  };
+
+  const goBack = () => {
+    let prevIndex = stepIndex - 1;
+    if (prevIndex === dependentsIndex && !isMarried) prevIndex -= 1;
+    setStepIndex(Math.max(prevIndex, 0));
+  };
+
+  const handleClose = () => {
+    resetWizard();
+    onClose();
+  };
+
+  const handleFinalSubmit = async () => {
     setSubmitting(true);
     try {
-      const isServiceProvider = formData.role === UserRole.SERVICE_PROVIDER;
+      const values = form.getValues();
+
       const payload = isServiceProvider
         ? {
-            ...formData,
             employee_id: "",
-            first_name: formData.company_name || "Service Provider",
+            email: values.email,
+            first_name: values.company_name || "Service Provider",
             last_name: "Service Provider",
+            role: values.role,
+            department: values.department,
+            position: values.position,
+            hire_date: values.hire_date,
+            manager_id: values.manager_id,
+            hourly_rate: values.hourly_rate,
+            bank_name: values.bank_name,
+            account_holder_name: values.account_holder_name,
+            account_number: values.account_number,
+            bank_branch: values.bank_branch,
+            company_name: values.company_name,
+            contact_number: values.contact_number,
           }
-        : formData;
+        : {
+            employee_id: values.employee_id,
+            email: values.email,
+            first_name: values.first_name,
+            last_name: values.last_name,
+            role: values.role,
+            department: values.department,
+            position: values.position,
+            hire_date: values.hire_date,
+            manager_id: values.manager_id,
+            hourly_rate: values.hourly_rate,
+            bank_name: values.bankName,
+            account_holder_name: values.accountHolderName,
+            account_number: values.accountNumber,
+            bank_branch: values.bankBranch,
+            bank_branch_code: values.bankBranchCode,
+            swift_code: values.swiftCode,
+            company_name: values.company_name,
+            contact_number: values.mobileNumber,
+            profile: {
+              statutory: {
+                nationalId: values.nationalId,
+                fullNameAsNic: values.fullNameAsNic,
+                nameWithInitials: values.nameWithInitials,
+                addressLine1: values.permanentAddressLine1,
+                addressLine2: values.permanentAddressLine2 || null,
+                city: values.permanentCity,
+                district: values.permanentDistrict,
+                dateOfBirth: values.dateOfBirth,
+                birthPlace: values.birthPlace,
+                sex: values.sex,
+                maritalStatus: values.maritalStatus,
+                nationality: values.nationality,
+                spouseName: values.spouseName || null,
+                motherName: values.motherName,
+                fatherName: values.fatherName,
+              },
+              nominees: values.nominees.map(nomineeToValue),
+              remittance: {
+                residingAddressLine1: values.residingAddressLine1 || null,
+                residingAddressLine2: values.residingAddressLine2 || null,
+                residingCity: values.residingCity || null,
+                residingDistrict: values.residingDistrict || null,
+                landlineNumber: values.landlineNumber || null,
+              },
+              dependents: isMarried ? values.dependents.map(dependentToValue) : [],
+              emergencyContacts: values.emergencyContacts.map(emergencyContactToValue),
+              bloodType: values.bloodType ? (values.bloodType as BloodType) : undefined,
+              welfare: {
+                weddingAnniversaryDate: values.weddingAnniversaryDate || null,
+                hobbies: values.hobbies || null,
+                communityActivities: values.communityActivities || null,
+                professionalMemberships: values.professionalMemberships || null,
+              },
+            },
+          };
+
       await onSubmit(payload);
-      setFormData({
-        employee_id: "",
-        email: "",
-        first_name: "",
-        last_name: "",
-        role: UserRole.EMPLOYEE,
-        department: "",
-        position: "",
-        hire_date: "",
-        manager_id: "",
-        hourly_rate: "",
-        bank_name: "",
-        account_holder_name: "",
-        account_number: "",
-        bank_branch: "",
-        company_name: "",
-        contact_number: "",
-      });
+      resetWizard();
     } catch (error) {
-      // Error handling is done in parent component
+      // Error handling is done in parent component; keep the wizard open on failure.
     } finally {
       setSubmitting(false);
     }
   };
 
   if (!isOpen) return null;
+
+  const isLastStep = stepIndex === steps.length - 1;
+  const currentKey = steps[stepIndex].key;
 
   return (
     <div
@@ -146,27 +303,20 @@ export default function CreateUserModal({
       <div className="flex min-h-full items-end justify-center p-4 text-center sm:items-center sm:p-0">
         <div
           className="fixed inset-0 bg-opacity-50 backdrop-blur-sm transition-opacity"
-          onClick={onClose}
+          onClick={handleClose}
         ></div>
         <div
-          className="relative transform overflow-hidden rounded-2xl bg-white text-left shadow-xl transition-all sm:my-8 sm:w-full sm:max-w-2xl"
+          className="relative transform overflow-hidden rounded-2xl bg-white text-left shadow-xl transition-all sm:my-8 sm:w-full sm:max-w-6xl"
           onClick={(e) => e.stopPropagation()}
         >
-          <div className="bg-white px-6 pt-6 pb-4">
+          <div className="bg-white px-6 pt-6 pb-6">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-2xl font-bold text-[#101828]">
-                Create New Employee
-              </h3>
+              <h3 className="text-2xl font-bold text-[#101828]">Create New Employee</h3>
               <button
-                onClick={onClose}
+                onClick={handleClose}
                 className="text-[#98A2B3] hover:text-[#344054] transition-colors"
               >
-                <svg
-                  className="h-6 w-6"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
+                <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path
                     strokeLinecap="round"
                     strokeLinejoin="round"
@@ -176,400 +326,56 @@ export default function CreateUserModal({
                 </svg>
               </button>
             </div>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div>
-                <label className="block text-sm font-semibold text-[#344054] mb-2">
-                  Role *
-                </label>
-                <select
-                  required
-                  value={formData.role}
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      role: e.target.value as UserRole,
-                      hourly_rate:
-                        formData.role === UserRole.CONSULTANT
-                          ? formData.hourly_rate
-                          : "",
-                    })
-                  }
-                  className="block w-full px-3 py-2.5 border border-[#D0D5DD] rounded-lg text-sm font-medium text-[#344054] bg-white focus:outline-none focus:ring-2 focus:ring-[#465FFF] focus:border-transparent"
-                >
-                  <option value={UserRole.EMPLOYEE}>Employee</option>
-                  <option value={UserRole.CONSULTANT}>Consultant</option>
-                  <option value={UserRole.HR_EXECUTIVE}>HR Executive</option>
-                  <option value={UserRole.FINANCE_EXECUTIVE}>
-                    Finance Executive
-                  </option>
-                  <option value={UserRole.FINANCE_MANAGER}>
-                    Finance Manager
-                  </option>
-                  {currentUserRole === UserRole.HR_MANAGER && (
-                    <option value={UserRole.HR_MANAGER}>HR Manager</option>
-                  )}
-                </select>
-              </div>
-              {formData.role !== UserRole.SERVICE_PROVIDER && (
-                <>
-                  <div>
-                    <label className="block text-sm font-semibold text-[#344054] mb-2">
-                      Employee ID
-                    </label>
-                    <input
-                      type="text"
-                      value={formData.employee_id}
-                      onChange={(e) =>
-                        setFormData({
-                          ...formData,
-                          employee_id: e.target.value,
-                        })
-                      }
-                      placeholder="Leave empty to auto-generate (e.g., EMP20260001)"
-                      className="block w-full px-3 py-2.5 border border-[#D0D5DD] rounded-lg text-sm text-[#101828] placeholder-[#98A2B3] focus:outline-none focus:ring-2 focus:ring-[#465FFF] focus:border-transparent"
-                    />
-                    <p className="text-xs text-[#667085] mt-1">
-                      Optional: Leave blank to auto-generate based on year
-                    </p>
-                  </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-semibold text-[#344054] mb-2">
-                        First Name *
-                      </label>
-                      <input
-                        type="text"
-                        required
-                        value={formData.first_name}
-                        onChange={(e) =>
-                          setFormData({
-                            ...formData,
-                            first_name: e.target.value,
-                          })
-                        }
-                        className="block w-full px-3 py-2.5 border border-[#D0D5DD] rounded-lg text-sm text-[#101828] focus:outline-none focus:ring-2 focus:ring-[#465FFF] focus:border-transparent"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-semibold text-[#344054] mb-2">
-                        Last Name *
-                      </label>
-                      <input
-                        type="text"
-                        required
-                        value={formData.last_name}
-                        onChange={(e) =>
-                          setFormData({
-                            ...formData,
-                            last_name: e.target.value,
-                          })
-                        }
-                        className="block w-full px-3 py-2.5 border border-[#D0D5DD] rounded-lg text-sm text-[#101828] focus:outline-none focus:ring-2 focus:ring-[#465FFF] focus:border-transparent"
-                      />
-                    </div>
-                  </div>
-                </>
-              )}
-              {formData.role === UserRole.SERVICE_PROVIDER ? (
-                <>
-                  <div>
-                    <label className="block text-sm font-semibold text-[#344054] mb-2">
-                      Company Name *
-                    </label>
-                    <input
-                      type="text"
-                      required
-                      value={formData.company_name}
-                      onChange={(e) =>
-                        setFormData({
-                          ...formData,
-                          company_name: e.target.value,
-                        })
-                      }
-                      placeholder="Company or organization name"
-                      className="block w-full px-3 py-2.5 border border-[#D0D5DD] rounded-lg text-sm text-[#101828] focus:outline-none focus:ring-2 focus:ring-[#465FFF] focus:border-transparent"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-semibold text-[#344054] mb-2">
-                      Email *
-                    </label>
-                    <input
-                      type="email"
-                      required
-                      value={formData.email}
-                      onChange={(e) =>
-                        setFormData({ ...formData, email: e.target.value })
-                      }
-                      className="block w-full px-3 py-2.5 border border-[#D0D5DD] rounded-lg text-sm text-[#101828] focus:outline-none focus:ring-2 focus:ring-[#465FFF] focus:border-transparent"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-semibold text-[#344054] mb-2">
-                      Contact Number
-                    </label>
-                    <input
-                      type="text"
-                      value={formData.contact_number}
-                      onChange={(e) =>
-                        setFormData({
-                          ...formData,
-                          contact_number: e.target.value,
-                        })
-                      }
-                      placeholder="e.g. +94 77 123 4567"
-                      className="block w-full px-3 py-2.5 border border-[#D0D5DD] rounded-lg text-sm text-[#101828] focus:outline-none focus:ring-2 focus:ring-[#465FFF] focus:border-transparent"
-                    />
-                  </div>
-                </>
-              ) : (
-                <>
-                  <div>
-                    <label className="block text-sm font-semibold text-[#344054] mb-2">
-                      Email *
-                    </label>
-                    <input
-                      type="email"
-                      required
-                      value={formData.email}
-                      onChange={(e) =>
-                        setFormData({ ...formData, email: e.target.value })
-                      }
-                      className="block w-full px-3 py-2.5 border border-[#D0D5DD] rounded-lg text-sm text-[#101828] focus:outline-none focus:ring-2 focus:ring-[#465FFF] focus:border-transparent"
-                    />
-                  </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-semibold text-[#344054] mb-2">
-                        Department
-                      </label>
-                      <input
-                        type="text"
-                        value={formData.department}
-                        onChange={(e) =>
-                          setFormData({
-                            ...formData,
-                            department: e.target.value,
-                          })
-                        }
-                        className="block w-full px-3 py-2.5 border border-[#D0D5DD] rounded-lg text-sm text-[#101828] focus:outline-none focus:ring-2 focus:ring-[#465FFF] focus:border-transparent"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-semibold text-[#344054] mb-2">
-                        Position
-                      </label>
-                      <input
-                        type="text"
-                        value={formData.position}
-                        onChange={(e) =>
-                          setFormData({ ...formData, position: e.target.value })
-                        }
-                        className="block w-full px-3 py-2.5 border border-[#D0D5DD] rounded-lg text-sm text-[#101828] focus:outline-none focus:ring-2 focus:ring-[#465FFF] focus:border-transparent"
-                      />
-                    </div>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-semibold text-[#344054] mb-2">
-                      Hire Date
-                    </label>
-                    <input
-                      type="date"
-                      value={formData.hire_date}
-                      onChange={(e) =>
-                        setFormData({ ...formData, hire_date: e.target.value })
-                      }
-                      className="block w-full px-3 py-2.5 border border-[#D0D5DD] rounded-lg text-sm text-[#101828] focus:outline-none focus:ring-2 focus:ring-[#465FFF] focus:border-transparent"
-                    />
-                  </div>
-                </>
-              )}
-              {formData.role === UserRole.CONSULTANT && (
-                <div>
-                  <label className="block text-sm font-semibold text-[#344054] mb-2">
-                    Hourly Rate *
-                  </label>
-                  <input
-                    type="number"
-                    required={formData.role === UserRole.CONSULTANT}
-                    min={0}
-                    step={0.01}
-                    value={formData.hourly_rate}
-                    onChange={(e) =>
-                      setFormData({ ...formData, hourly_rate: e.target.value })
-                    }
-                    placeholder="e.g. 50.00"
-                    className="block w-full px-3 py-2.5 border border-[#D0D5DD] rounded-lg text-sm text-[#101828] focus:outline-none focus:ring-2 focus:ring-[#465FFF] focus:border-transparent"
-                  />
-                  <p className="text-xs text-[#667085] mt-1">
-                    Required for Consultant role
-                  </p>
-                </div>
-              )}
 
-              <div className="border-t border-[#E4E7EC] pt-4">
-                <p className="text-sm font-semibold text-[#344054] mb-3">
-                  Bank Details
-                </p>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-[#344054] mb-1">
-                      Bank Name
-                    </label>
-                    <input
-                      type="text"
-                      value={formData.bank_name}
-                      onChange={(e) =>
-                        setFormData({ ...formData, bank_name: e.target.value })
-                      }
-                      placeholder="e.g. Commercial Bank"
-                      className="block w-full px-3 py-2.5 border border-[#D0D5DD] rounded-lg text-sm text-[#101828] focus:outline-none focus:ring-2 focus:ring-[#465FFF] focus:border-transparent"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-[#344054] mb-1">
-                      Account Holder Name
-                    </label>
-                    <input
-                      type="text"
-                      value={formData.account_holder_name}
-                      onChange={(e) =>
-                        setFormData({
-                          ...formData,
-                          account_holder_name: e.target.value,
-                        })
-                      }
-                      placeholder="Name as per bank account"
-                      className="block w-full px-3 py-2.5 border border-[#D0D5DD] rounded-lg text-sm text-[#101828] focus:outline-none focus:ring-2 focus:ring-[#465FFF] focus:border-transparent"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-[#344054] mb-1">
-                      Account Number
-                    </label>
-                    <input
-                      type="text"
-                      value={formData.account_number}
-                      onChange={(e) =>
-                        setFormData({
-                          ...formData,
-                          account_number: e.target.value,
-                        })
-                      }
-                      placeholder="Bank account number"
-                      className="block w-full px-3 py-2.5 border border-[#D0D5DD] rounded-lg text-sm text-[#101828] focus:outline-none focus:ring-2 focus:ring-[#465FFF] focus:border-transparent"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-[#344054] mb-1">
-                      Branch
-                    </label>
-                    <input
-                      type="text"
-                      value={formData.bank_branch}
-                      onChange={(e) =>
-                        setFormData({
-                          ...formData,
-                          bank_branch: e.target.value,
-                        })
-                      }
-                      placeholder="Branch name or code"
-                      className="block w-full px-3 py-2.5 border border-[#D0D5DD] rounded-lg text-sm text-[#101828] focus:outline-none focus:ring-2 focus:ring-[#465FFF] focus:border-transparent"
-                    />
-                  </div>
-                </div>
-              </div>
+            <div className="mb-6">
+              <Stepper steps={steps} currentIndex={stepIndex} />
+            </div>
 
-              {leaveInfo && formData.role === UserRole.EMPLOYEE && (
-                <div className="bg-[var(--success-light)] border border-[var(--success)]/30 rounded-lg p-4 mt-4">
-                  <div className="flex items-start space-x-3">
-                    <div className="flex-shrink-0 mt-0.5">
-                      <svg
-                        className="h-5 w-5 text-emerald-600"
-                        fill="currentColor"
-                        viewBox="0 0 20 20"
-                      >
-                        <path
-                          fillRule="evenodd"
-                          d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
-                          clipRule="evenodd"
-                        />
-                      </svg>
-                    </div>
-                    <div className="flex-1">
-                      <p className="text-sm font-semibold text-emerald-900 mb-1">
-                        Annual Leave Entitlement
-                      </p>
-                      <p className="text-xs text-emerald-700 mb-2">
-                        Hired in {leaveInfo.quarter} •{" "}
-                        {leaveInfo.remainingMonths} months remaining in first
-                        year
-                      </p>
-                      <div className="grid grid-cols-2 gap-3">
-                        <div className="bg-white rounded-lg p-2.5 border border-emerald-100">
-                          <p className="text-xs text-emerald-600 font-medium mb-1">
-                            First Year (
-                            {new Date(formData.hire_date).getFullYear()})
-                          </p>
-                          <p className="text-lg font-bold text-emerald-900">
-                            {leaveInfo.firstYear} days
-                          </p>
-                          <p className="text-[10px] text-emerald-600 mt-0.5">
-                            0.5 days × {leaveInfo.remainingMonths} months
-                          </p>
-                        </div>
-                        <div className="bg-white rounded-lg p-2.5 border border-emerald-100">
-                          <p className="text-xs text-emerald-600 font-medium mb-1">
-                            Second Year Onwards
-                          </p>
-                          <p className="text-lg font-bold text-emerald-900">
-                            {leaveInfo.secondYearOnwards} days
-                          </p>
-                          <p className="text-[10px] text-emerald-600 mt-0.5">
-                            Based on hire quarter
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
+            <StepPanel stepKey={currentKey}>
+              {currentKey === "basic" && (
+                <StepBasicInfo form={form} currentUserRole={currentUserRole} />
               )}
+              {currentKey === "employment" && <StepEmployment form={form} />}
+              {currentKey === "bank" && <StepBank form={form} />}
+              {currentKey === "statutory" && (
+                <StepStatutory form={profileForm} email={email} designation={position} />
+              )}
+              {currentKey === "remittance" && <StepRemittance form={profileForm} />}
+              {currentKey === "dependents" && (
+                <StepDependents form={profileForm} isMarried={isMarried} />
+              )}
+              {currentKey === "emergency" && <StepEmergencyContacts form={profileForm} />}
+              {currentKey === "welfare" && <StepWelfare form={profileForm} />}
+              {currentKey === "review" && <StepReview form={form} />}
+            </StepPanel>
 
-              {formData.role !== UserRole.SERVICE_PROVIDER && (
-                <div className="bg-[#ECF3FF] border border-[#DDE9FF] rounded-lg p-4 mt-4">
-                  <p className="text-sm text-[#344054]">
-                    <strong>Note:</strong> The employee will receive an email
-                    with a link to set up their password. They must complete
-                    password setup before they can log in.
-                  </p>
-                </div>
-              )}
-              {formData.role === UserRole.SERVICE_PROVIDER && (
-                <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 mt-4">
-                  <p className="text-sm text-amber-800">
-                    <strong>Service Provider:</strong> This user will not
-                    receive a login or password setup email. They do not need to
-                    log in.
-                  </p>
-                </div>
-              )}
-              <div className="flex items-center justify-end space-x-3 pt-4">
+            <div className="flex items-center justify-between pt-6 mt-2 border-t border-[#E4E7EC]">
+              <button
+                type="button"
+                onClick={stepIndex === 0 ? handleClose : goBack}
+                className="px-4 py-2.5 text-sm font-semibold text-[#344054] bg-white border border-[#D0D5DD] rounded-lg hover:bg-[#F9FAFB] transition-colors"
+              >
+                {stepIndex === 0 ? "Cancel" : "Back"}
+              </button>
+              {isLastStep ? (
                 <button
                   type="button"
-                  onClick={onClose}
-                  className="px-4 py-2.5 text-sm font-semibold text-[#344054] bg-white border border-[#D0D5DD] rounded-lg hover:bg-[#F9FAFB] transition-colors"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
+                  onClick={handleFinalSubmit}
                   disabled={submitting}
                   className="px-4 py-2.5 text-sm font-semibold text-white bg-[#465FFF] rounded-lg hover:bg-[#3641F5] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {submitting ? "Creating..." : "Create Employee"}
                 </button>
-              </div>
-            </form>
+              ) : (
+                <button
+                  type="button"
+                  onClick={goNext}
+                  className="px-4 py-2.5 text-sm font-semibold text-white bg-[#465FFF] rounded-lg hover:bg-[#3641F5] transition-colors"
+                >
+                  Next
+                </button>
+              )}
+            </div>
           </div>
         </div>
       </div>

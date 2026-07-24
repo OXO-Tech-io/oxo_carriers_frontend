@@ -40,21 +40,43 @@ const USER_FIELD_LABELS: Record<string, string> = {
 };
 
 const PII_FIELD_LABELS: Record<string, string> = {
-  address: 'Address',
-  emergency_contact: 'Emergency Contact',
+  address: 'Permanent Address',
+  residing_address: 'Residing Address',
   blood_type: 'Blood Type',
+  full_name_as_nic: 'Full Name as in NIC',
+  name_with_initials: 'Name with Initials',
+  date_of_birth: 'Date of Birth',
+  birth_place: 'Birth Place',
+  sex: 'Sex',
+  marital_status: 'Marital Status',
+  nationality: 'Nationality',
+  spouse_name: 'Spouse Name',
+  mother_name: 'Mother Name',
+  father_name: 'Father Name',
+  landline_number: 'Landline Number',
+  national_id: 'National Identity Card Number',
 };
 
+const WELFARE_FIELD_LABELS: Record<string, string> = {
+  anniversary_date: 'Wedding Anniversary Date',
+  hobbies: 'Hobbies',
+  community_activities: 'Community Activities',
+  professional_memberships: 'Professional Memberships',
+};
+
+function firstChangeLabel(first: ProfileChangeRequest['changes'][number]): string {
+  if (first.entityType === 'user_field') return USER_FIELD_LABELS[first.field] ?? first.field;
+  if (first.entityType === 'employee_pii_field') return PII_FIELD_LABELS[first.field] ?? first.field;
+  if (first.entityType === 'welfare_field') return WELFARE_FIELD_LABELS[first.field] ?? first.field;
+  if (first.entityType === 'education') return `Education (${first.operation})`;
+  if (first.entityType === 'work_history') return `Work History (${first.operation})`;
+  if (first.entityType === 'nominee') return `Nominee (${first.operation})`;
+  if (first.entityType === 'dependent') return `Dependent (${first.operation})`;
+  return `Emergency Contact (${first.operation})`;
+}
+
 function changeSummary(request: ProfileChangeRequest): string {
-  const first = request.changes[0];
-  const label =
-    first.entityType === 'user_field'
-      ? USER_FIELD_LABELS[first.field] ?? first.field
-      : first.entityType === 'employee_pii_field'
-      ? PII_FIELD_LABELS[first.field] ?? first.field
-      : first.entityType === 'education'
-      ? `Education (${first.operation})`
-      : `Work History (${first.operation})`;
+  const label = firstChangeLabel(request.changes[0]);
   return request.changes.length > 1 ? `${label} +${request.changes.length - 1} more` : label;
 }
 

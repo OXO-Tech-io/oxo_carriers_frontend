@@ -6,6 +6,10 @@ import type {
   EmployeeEducation,
   EmployeeWorkHistory,
   EmployeePii,
+  EmployeeNominee,
+  EmployeeDependent,
+  EmployeeEmergencyContact,
+  EmployeeWelfareInfo,
   ExperienceSummary,
   ProfileChangeRequest,
   ProfileChangeRequestStatus,
@@ -50,6 +54,31 @@ export const profileService = {
   getEmployeePii: async (userId: number): Promise<EmployeePii | null> => {
     const res = await api.get<{ success: boolean; pii: EmployeePii | null }>(`/employee-pii/${userId}`);
     return res.data.pii;
+  },
+
+  // These 4 read-only endpoints are mounted at /employees/:employeeId/... (the
+  // employee's string employeeId, not their numeric id) - the backend service
+  // branches self-vs-HR access same as education/work-history, but self-role
+  // callers always get their own records regardless of which employeeId is
+  // in the URL, so passing your own employeeId is always safe.
+  getNominees: async (employeeId: string): Promise<EmployeeNominee[]> => {
+    const res = await api.get<ApiResponse<EmployeeNominee[]>>(`/employees/${employeeId}/nominees`);
+    return res.data.data;
+  },
+
+  getDependents: async (employeeId: string): Promise<EmployeeDependent[]> => {
+    const res = await api.get<ApiResponse<EmployeeDependent[]>>(`/employees/${employeeId}/dependents`);
+    return res.data.data;
+  },
+
+  getEmergencyContacts: async (employeeId: string): Promise<EmployeeEmergencyContact[]> => {
+    const res = await api.get<ApiResponse<EmployeeEmergencyContact[]>>(`/employees/${employeeId}/emergency-contacts`);
+    return res.data.data;
+  },
+
+  getWelfareInfo: async (employeeId: string): Promise<EmployeeWelfareInfo | null> => {
+    const res = await api.get<ApiResponse<EmployeeWelfareInfo | null>>(`/employees/${employeeId}/welfare-info`);
+    return res.data.data;
   },
 
   getMyExperienceSummary: async (): Promise<ExperienceSummary> => {

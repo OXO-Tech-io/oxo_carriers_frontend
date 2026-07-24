@@ -5,7 +5,7 @@ import FillFormClient from './FillFormClient';
 export const dynamicParams = false;
 
 export async function generateStaticParams() {
-  const ids = Array.from({ length: 100 }, (_, i) => ({ id: String(i + 1) }));
+  const ids = Array.from({ length: 500 }, (_, i) => ({ id: String(i + 1) }));
   return ids;
 }
 

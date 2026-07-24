@@ -5,7 +5,9 @@ import { Button } from '@/components/ui/Button';
 import type {
   AddressValue,
   BankAccountValue,
-  EmergencyContactValue,
+  DependentValue,
+  EmergencyContactRecordValue,
+  NomineeValue,
   ProfileChangeItem,
   ProfileChangeRequest,
   QualificationLevel,
@@ -18,9 +20,25 @@ const FIELD_LABELS: Record<string, string> = {
   undergraduateDegreeCompletionDate: 'Undergraduate Degree Completion Date',
   bank_account: 'Bank Account',
   title: 'Title',
-  address: 'Address',
-  emergency_contact: 'Emergency Contact',
+  address: 'Permanent Address',
+  residing_address: 'Residing Address',
   blood_type: 'Blood Type',
+  full_name_as_nic: 'Full Name as in NIC',
+  name_with_initials: 'Name with Initials',
+  date_of_birth: 'Date of Birth',
+  birth_place: 'Birth Place',
+  sex: 'Sex',
+  marital_status: 'Marital Status',
+  nationality: 'Nationality',
+  spouse_name: 'Spouse Name',
+  mother_name: 'Mother Name',
+  father_name: 'Father Name',
+  landline_number: 'Landline Number',
+  national_id: 'National Identity Card Number',
+  anniversary_date: 'Wedding Anniversary Date',
+  hobbies: 'Hobbies',
+  community_activities: 'Community Activities',
+  professional_memberships: 'Professional Memberships',
 };
 
 const STATUS_STYLES: Record<ProfileChangeRequest['status'], { label: string; className: string }> = {
@@ -69,15 +87,45 @@ function AddressBlock({ value }: { value: AddressValue }) {
   );
 }
 
-function EmergencyContactBlock({ value }: { value: EmergencyContactValue }) {
+function EmergencyContactRecordBlock({ value }: { value: EmergencyContactRecordValue }) {
   return (
     <dl className="grid grid-cols-2 gap-x-4 gap-y-1.5">
       <dt className="text-[10px] font-bold text-[var(--gray-400)] uppercase">Name</dt>
-      <dd className="text-xs font-semibold text-[var(--foreground)]">{value.emergencyContactName}</dd>
-      <dt className="text-[10px] font-bold text-[var(--gray-400)] uppercase">Phone</dt>
-      <dd className="text-xs font-semibold text-[var(--foreground)]">{value.emergencyContactPhone}</dd>
+      <dd className="text-xs font-semibold text-[var(--foreground)]">{value.name}</dd>
+      <dt className="text-[10px] font-bold text-[var(--gray-400)] uppercase">Contact Number</dt>
+      <dd className="text-xs font-semibold text-[var(--foreground)]">{value.contactNumber}</dd>
       <dt className="text-[10px] font-bold text-[var(--gray-400)] uppercase">Relationship</dt>
-      <dd className="text-xs font-semibold text-[var(--foreground)]">{value.emergencyContactRelationship || '—'}</dd>
+      <dd className="text-xs font-semibold text-[var(--foreground)]">{value.relationship}</dd>
+    </dl>
+  );
+}
+
+function NomineeBlock({ value }: { value: NomineeValue }) {
+  return (
+    <dl className="grid grid-cols-2 gap-x-4 gap-y-1.5">
+      <dt className="text-[10px] font-bold text-[var(--gray-400)] uppercase">Name</dt>
+      <dd className="text-xs font-semibold text-[var(--foreground)]">{value.nameWithInitials}</dd>
+      <dt className="text-[10px] font-bold text-[var(--gray-400)] uppercase">NIC</dt>
+      <dd className="text-xs font-semibold text-[var(--foreground)]">{value.nic}</dd>
+      <dt className="text-[10px] font-bold text-[var(--gray-400)] uppercase">Relationship</dt>
+      <dd className="text-xs font-semibold text-[var(--foreground)]">{value.relationship}</dd>
+      <dt className="text-[10px] font-bold text-[var(--gray-400)] uppercase">Proportion</dt>
+      <dd className="text-xs font-semibold text-[var(--foreground)]">{value.proportionPercent}%</dd>
+    </dl>
+  );
+}
+
+function DependentBlock({ value }: { value: DependentValue }) {
+  return (
+    <dl className="grid grid-cols-2 gap-x-4 gap-y-1.5">
+      <dt className="text-[10px] font-bold text-[var(--gray-400)] uppercase">Name</dt>
+      <dd className="text-xs font-semibold text-[var(--foreground)]">{value.fullName}</dd>
+      <dt className="text-[10px] font-bold text-[var(--gray-400)] uppercase">NIC</dt>
+      <dd className="text-xs font-semibold text-[var(--foreground)]">{value.nic || '—'}</dd>
+      <dt className="text-[10px] font-bold text-[var(--gray-400)] uppercase">Date of Birth</dt>
+      <dd className="text-xs font-semibold text-[var(--foreground)]">{formatDate(value.dateOfBirth)}</dd>
+      <dt className="text-[10px] font-bold text-[var(--gray-400)] uppercase">Relationship</dt>
+      <dd className="text-xs font-semibold text-[var(--foreground)] capitalize">{value.relationship}</dd>
     </dl>
   );
 }
@@ -96,17 +144,36 @@ function ChangeItemCard({ item }: { item: ProfileChangeItem }) {
     beforeNode = <span>{item.field === 'undergraduateDegreeCompletionDate' ? formatDate(item.before) : item.before || '—'}</span>;
     afterNode = <span>{item.field === 'undergraduateDegreeCompletionDate' ? formatDate(item.after) : item.after || '—'}</span>;
   } else if (item.entityType === 'employee_pii_field') {
-    label = FIELD_LABELS[item.field];
-    if (item.field === 'address') {
+    label = FIELD_LABELS[item.field] ?? item.field;
+    if (item.field === 'address' || item.field === 'residing_address') {
       beforeNode = item.before ? <AddressBlock value={item.before} /> : <span className="text-[var(--gray-400)]">—</span>;
-      afterNode = <AddressBlock value={item.after} />;
-    } else if (item.field === 'emergency_contact') {
-      beforeNode = item.before ? <EmergencyContactBlock value={item.before} /> : <span className="text-[var(--gray-400)]">—</span>;
-      afterNode = <EmergencyContactBlock value={item.after} />;
+      afterNode = item.after ? <AddressBlock value={item.after} /> : <span className="text-[var(--gray-400)]">—</span>;
     } else {
       beforeNode = <span>{item.before || '—'}</span>;
-      afterNode = <span>{item.after}</span>;
+      afterNode = <span>{item.after || '—'}</span>;
     }
+  } else if (item.entityType === 'welfare_field') {
+    label = FIELD_LABELS[item.field] ?? item.field;
+    beforeNode = <span>{item.field === 'anniversary_date' ? formatDate(item.before) : item.before || '—'}</span>;
+    afterNode = <span>{item.field === 'anniversary_date' ? formatDate(item.after) : item.after || '—'}</span>;
+  } else if (item.entityType === 'nominee') {
+    label = `Nominee (${item.operation})`;
+    const renderRecord = (rec?: NomineeValue | null) =>
+      rec ? <NomineeBlock value={rec} /> : <span className="text-[var(--gray-400)]">—</span>;
+    beforeNode = renderRecord(item.before);
+    afterNode = renderRecord(item.after);
+  } else if (item.entityType === 'dependent') {
+    label = `Dependent (${item.operation})`;
+    const renderRecord = (rec?: DependentValue | null) =>
+      rec ? <DependentBlock value={rec} /> : <span className="text-[var(--gray-400)]">—</span>;
+    beforeNode = renderRecord(item.before);
+    afterNode = renderRecord(item.after);
+  } else if (item.entityType === 'emergency_contact_record') {
+    label = `Emergency Contact (${item.operation})`;
+    const renderRecord = (rec?: EmergencyContactRecordValue | null) =>
+      rec ? <EmergencyContactRecordBlock value={rec} /> : <span className="text-[var(--gray-400)]">—</span>;
+    beforeNode = renderRecord(item.before);
+    afterNode = renderRecord(item.after);
   } else if (item.entityType === 'education') {
     label = `Education (${item.operation})`;
     const renderRecord = (rec?: typeof item.after) =>

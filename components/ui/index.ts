@@ -9,3 +9,6 @@ export { Pagination } from './Pagination';
 export { FileUpload } from './FileUpload';
 export { DataTable } from './DataTable';
 export { EmployeeMultiSelect } from './EmployeeMultiSelect';
+export { RecipientPicker } from './RecipientPicker';
+export { ActionsMenu } from './ActionsMenu';
+export type { ActionsMenuItem } from './ActionsMenu';

@@ -4,11 +4,26 @@ import type { ApiResponse } from '@/types/api';
 import type { Communication, CommunicationRecipient } from '@/types/hrModules';
 
 export const communicationService = {
-  create: async (title: string, body: string, recipientUserIds: number[], files: File[]): Promise<Communication> => {
+  create: async (
+    title: string,
+    body: string,
+    recipientUserIds: number[],
+    recipientGroupIds: number[],
+    files: File[],
+    requiresAcknowledgement?: boolean,
+    deadlineAt?: string | null
+  ): Promise<Communication> => {
     const formData = new FormData();
     formData.append('title', title);
     formData.append('body', body);
     formData.append('recipientUserIds', JSON.stringify(recipientUserIds));
+    formData.append('recipientGroupIds', JSON.stringify(recipientGroupIds));
+    if (requiresAcknowledgement !== undefined) {
+      formData.append('requiresAcknowledgement', String(requiresAcknowledgement));
+    }
+    if (deadlineAt) {
+      formData.append('deadlineAt', deadlineAt);
+    }
     files.forEach((file) => formData.append('attachments', file));
     const res = await api.post<ApiResponse<Communication>>('/communications', formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
@@ -33,5 +48,9 @@ export const communicationService = {
   downloadReport: async (): Promise<Blob> => {
     const res = await api.get('/communications/report', { responseType: 'blob' });
     return res.data as Blob;
+  },
+
+  delete: async (id: number): Promise<void> => {
+    await api.delete(`/communications/${id}`);
   },
 };
