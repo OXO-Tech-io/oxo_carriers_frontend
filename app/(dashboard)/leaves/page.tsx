@@ -60,7 +60,7 @@ export default function LeavesPage() {
   }, []);
 
   const leaveTypesQuery = useLeaveTypesQuery();
-  const leaveBalanceQuery = useLeaveBalanceQuery();
+  const leaveBalanceQuery = useLeaveBalanceQuery(user?.employee_id);
   const leaveRequestsQuery = useLeaveRequestsQuery(
     activeTab === 'approvals' ? { status: 'pending' } : {},
     { enabled: activeTab === 'history' || activeTab === 'approvals' }

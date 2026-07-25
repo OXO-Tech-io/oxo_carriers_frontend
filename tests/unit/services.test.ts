@@ -388,7 +388,7 @@ describe("frontend services", () => {
     await leaveService.getLeaveTypes();
 
     apiMock.get.mockResolvedValueOnce(asResponse({ data: [] }));
-    await leaveService.getLeaveBalance(2026);
+    await leaveService.getLeaveBalance("EMP-1", 2026);
 
     apiMock.get.mockResolvedValueOnce(asResponse({ data: [] }));
     await leaveService.listLeaveRequests({ status: "pending" });
@@ -420,8 +420,8 @@ describe("frontend services", () => {
       name: "Holiday 2",
     });
     expect(apiMock.delete).toHaveBeenCalledWith("/leave-calendars/1");
-    expect(apiMock.get).toHaveBeenCalledWith("/leaves/types");
-    expect(apiMock.get).toHaveBeenCalledWith("/leaves/balance", {
+    expect(apiMock.get).toHaveBeenCalledWith("/leave-types");
+    expect(apiMock.get).toHaveBeenCalledWith("/leaves/EMP-1/balances", {
       params: { year: 2026 },
     });
     expect(apiMock.get).toHaveBeenCalledWith("/leaves", {
