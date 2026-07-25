@@ -48,7 +48,7 @@ export const communicationService = {
   },
 
   downloadReport: async (): Promise<Blob> => {
-    const res = await api.get('/communications/report', { responseType: 'blob' });
+    const res = await api.get('/communications/reports', { responseType: 'blob' });
     return res.data as Blob;
   },
 
