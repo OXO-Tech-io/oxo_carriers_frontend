@@ -239,8 +239,8 @@ export interface AssignedForm {
   form: HrForm;
   distributedAt: string | null;
   submitted: boolean;
-  /** Mirrors FormSettings.acceptResponses, flattened onto the assignment so `/forms/mine` doesn't
-   * need a settings fan-out per form. Absent (older payloads) is treated as accepting responses. */
+  /** Mirrors FormSettings.acceptResponses, flattened onto the assignment so `/forms?mine=true`
+   * doesn't need a settings fan-out per form. Absent (older payloads) is treated as accepting responses. */
   acceptResponses?: boolean;
   closeAt?: string | null;
 }

@@ -141,7 +141,7 @@ export const formService = {
   },
 
   listAssignedToMe: async (): Promise<AssignedForm[]> => {
-    const res = await api.get<ApiResponse<AssignedForm[]>>('/forms/mine');
+    const res = await api.get<ApiResponse<AssignedForm[]>>('/forms', { params: { mine: true } });
     return extractData(res);
   },
 
