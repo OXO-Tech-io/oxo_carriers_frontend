@@ -77,7 +77,7 @@ export const profileService = {
   },
 
   getWelfareInfo: async (employeeId: string): Promise<EmployeeWelfareInfo | null> => {
-    const res = await api.get<ApiResponse<EmployeeWelfareInfo | null>>(`/employees/${employeeId}/welfare-info`);
+    const res = await api.get<ApiResponse<EmployeeWelfareInfo | null>>(`/employees/${employeeId}/welfare-informations`);
     return res.data.data;
   },
 
