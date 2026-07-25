@@ -122,7 +122,7 @@ export const formService = {
   },
 
   publish: async (id: number): Promise<HrForm> => {
-    const res = await api.post<ApiResponse<HrForm>>(`/forms/${id}/publication`);
+    const res = await api.post<ApiResponse<HrForm>>(`/forms/${id}/publishes`);
     return extractData(res);
   },
 
