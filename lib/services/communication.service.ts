@@ -36,8 +36,10 @@ export const communicationService = {
     return extractData(res);
   },
 
-  listMine: async (): Promise<CommunicationRecipient[]> => {
-    const res = await api.get<ApiResponse<CommunicationRecipient[]>>('/communications/mine');
+  listMine: async (employeeId: string): Promise<CommunicationRecipient[]> => {
+    const res = await api.get<ApiResponse<CommunicationRecipient[]>>('/communications', {
+      params: { employee_id: employeeId },
+    });
     return extractData(res);
   },
 

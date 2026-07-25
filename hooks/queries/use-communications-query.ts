@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { communicationService } from '@/lib/services/communication.service';
+import { useAuth } from '@/hooks/useAuth';
 
 export const useCommunicationsQuery = () =>
   useQuery({
@@ -7,8 +8,13 @@ export const useCommunicationsQuery = () =>
     queryFn: () => communicationService.listAll(),
   });
 
-export const useMyCommunicationsQuery = () =>
-  useQuery({
-    queryKey: ['communications', 'mine'],
-    queryFn: () => communicationService.listMine(),
+export const useMyCommunicationsQuery = () => {
+  const { user } = useAuth();
+  const employeeId = user?.employee_id;
+
+  return useQuery({
+    queryKey: ['communications', 'mine', employeeId],
+    queryFn: () => communicationService.listMine(employeeId!),
+    enabled: !!employeeId,
   });
+};
