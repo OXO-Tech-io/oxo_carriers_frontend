@@ -163,7 +163,7 @@ export default function PermissionsPage() {
       setLoading(true);
       setPageError("");
       const [usersRes, catalogRes, assignmentsRes] = await Promise.all([
-        api.get("/permissions/manage-users"),
+        api.get("/permissions/manageable-users"),
         api.get("/permissions/catalog"),
         api.get("/permissions/users"),
       ]);

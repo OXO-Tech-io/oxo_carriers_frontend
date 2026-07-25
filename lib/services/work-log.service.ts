@@ -48,7 +48,7 @@ export const workLogService = {
   bulkUpload: async (file: File): Promise<BulkUploadResult> => {
     const formData = new FormData();
     formData.append('excel', file);
-    const res = await api.post<ApiResponse<BulkUploadResult>>('/work-logs/bulk-upload', formData, {
+    const res = await api.post<ApiResponse<BulkUploadResult>>('/work-logs/bulk-uploads', formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
     });
     return extractData(res);

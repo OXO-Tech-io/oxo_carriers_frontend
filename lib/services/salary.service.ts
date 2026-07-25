@@ -19,7 +19,7 @@ export const salaryService = {
     formData: FormData,
   ): Promise<{ message?: string; success?: boolean }> => {
     const res = await api.post<{ message?: string; success?: boolean }>(
-      "/salary/bulk-upload",
+      "/salaries/bulk-uploads",
       formData,
     );
     return res.data;
@@ -28,7 +28,7 @@ export const salaryService = {
   listSalaries: async (year?: number): Promise<SalaryListResponse> => {
     const res = await api.get<
       ApiResponse<SalaryListResponse> | SalaryListResponse
-    >("/salary", {
+    >("/salaries", {
       params: year ? { year } : undefined,
     });
     return extractData<SalaryListResponse>(res as never);
@@ -36,14 +36,14 @@ export const salaryService = {
 
   getSalaryById: async (id: number): Promise<SalarySlip> => {
     const res = await api.get<ApiResponse<SalarySlip> | SalarySlip>(
-      `/salary/${id}`,
+      `/salaries/${id}`,
     );
     return extractData<SalarySlip>(res as never);
   },
 
   getSalaryYtd: async (year: number): Promise<SalaryYtd> => {
     const res = await api.get<ApiResponse<SalaryYtd> | SalaryYtd>(
-      "/salary/ytd",
+      "/salaries/ytd",
       {
         params: { year },
       },
@@ -52,7 +52,7 @@ export const salaryService = {
   },
 
   downloadSalaryPdf: async (salaryId: number): Promise<Blob> => {
-    const res = await api.get<Blob>(`/salary/${salaryId}/pdf`, {
+    const res = await api.get<Blob>(`/salaries/${salaryId}/pdf`, {
       responseType: "blob",
     });
     return res.data;

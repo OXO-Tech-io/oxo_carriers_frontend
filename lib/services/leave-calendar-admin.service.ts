@@ -23,7 +23,7 @@ export const leaveCalendarAdminService = {
   listByYear: async (year: number): Promise<LeaveCalendarEntry[]> => {
     const res = await api.get<
       ApiResponse<LeaveCalendarEntry[]> | LeaveCalendarEntry[]
-    >("/leave-calendar", {
+    >("/leave-calendar-entries", {
       params: { year },
     });
     return extractData<LeaveCalendarEntry[]>(res as never);
@@ -34,7 +34,7 @@ export const leaveCalendarAdminService = {
   ): Promise<LeaveCalendarEntry> => {
     const res = await api.post<
       ApiResponse<LeaveCalendarEntry> | LeaveCalendarEntry
-    >("/leave-calendar", payload);
+    >("/leave-calendar-entries", payload);
     return extractData<LeaveCalendarEntry>(res as never);
   },
 
@@ -44,11 +44,11 @@ export const leaveCalendarAdminService = {
   ): Promise<LeaveCalendarEntry> => {
     const res = await api.put<
       ApiResponse<LeaveCalendarEntry> | LeaveCalendarEntry
-    >(`/leave-calendar/${id}`, payload);
+    >(`/leave-calendar-entries/${id}`, payload);
     return extractData<LeaveCalendarEntry>(res as never);
   },
 
   deleteEntry: async (id: number): Promise<void> => {
-    await api.delete(`/leave-calendar/${id}`);
+    await api.delete(`/leave-calendar-entries/${id}`);
   },
 };

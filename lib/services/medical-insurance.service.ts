@@ -38,7 +38,7 @@ export const medicalInsuranceService = {
   ): Promise<MedicalInsuranceListResponse> => {
     const res = await api.get<
       ApiResponse<MedicalInsuranceListResponse> | MedicalInsuranceListResponse
-    >("/medical-insurance", {
+    >("/medical-insurance-claims", {
       params: filters,
     });
     return extractData<MedicalInsuranceListResponse>(res as never);
@@ -47,14 +47,14 @@ export const medicalInsuranceService = {
   getLimits: async (): Promise<MedicalInsuranceLimits> => {
     const res = await api.get<
       ApiResponse<MedicalInsuranceLimits> | MedicalInsuranceLimits
-    >("/medical-insurance/limits");
+    >("/medical-insurance-claims/limits");
     return extractData<MedicalInsuranceLimits>(res as never);
   },
 
   createClaim: async (formData: FormData): Promise<MedicalInsuranceClaim> => {
     const res = await api.post<
       ApiResponse<MedicalInsuranceClaim> | MedicalInsuranceClaim
-    >("/medical-insurance", formData);
+    >("/medical-insurance-claims", formData);
     return extractData<MedicalInsuranceClaim>(res as never);
   },
 
@@ -64,14 +64,14 @@ export const medicalInsuranceService = {
   ): Promise<MedicalInsuranceClaim> => {
     const res = await api.post<
       ApiResponse<MedicalInsuranceClaim> | MedicalInsuranceClaim
-    >(`/medical-insurance/${id}/resubmit`, formData);
+    >(`/medical-insurance-claims/${id}/resubmissions`, formData);
     return extractData<MedicalInsuranceClaim>(res as never);
   },
 
   approveClaim: async (id: number): Promise<MedicalInsuranceClaim> => {
     const res = await api.put<
       ApiResponse<MedicalInsuranceClaim> | MedicalInsuranceClaim
-    >(`/medical-insurance/${id}/approve`);
+    >(`/medical-insurance-claims/${id}/decision`, { action: "approve" });
     return extractData<MedicalInsuranceClaim>(res as never);
   },
 
@@ -81,7 +81,8 @@ export const medicalInsuranceService = {
   ): Promise<MedicalInsuranceClaim> => {
     const res = await api.put<
       ApiResponse<MedicalInsuranceClaim> | MedicalInsuranceClaim
-    >(`/medical-insurance/${id}/reject`, {
+    >(`/medical-insurance-claims/${id}/decision`, {
+      action: "reject",
       admin_comment,
     });
     return extractData<MedicalInsuranceClaim>(res as never);

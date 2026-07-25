@@ -79,7 +79,7 @@ export const voucherService = {
 
   resubmitVoucher: async (id: number): Promise<PaymentVoucher> => {
     const res = await api.put<ApiResponse<PaymentVoucher> | PaymentVoucher>(
-      `/vouchers/${id}/resubmit`,
+      `/vouchers/${id}/resubmission`,
     );
     return extractData<PaymentVoucher>(res as never);
   },

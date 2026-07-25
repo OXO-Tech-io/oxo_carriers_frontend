@@ -122,7 +122,7 @@ export const formService = {
   },
 
   publish: async (id: number): Promise<HrForm> => {
-    const res = await api.post<ApiResponse<HrForm>>(`/forms/${id}/publish`);
+    const res = await api.post<ApiResponse<HrForm>>(`/forms/${id}/publication`);
     return extractData(res);
   },
 
@@ -137,7 +137,7 @@ export const formService = {
   },
 
   distribute: async (id: number, userIds: number[], groupIds: number[], closeAt?: string | null): Promise<void> => {
-    await api.post(`/forms/${id}/distribute`, { userIds, groupIds, closeAt });
+    await api.post(`/forms/${id}/distribution`, { userIds, groupIds, closeAt });
   },
 
   listAssignedToMe: async (): Promise<AssignedForm[]> => {

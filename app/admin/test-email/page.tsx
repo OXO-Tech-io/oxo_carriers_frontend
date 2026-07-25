@@ -31,7 +31,7 @@ export default function TestEmailPage() {
   const checkEmailConfig = async () => {
     setLoadingConfig(true);
     try {
-      const response = await api.get('/email-config-check');
+      const response = await api.get('/health/email-config');
       setConfigStatus(response.data);
     } catch (error: any) {
       setConfigStatus({
@@ -65,7 +65,7 @@ export default function TestEmailPage() {
         };
       }
 
-      const response = await api.post('/test-email', payload);
+      const response = await api.post('/health/email-tests', payload);
 
       setResult({
         success: response.data.success,

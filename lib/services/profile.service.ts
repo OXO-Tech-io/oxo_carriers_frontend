@@ -52,7 +52,7 @@ export const profileService = {
   },
 
   getEmployeePii: async (userId: number): Promise<EmployeePii | null> => {
-    const res = await api.get<{ success: boolean; pii: EmployeePii | null }>(`/employee-pii/${userId}`);
+    const res = await api.get<{ success: boolean; pii: EmployeePii | null }>(`/employees/${userId}/pii`);
     return res.data.pii;
   },
 
@@ -112,7 +112,7 @@ export const profileService = {
   },
 
   approveChangeRequest: async (id: number, reviewerComments?: string): Promise<ProfileChangeRequest> => {
-    const res = await api.put<ApiResponse<ProfileChangeRequest>>(`/profile-change-requests/${id}/approve`, {
+    const res = await api.put<ApiResponse<ProfileChangeRequest>>(`/profile-change-requests/${id}/decision`, {
       decision: 'approved',
       reviewerComments,
     });
@@ -120,7 +120,7 @@ export const profileService = {
   },
 
   rejectChangeRequest: async (id: number, reviewerComments: string): Promise<ProfileChangeRequest> => {
-    const res = await api.put<ApiResponse<ProfileChangeRequest>>(`/profile-change-requests/${id}/reject`, {
+    const res = await api.put<ApiResponse<ProfileChangeRequest>>(`/profile-change-requests/${id}/decision`, {
       decision: 'rejected',
       reviewerComments,
     });
@@ -128,7 +128,7 @@ export const profileService = {
   },
 
   returnChangeRequest: async (id: number, reviewerComments: string): Promise<ProfileChangeRequest> => {
-    const res = await api.put<ApiResponse<ProfileChangeRequest>>(`/profile-change-requests/${id}/return`, {
+    const res = await api.put<ApiResponse<ProfileChangeRequest>>(`/profile-change-requests/${id}/decision`, {
       decision: 'returned_for_modification',
       reviewerComments,
     });

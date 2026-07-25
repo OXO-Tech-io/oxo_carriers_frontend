@@ -20,14 +20,14 @@ export interface TestEmailResponse {
 
 export const emailService = {
   checkConfig: async (): Promise<EmailConfigCheckResponse> => {
-    const res = await api.get<EmailConfigCheckResponse>("/email-config-check");
+    const res = await api.get<EmailConfigCheckResponse>("/health/email-config");
     return res.data;
   },
 
   sendTestEmail: async (
     payload: TestEmailInput,
   ): Promise<TestEmailResponse> => {
-    const res = await api.post<TestEmailResponse>("/test-email", payload);
+    const res = await api.post<TestEmailResponse>("/health/email-tests", payload);
     return res.data;
   },
 };

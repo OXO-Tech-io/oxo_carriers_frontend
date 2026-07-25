@@ -233,7 +233,7 @@ function VoucherPageContent() {
     setActioningId(id);
     setError("");
     try {
-      await api.put(`/vouchers/${id}/resubmit`);
+      await api.put(`/vouchers/${id}/resubmission`);
       setSuccess("Voucher resubmitted for review.");
       fetchVouchers();
     } catch (err: any) {

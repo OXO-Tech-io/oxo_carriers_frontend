@@ -42,7 +42,7 @@ export const communicationService = {
   },
 
   respond: async (id: number, responseText?: string): Promise<void> => {
-    await api.post(`/communications/${id}/respond`, { responseText });
+    await api.post(`/communications/${id}/responses`, { responseText });
   },
 
   downloadReport: async (): Promise<Blob> => {

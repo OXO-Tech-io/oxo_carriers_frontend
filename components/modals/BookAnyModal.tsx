@@ -117,7 +117,7 @@ export default function BookAnyModal({
     const { facility_id, purpose } = step3Form.getValues();
     const { start_time, end_time } = step2Form.getValues();
     try {
-      await api.post('/facilities/book', {
+      await api.post('/facilities/bookings', {
         facility_id,
         start_time,
         end_time,

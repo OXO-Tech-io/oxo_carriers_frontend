@@ -146,7 +146,7 @@ export default function AdminUsersPage() {
     // 2. Provision in Keycloak (skip for service providers/vendors)
     if (createdUser && formData.role !== UserRole.SERVICE_PROVIDER) {
       try {
-        const kcResponse = await api.post(`/users/${createdUser.id}/keycloak`);
+        const kcResponse = await api.post(`/users/${createdUser.id}/keycloak-accounts`);
         toast.success(
           "Keycloak Provisioned",
           kcResponse.data.message || "Keycloak identity provisioned successfully and email sent."

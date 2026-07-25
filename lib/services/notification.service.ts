@@ -20,10 +20,10 @@ export const notificationService = {
   },
 
   markRead: async (id: number): Promise<void> => {
-    await api.patch(`/notifications/${id}/read`);
+    await api.patch(`/notifications/${id}/read-status`);
   },
 
   markAllRead: async (): Promise<void> => {
-    await api.patch('/notifications/read-all');
+    await api.patch('/notifications/read-statuses');
   },
 };

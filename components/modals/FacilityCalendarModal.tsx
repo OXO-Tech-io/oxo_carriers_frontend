@@ -36,7 +36,7 @@ export default function FacilityCalendarModal({ isOpen, onClose, facility }: Fac
       const start = format(startOfMonth(currentMonth), 'yyyy-MM-dd');
       const end = format(endOfMonth(currentMonth), 'yyyy-MM-dd');
       
-      const response = await api.get(`/facilities/all-bookings?start_date=${start}&end_date=${end}&facility_id=${facility.id}`);
+      const response = await api.get(`/facilities/bookings?start_date=${start}&end_date=${end}&facility_id=${facility.id}`);
       setBookings(response.data || []);
     } catch (err) {
       console.error(err);

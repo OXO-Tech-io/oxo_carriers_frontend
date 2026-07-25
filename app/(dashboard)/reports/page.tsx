@@ -134,7 +134,7 @@ export default function ReportsPage() {
         year: selectedYear.toString(),
         ...(selectedMonth && { month: selectedMonth.toString() })
       });
-      const salaryRes = await api.get(`/salary?${salaryParams}`);
+      const salaryRes = await api.get(`/salaries?${salaryParams}`);
       const salaries = salaryRes.data.salaries || [];
 
       const salaryData: SalaryReport = {

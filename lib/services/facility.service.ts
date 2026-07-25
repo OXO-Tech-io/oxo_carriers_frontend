@@ -76,7 +76,7 @@ export const facilityService = {
     payload: FacilityBookingInput,
   ): Promise<FacilityBooking> => {
     const res = await api.post<ApiResponse<FacilityBooking> | FacilityBooking>(
-      "/facilities/book",
+      "/facilities/bookings",
       payload,
     );
     return extractData<FacilityBooking>(res as never);
@@ -85,12 +85,12 @@ export const facilityService = {
   getMyBookings: async (): Promise<FacilityBooking[]> => {
     const res = await api.get<
       ApiResponse<FacilityBooking[]> | FacilityBooking[]
-    >("/facilities/my-bookings");
+    >("/facilities/bookings/mine");
     return extractData<FacilityBooking[]>(res as never);
   },
 
   cancelBooking: async (id: number): Promise<void> => {
-    await api.put(`/facilities/bookings/${id}/cancel`);
+    await api.put(`/facilities/bookings/${id}/cancellation`);
   },
 
   getAllBookings: async (
@@ -98,7 +98,7 @@ export const facilityService = {
   ): Promise<FacilityBooking[]> => {
     const res = await api.get<
       ApiResponse<FacilityBooking[]> | FacilityBooking[]
-    >("/facilities/all-bookings", { params });
+    >("/facilities/bookings", { params });
     return extractData<FacilityBooking[]>(res as never);
   },
 };
