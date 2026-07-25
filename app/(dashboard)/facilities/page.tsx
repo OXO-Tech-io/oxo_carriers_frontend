@@ -72,7 +72,7 @@ export default function FacilitiesPage() {
 
   const fetchMyBookings = async () => {
     try {
-      const response = await api.get('/facilities/bookings/mine');
+      const response = await api.get('/facilities/bookings', { params: { mine: true } });
       setBookings(response.data || []);
     } catch (err) {
       console.error(err);

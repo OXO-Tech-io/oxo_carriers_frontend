@@ -85,7 +85,7 @@ export const facilityService = {
   getMyBookings: async (): Promise<FacilityBooking[]> => {
     const res = await api.get<
       ApiResponse<FacilityBooking[]> | FacilityBooking[]
-    >("/facilities/bookings/mine");
+    >("/facilities/bookings", { params: { mine: true } });
     return extractData<FacilityBooking[]>(res as never);
   },
 

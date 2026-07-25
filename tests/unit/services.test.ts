@@ -199,7 +199,9 @@ describe("frontend services", () => {
       start_time: "s",
       end_time: "e",
     });
-    expect(apiMock.get).toHaveBeenCalledWith("/facilities/bookings/mine");
+    expect(apiMock.get).toHaveBeenCalledWith("/facilities/bookings", {
+      params: { mine: true },
+    });
     expect(apiMock.put).toHaveBeenCalledWith(
       "/facilities/bookings/2/cancellation",
     );
