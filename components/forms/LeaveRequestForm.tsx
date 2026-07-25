@@ -90,7 +90,7 @@ export default function LeaveRequestForm() {
     queryKey: ['holidays', startDate, endDate],
     queryFn: async () => {
       if (!startDate || !endDate) return [];
-      const response = await api.get(`/leave-calendar-entries/range?startDate=${startDate}&endDate=${endDate}`);
+      const response = await api.get(`/leave-calendars/range?startDate=${startDate}&endDate=${endDate}`);
       return response.data.data || [];
     },
     enabled: !!startDate && !!endDate

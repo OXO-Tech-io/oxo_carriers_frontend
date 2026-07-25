@@ -52,7 +52,7 @@ export default function DateRangePicker({
       const end = new Date(currentYear + 1, 11, 31);
       
       const response = await api.get(
-        `/leave-calendar-entries/range?startDate=${format(start, 'yyyy-MM-dd')}&endDate=${format(end, 'yyyy-MM-dd')}`
+        `/leave-calendars/range?startDate=${format(start, 'yyyy-MM-dd')}&endDate=${format(end, 'yyyy-MM-dd')}`
       );
       setHolidays(response.data.data || []);
     } catch (err) {

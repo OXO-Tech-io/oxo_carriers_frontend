@@ -408,18 +408,18 @@ describe("frontend services", () => {
     apiMock.get.mockResolvedValueOnce(asResponse({ data: [] }));
     await leaveCalendarService.getHolidaysInRange("2026-01-01", "2026-12-31");
 
-    expect(apiMock.get).toHaveBeenCalledWith("/leave-calendar-entries", {
+    expect(apiMock.get).toHaveBeenCalledWith("/leave-calendars", {
       params: { year: 2026 },
     });
-    expect(apiMock.post).toHaveBeenCalledWith("/leave-calendar-entries", {
+    expect(apiMock.post).toHaveBeenCalledWith("/leave-calendars", {
       date: "2026-01-01",
       name: "Holiday",
     });
-    expect(apiMock.put).toHaveBeenCalledWith("/leave-calendar-entries/1", {
+    expect(apiMock.put).toHaveBeenCalledWith("/leave-calendars/1", {
       date: "2026-01-02",
       name: "Holiday 2",
     });
-    expect(apiMock.delete).toHaveBeenCalledWith("/leave-calendar-entries/1");
+    expect(apiMock.delete).toHaveBeenCalledWith("/leave-calendars/1");
     expect(apiMock.get).toHaveBeenCalledWith("/leaves/types");
     expect(apiMock.get).toHaveBeenCalledWith("/leaves/balance", {
       params: { year: 2026 },
@@ -435,7 +435,7 @@ describe("frontend services", () => {
     expect(apiMock.put).toHaveBeenCalledWith("/leaves/1/rejection", {
       rejectionReason: "x",
     });
-    expect(apiMock.get).toHaveBeenCalledWith("/leave-calendar-entries/range", {
+    expect(apiMock.get).toHaveBeenCalledWith("/leave-calendars/range", {
       params: { startDate: "2026-01-01", endDate: "2026-12-31" },
     });
   });
