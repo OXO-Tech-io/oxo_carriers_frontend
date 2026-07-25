@@ -33,7 +33,7 @@ export const eventService = {
   },
 
   recordParticipation: async (id: number, participants: RecordParticipationInput[]): Promise<EventParticipant[]> => {
-    const res = await api.post<ApiResponse<EventParticipant[]>>(`/events/${id}/participation`, { participants });
+    const res = await api.post<ApiResponse<EventParticipant[]>>(`/events/${id}/participations`, { participants });
     return extractData(res);
   },
 };
