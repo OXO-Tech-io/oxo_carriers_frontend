@@ -3,7 +3,6 @@ export * from "./use-approve-profile-change-mutation";
 export * from "./use-auth-mutations";
 export * from "./use-consultant-submission-mutations";
 export * from "./use-create-leave-mutation";
-export * from "./use-email-mutations";
 export * from "./use-facility-mutations";
 export * from "./use-leave-calendar-mutations";
 export * from "./use-mark-all-notifications-read-mutation";

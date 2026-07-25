@@ -11,7 +11,6 @@ import { medicalInsuranceService } from "@/lib/services/medical-insurance.servic
 import { consultantSubmissionService } from "@/lib/services/consultant-submission.service";
 import { leaveCalendarAdminService } from "@/lib/services/leave-calendar-admin.service";
 import { reportsService } from "@/lib/services/reports.service";
-import { emailService } from "@/lib/services/email.service";
 import { leaveService } from "@/lib/services/leave.service";
 import { leaveCalendarService } from "@/lib/services/leave-calendar.service";
 
@@ -130,7 +129,7 @@ describe("frontend services", () => {
       company_name: "X",
       email: "x@x.com",
     });
-    expect(apiMock.post).toHaveBeenCalledWith("/users/9/reset-password");
+    expect(apiMock.post).toHaveBeenCalledWith("/users/9/password-resets");
     expect(apiMock.delete).toHaveBeenCalledWith("/users/5");
     expect(apiMock.patch).toHaveBeenCalledWith("/users/4/role", {
       role: "employee",
@@ -195,14 +194,16 @@ describe("frontend services", () => {
     expect(apiMock.get).toHaveBeenCalledWith("/facilities/available", {
       params: { start_time: "s", end_time: "e" },
     });
-    expect(apiMock.post).toHaveBeenCalledWith("/facilities/book", {
+    expect(apiMock.post).toHaveBeenCalledWith("/facilities/bookings", {
       facility_id: 1,
       start_time: "s",
       end_time: "e",
     });
-    expect(apiMock.get).toHaveBeenCalledWith("/facilities/my-bookings");
-    expect(apiMock.put).toHaveBeenCalledWith("/facilities/bookings/2/cancel");
-    expect(apiMock.get).toHaveBeenCalledWith("/facilities/all-bookings", {
+    expect(apiMock.get).toHaveBeenCalledWith("/facilities/bookings/mine");
+    expect(apiMock.put).toHaveBeenCalledWith(
+      "/facilities/bookings/2/cancellation",
+    );
+    expect(apiMock.get).toHaveBeenCalledWith("/facilities/bookings", {
       params: { start_date: "a", end_date: "b", facility_id: 1 },
     });
   });
@@ -240,7 +241,7 @@ describe("frontend services", () => {
     expect(apiMock.put).toHaveBeenCalledWith("/vouchers/1/review", {
       action: "approve",
     });
-    expect(apiMock.put).toHaveBeenCalledWith("/vouchers/1/resubmit");
+    expect(apiMock.put).toHaveBeenCalledWith("/vouchers/1/resubmission");
     expect(apiMock.put).toHaveBeenCalledWith("/vouchers/1/bank-upload");
     expect(apiMock.put).toHaveBeenCalledWith("/vouchers/1/paid");
   });
@@ -263,17 +264,17 @@ describe("frontend services", () => {
     await expect(salaryService.downloadSalaryPdf(1)).resolves.toBe(blob);
 
     expect(apiMock.post).toHaveBeenCalledWith(
-      "/salary/bulk-upload",
+      "/salaries/bulk-uploads",
       expect.any(FormData),
     );
-    expect(apiMock.get).toHaveBeenCalledWith("/salary", {
+    expect(apiMock.get).toHaveBeenCalledWith("/salaries", {
       params: { year: 2026 },
     });
-    expect(apiMock.get).toHaveBeenCalledWith("/salary/1");
-    expect(apiMock.get).toHaveBeenCalledWith("/salary/ytd", {
+    expect(apiMock.get).toHaveBeenCalledWith("/salaries/1");
+    expect(apiMock.get).toHaveBeenCalledWith("/salaries/ytd", {
       params: { year: 2026 },
     });
-    expect(apiMock.get).toHaveBeenCalledWith("/salary/1/pdf", {
+    expect(apiMock.get).toHaveBeenCalledWith("/salaries/1/pdf", {
       responseType: "blob",
     });
   });
@@ -299,22 +300,28 @@ describe("frontend services", () => {
     apiMock.put.mockResolvedValueOnce(asResponse({ data: { id: 1 } }));
     await medicalInsuranceService.rejectClaim(1, "missing docs");
 
-    expect(apiMock.get).toHaveBeenCalledWith("/medical-insurance", {
+    expect(apiMock.get).toHaveBeenCalledWith("/medical-insurance-claims", {
       params: { page: 1 },
     });
-    expect(apiMock.get).toHaveBeenCalledWith("/medical-insurance/limits");
+    expect(apiMock.get).toHaveBeenCalledWith(
+      "/medical-insurance-claims/limits",
+    );
     expect(apiMock.post).toHaveBeenCalledWith(
-      "/medical-insurance",
+      "/medical-insurance-claims",
       expect.any(FormData),
     );
     expect(apiMock.post).toHaveBeenCalledWith(
-      "/medical-insurance/1/resubmit",
+      "/medical-insurance-claims/1/resubmissions",
       expect.any(FormData),
     );
-    expect(apiMock.put).toHaveBeenCalledWith("/medical-insurance/1/approve");
-    expect(apiMock.put).toHaveBeenCalledWith("/medical-insurance/1/reject", {
-      admin_comment: "missing docs",
-    });
+    expect(apiMock.put).toHaveBeenCalledWith(
+      "/medical-insurance-claims/1/decision",
+      { action: "approve" },
+    );
+    expect(apiMock.put).toHaveBeenCalledWith(
+      "/medical-insurance-claims/1/decision",
+      { action: "reject", admin_comment: "missing docs" },
+    );
   });
 
   it("consultantSubmissionService methods call expected endpoints", async () => {
@@ -343,15 +350,16 @@ describe("frontend services", () => {
       expect.any(FormData),
     );
     expect(apiMock.post).toHaveBeenCalledWith(
-      "/consultant-submissions/1/resubmit",
+      "/consultant-submissions/1/resubmissions",
       expect.any(FormData),
     );
     expect(apiMock.put).toHaveBeenCalledWith(
-      "/consultant-submissions/1/approve",
+      "/consultant-submissions/1/decision",
+      { action: "approve" },
     );
     expect(apiMock.put).toHaveBeenCalledWith(
-      "/consultant-submissions/1/reject",
-      { admin_comment: "fix hours" },
+      "/consultant-submissions/1/decision",
+      { action: "reject", admin_comment: "fix hours" },
     );
   });
 
@@ -398,18 +406,18 @@ describe("frontend services", () => {
     apiMock.get.mockResolvedValueOnce(asResponse({ data: [] }));
     await leaveCalendarService.getHolidaysInRange("2026-01-01", "2026-12-31");
 
-    expect(apiMock.get).toHaveBeenCalledWith("/leave-calendar", {
+    expect(apiMock.get).toHaveBeenCalledWith("/leave-calendar-entries", {
       params: { year: 2026 },
     });
-    expect(apiMock.post).toHaveBeenCalledWith("/leave-calendar", {
+    expect(apiMock.post).toHaveBeenCalledWith("/leave-calendar-entries", {
       date: "2026-01-01",
       name: "Holiday",
     });
-    expect(apiMock.put).toHaveBeenCalledWith("/leave-calendar/1", {
+    expect(apiMock.put).toHaveBeenCalledWith("/leave-calendar-entries/1", {
       date: "2026-01-02",
       name: "Holiday 2",
     });
-    expect(apiMock.delete).toHaveBeenCalledWith("/leave-calendar/1");
+    expect(apiMock.delete).toHaveBeenCalledWith("/leave-calendar-entries/1");
     expect(apiMock.get).toHaveBeenCalledWith("/leaves/types");
     expect(apiMock.get).toHaveBeenCalledWith("/leaves/balance", {
       params: { year: 2026 },
@@ -419,18 +427,18 @@ describe("frontend services", () => {
     });
     expect(apiMock.get).toHaveBeenCalledWith("/leaves/1");
     expect(apiMock.post).toHaveBeenCalledWith("/leaves", expect.any(FormData));
-    expect(apiMock.put).toHaveBeenCalledWith("/leaves/1/approve", {
+    expect(apiMock.put).toHaveBeenCalledWith("/leaves/1/approval", {
       approvedBy: "hr",
     });
-    expect(apiMock.put).toHaveBeenCalledWith("/leaves/1/reject", {
+    expect(apiMock.put).toHaveBeenCalledWith("/leaves/1/rejection", {
       rejectionReason: "x",
     });
-    expect(apiMock.get).toHaveBeenCalledWith("/leave-calendar/range", {
+    expect(apiMock.get).toHaveBeenCalledWith("/leave-calendar-entries/range", {
       params: { startDate: "2026-01-01", endDate: "2026-12-31" },
     });
   });
 
-  it("report and email services call expected endpoints", async () => {
+  it("report services call expected endpoints", async () => {
     apiMock.get.mockResolvedValueOnce(asResponse({ totalUsers: 10 }));
     await reportsService.getDashboardSummary();
 
@@ -446,12 +454,6 @@ describe("frontend services", () => {
       reportsService.downloadSalariesReport({ year: 2026 }),
     ).resolves.toBe(salariesBlob);
 
-    apiMock.get.mockResolvedValueOnce(asResponse({ success: true }));
-    await emailService.checkConfig();
-
-    apiMock.post.mockResolvedValueOnce(asResponse({ success: true }));
-    await emailService.sendTestEmail({ email: "a@a.com" });
-
     expect(apiMock.get).toHaveBeenCalledWith("/reports/dashboard");
     expect(apiMock.get).toHaveBeenCalledWith("/reports/leaves", {
       params: { year: 2026 },
@@ -460,10 +462,6 @@ describe("frontend services", () => {
     expect(apiMock.get).toHaveBeenCalledWith("/reports/salaries", {
       params: { year: 2026 },
       responseType: "blob",
-    });
-    expect(apiMock.get).toHaveBeenCalledWith("/email-config-check");
-    expect(apiMock.post).toHaveBeenCalledWith("/test-email", {
-      email: "a@a.com",
     });
   });
 });

@@ -1,6 +1,5 @@
 export * from "./auth.service";
 export * from "./consultant-submission.service";
-export * from "./email.service";
 export * from "./facility.service";
 export * from "./leave-calendar-admin.service";
 export * from "./leave-calendar.service";
