@@ -66,7 +66,7 @@ export const facilityService = {
     params: FacilityAvailabilityParams,
   ): Promise<Facility[]> => {
     const res = await api.get<ApiResponse<Facility[]> | Facility[]>(
-      "/facilities/available",
+      "/facilities",
       { params },
     );
     return extractData<Facility[]>(res as never);

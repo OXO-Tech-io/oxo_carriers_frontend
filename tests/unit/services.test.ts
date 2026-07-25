@@ -191,7 +191,7 @@ describe("frontend services", () => {
       type: "meeting_room",
     });
     expect(apiMock.delete).toHaveBeenCalledWith("/facilities/1");
-    expect(apiMock.get).toHaveBeenCalledWith("/facilities/available", {
+    expect(apiMock.get).toHaveBeenCalledWith("/facilities", {
       params: { start_time: "s", end_time: "e" },
     });
     expect(apiMock.post).toHaveBeenCalledWith("/facilities/bookings", {
