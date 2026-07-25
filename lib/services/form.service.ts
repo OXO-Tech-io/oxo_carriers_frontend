@@ -137,7 +137,7 @@ export const formService = {
   },
 
   distribute: async (id: number, userIds: number[], groupIds: number[], closeAt?: string | null): Promise<void> => {
-    await api.post(`/forms/${id}/distribution`, { userIds, groupIds, closeAt });
+    await api.post(`/forms/${id}/distributes`, { userIds, groupIds, closeAt });
   },
 
   listAssignedToMe: async (): Promise<AssignedForm[]> => {
