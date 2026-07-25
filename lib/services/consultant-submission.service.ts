@@ -53,7 +53,7 @@ export const consultantSubmissionService = {
   approveSubmission: async (id: number): Promise<ConsultantWorkSubmission> => {
     const res = await api.put<
       ApiResponse<ConsultantWorkSubmission> | ConsultantWorkSubmission
-    >(`/consultant-submissions/${id}/decision`, { action: "approve" });
+    >(`/consultant-submissions/${id}/decisions`, { action: "approve" });
     return extractData<ConsultantWorkSubmission>(res as never);
   },
 
@@ -63,7 +63,7 @@ export const consultantSubmissionService = {
   ): Promise<ConsultantWorkSubmission> => {
     const res = await api.put<
       ApiResponse<ConsultantWorkSubmission> | ConsultantWorkSubmission
-    >(`/consultant-submissions/${id}/decision`, { action: "reject", admin_comment });
+    >(`/consultant-submissions/${id}/decisions`, { action: "reject", admin_comment });
     return extractData<ConsultantWorkSubmission>(res as never);
   },
 };

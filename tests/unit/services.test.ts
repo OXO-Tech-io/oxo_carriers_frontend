@@ -354,11 +354,11 @@ describe("frontend services", () => {
       expect.any(FormData),
     );
     expect(apiMock.put).toHaveBeenCalledWith(
-      "/consultant-submissions/1/decision",
+      "/consultant-submissions/1/decisions",
       { action: "approve" },
     );
     expect(apiMock.put).toHaveBeenCalledWith(
-      "/consultant-submissions/1/decision",
+      "/consultant-submissions/1/decisions",
       { action: "reject", admin_comment: "fix hours" },
     );
   });

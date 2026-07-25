@@ -48,7 +48,7 @@ export default function AdminConsultantSubmissionsPage() {
   const handleApprove = async (id: number) => {
     try {
       setError('');
-      await api.put(`/consultant-submissions/${id}/decision`, { action: 'approve' });
+      await api.put(`/consultant-submissions/${id}/decisions`, { action: 'approve' });
       setSuccess('Submission approved.');
       fetchSubmissions();
     } catch (err: any) {
@@ -63,7 +63,7 @@ export default function AdminConsultantSubmissionsPage() {
     }
     try {
       setError('');
-      await api.put(`/consultant-submissions/${id}/decision`, { action: 'reject', admin_comment: rejectComment.trim() });
+      await api.put(`/consultant-submissions/${id}/decisions`, { action: 'reject', admin_comment: rejectComment.trim() });
       setSuccess('Submission rejected.');
       setRejectingId(null);
       setRejectComment('');
