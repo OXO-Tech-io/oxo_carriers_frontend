@@ -10,7 +10,7 @@ import type { EmployeeNote } from '@/types/hrModules';
 interface EmployeeNotesModalProps {
   isOpen: boolean;
   onClose: () => void;
-  employeeUserId: number;
+  employeeId: number;
   employeeName: string;
 }
 
@@ -18,7 +18,7 @@ interface EmployeeNotesModalProps {
 // rendered for that role, matching the doc's write-only requirement. Only
 // HR Manager/super_admin sees the full note history with author + timestamp
 // and can edit entries.
-export function EmployeeNotesModal({ isOpen, onClose, employeeUserId, employeeName }: EmployeeNotesModalProps) {
+export function EmployeeNotesModal({ isOpen, onClose, employeeId, employeeName }: EmployeeNotesModalProps) {
   const { isHRManager, isSuperAdmin } = useAuth();
   const canViewNotes = isHRManager || isSuperAdmin;
 
@@ -27,9 +27,9 @@ export function EmployeeNotesModal({ isOpen, onClose, employeeUserId, employeeNa
   const [editingId, setEditingId] = useState<number | null>(null);
   const [editContent, setEditContent] = useState('');
 
-  const notesQuery = useEmployeeNotesQuery(employeeUserId, { enabled: isOpen && canViewNotes });
-  const createMutation = useCreateEmployeeNoteMutation(employeeUserId);
-  const updateMutation = useUpdateEmployeeNoteMutation(employeeUserId);
+  const notesQuery = useEmployeeNotesQuery(employeeId, { enabled: isOpen && canViewNotes });
+  const createMutation = useCreateEmployeeNoteMutation(employeeId);
+  const updateMutation = useUpdateEmployeeNoteMutation(employeeId);
 
   const handleAdd = async () => {
     if (!content.trim()) return;

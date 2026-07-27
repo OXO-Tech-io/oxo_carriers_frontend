@@ -545,7 +545,7 @@ export default function AdminUsersPage() {
             setShowNotesModal(false);
             setSelectedUser(null);
           }}
-          employeeUserId={selectedUser.id}
+          employeeId={selectedUser.id}
           employeeName={`${selectedUser.first_name} ${selectedUser.last_name}`}
         />
       )}

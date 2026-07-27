@@ -1,11 +1,11 @@
 import { useQuery } from '@tanstack/react-query';
 import { employeeNoteService } from '@/lib/services/employee-note.service';
 
-export const employeeNotesQueryKey = (employeeUserId: number) => ['employee-notes', employeeUserId] as const;
+export const employeeNotesQueryKey = (employeeId: number) => ['employee-notes', employeeId] as const;
 
-export const useEmployeeNotesQuery = (employeeUserId: number, options?: { enabled?: boolean }) =>
+export const useEmployeeNotesQuery = (employeeId: number, options?: { enabled?: boolean }) =>
   useQuery({
-    queryKey: employeeNotesQueryKey(employeeUserId),
-    queryFn: () => employeeNoteService.listForEmployee(employeeUserId),
+    queryKey: employeeNotesQueryKey(employeeId),
+    queryFn: () => employeeNoteService.listForEmployee(employeeId),
     enabled: options?.enabled ?? true,
   });
