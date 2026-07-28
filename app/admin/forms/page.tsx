@@ -26,6 +26,7 @@ import type { HrForm } from '@/types/hrModules';
 const createFormSchema = z.object({
   title: z.string().min(1, 'Title is required'),
   description: z.string().optional(),
+  closeAt: z.string().optional(),
 });
 type CreateFormValues = z.infer<typeof createFormSchema>;
 
@@ -70,7 +71,10 @@ export default function AdminFormsPage() {
   }
 
   const onCreate = async (values: CreateFormValues) => {
-    const created = await createMutation.mutateAsync(values);
+    const created = await createMutation.mutateAsync({
+      ...values,
+      closeAt: values.closeAt ? new Date(values.closeAt).toISOString() : null,
+    });
     reset();
     setShowCreateModal(false);
     router.push(`/admin/forms/${created.id}/edit`);
@@ -220,6 +224,17 @@ export default function AdminFormsPage() {
             <textarea
               {...register('description')}
               rows={2}
+              className="mt-1 w-full rounded-xl border border-[var(--gray-200)] bg-[var(--card-bg)] p-2.5 text-sm text-[var(--foreground)]"
+            />
+          </div>
+          <div>
+            <label className="text-sm font-semibold text-[var(--foreground)] flex items-center gap-1.5">
+              <Clock className="h-3.5 w-3.5 text-amber-500" />
+              Deadline (Optional)
+            </label>
+            <input
+              type="datetime-local"
+              {...register('closeAt')}
               className="mt-1 w-full rounded-xl border border-[var(--gray-200)] bg-[var(--card-bg)] p-2.5 text-sm text-[var(--foreground)]"
             />
           </div>

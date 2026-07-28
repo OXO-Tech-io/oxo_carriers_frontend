@@ -59,6 +59,8 @@ export default function FormResponsesClient() {
     .filter((q) => q.type !== 'section_header' && q.type !== 'rich_text')
     .sort((a, b) => a.orderIndex - b.orderIndex);
   const responses = responsesQuery.data ?? [];
+  const closeAt = formQuery.data?.form.closeAt;
+  const isLate = (submittedAt: string | null) => !!closeAt && !!submittedAt && new Date(submittedAt) > new Date(closeAt);
 
   const columns: ColumnDef<FormResponseWithAnswers, any>[] = [
     {
@@ -75,15 +77,25 @@ export default function FormResponsesClient() {
     {
       id: 'status',
       header: 'Status',
-      cell: ({ row }) => (
-        <span
-          className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-            row.original.response.status === 'submitted' ? 'bg-emerald-100 text-emerald-700' : 'bg-[var(--gray-100)] text-[var(--gray-400)]'
-          }`}
-        >
-          {row.original.response.status === 'submitted' ? 'Submitted' : 'In progress'}
-        </span>
-      ),
+      cell: ({ row }) => {
+        const { status, submittedAt } = row.original.response;
+        if (status !== 'submitted') {
+          return (
+            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-[var(--gray-100)] text-[var(--gray-400)]">
+              In progress
+            </span>
+          );
+        }
+        return isLate(submittedAt) ? (
+          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300">
+            Submitted (Late)
+          </span>
+        ) : (
+          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-100 text-emerald-700">
+            Submitted
+          </span>
+        );
+      },
     },
     {
       id: 'submittedAt',
@@ -141,7 +153,7 @@ export default function FormResponsesClient() {
           <div className="space-y-4">
             <p className="text-xs text-[var(--gray-400)]">
               {detail.response.status === 'submitted' && detail.response.submittedAt
-                ? `Submitted ${new Date(detail.response.submittedAt).toLocaleString()}`
+                ? `Submitted ${new Date(detail.response.submittedAt).toLocaleString()}${isLate(detail.response.submittedAt) ? ' (Late)' : ''}`
                 : 'In progress'}
             </p>
             <div className="space-y-3 divide-y divide-[var(--gray-50)]">

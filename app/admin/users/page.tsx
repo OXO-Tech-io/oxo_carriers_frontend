@@ -22,6 +22,21 @@ import CreateServiceProviderModal, {
 } from "@/components/modals/CreateServiceProviderModal";
 import ResetPasswordModal from "@/components/modals/ResetPasswordModal";
 import { EmployeeNotesModal } from "@/components/modals/EmployeeNotesModal";
+import { mapDbUserToAppUser } from "@/lib/mappers/user.mapper";
+
+// GET /users is driven by the local employee table, cross-referenced against
+// Keycloak status where available (see users.service.ts#getAll) - the
+// employee fields we display live under `employee`, not at the top level.
+interface KeycloakUserRow {
+  keycloakId: string;
+  email: string;
+  firstName: string;
+  lastName: string;
+  enabled: boolean;
+  emailVerified: boolean;
+  requiredActions: string[];
+  employee: Parameters<typeof mapDbUserToAppUser>[0];
+}
 
 interface User {
   id: number;
@@ -33,7 +48,7 @@ interface User {
   department?: string;
   position?: string;
   hire_date?: string;
-  must_change_password: boolean;
+  requiredActions: string[];
   created_at: string;
 }
 
@@ -67,7 +82,9 @@ export default function AdminUsersPage() {
       fetchUsers();
       if (!isFinance) fetchDepartments();
     }
-  }, [canAccessUsers, isFinance, searchTerm, filterRole, filterDepartment]);
+    // filterRole/filterDepartment are applied client-side (see filteredItems
+    // below), not refetched - the backend doesn't support those filters.
+  }, [canAccessUsers, isFinance, searchTerm]);
 
   const fetchUsers = async () => {
     try {
@@ -78,12 +95,23 @@ export default function AdminUsersPage() {
         const response = await api.get(`/vendors?${params.toString()}`);
         setListItems(response.data.vendors || []);
       } else {
+        // The backend only supports filtering by `search` - role/department
+        // filters are applied client-side below.
         const params = new URLSearchParams();
         if (searchTerm) params.append("search", searchTerm);
-        if (filterRole) params.append("role", filterRole);
-        if (filterDepartment) params.append("department", filterDepartment);
         const response = await api.get(`/users?${params.toString()}`);
-        setListItems(response.data.users || []);
+        const rows: KeycloakUserRow[] = response.data.users || [];
+        const mapped = rows
+          .filter((row) => row.employee)
+          .map((row) => {
+            const employee = mapDbUserToAppUser(row.employee)!;
+            return {
+              ...employee,
+              role: employee.role as UserRole,
+              requiredActions: row.requiredActions ?? [],
+            };
+          });
+        setListItems(mapped);
       }
     } catch (err: any) {
       console.error("Failed to fetch:", err);
@@ -224,6 +252,13 @@ export default function AdminUsersPage() {
       );
     }
   };
+
+  const filteredItems = listItems.filter((item) => {
+    if (isVendor(item)) return true;
+    if (filterRole && item.role !== filterRole) return false;
+    if (filterDepartment && item.department !== filterDepartment) return false;
+    return true;
+  });
 
   if (!canAccessUsers) {
     return (
@@ -388,7 +423,7 @@ export default function AdminUsersPage() {
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-[#E4E7EC]">
-                {listItems.length === 0 ? (
+                {filteredItems.length === 0 ? (
                   <tr>
                     <td
                       colSpan={isFinance ? 2 : 6}
@@ -406,7 +441,7 @@ export default function AdminUsersPage() {
                     </td>
                   </tr>
                 ) : (
-                  listItems.map((item) =>
+                  filteredItems.map((item) =>
                     isVendor(item) ? (
                       <tr
                         key={item.id}
@@ -456,7 +491,7 @@ export default function AdminUsersPage() {
                           {item.position || "—"}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
-                          {item.must_change_password ? (
+                          {item.requiredActions.includes("UPDATE_PASSWORD") ? (
                             <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-700">
                               Password Setup Required
                             </span>
