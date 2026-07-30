@@ -96,7 +96,7 @@ export default function FacilitiesPage() {
   const handleCancelBooking = async (id: number) => {
     if (!confirm('Cancel this booking?')) return;
     try {
-      await api.put(`/facilities/bookings/${id}/cancellation`);
+      await api.put(`/facilities/bookings/${id}/cancellations`);
       setSuccess('Booking cancelled');
       fetchMyBookings();
     } catch (err) {

@@ -71,7 +71,7 @@ export const medicalInsuranceService = {
   approveClaim: async (id: number): Promise<MedicalInsuranceClaim> => {
     const res = await api.put<
       ApiResponse<MedicalInsuranceClaim> | MedicalInsuranceClaim
-    >(`/medical-insurance-claims/${id}/decision`, { action: "approve" });
+    >(`/medical-insurance-claims/${id}/decisions`, { action: "approve" });
     return extractData<MedicalInsuranceClaim>(res as never);
   },
 
@@ -81,7 +81,7 @@ export const medicalInsuranceService = {
   ): Promise<MedicalInsuranceClaim> => {
     const res = await api.put<
       ApiResponse<MedicalInsuranceClaim> | MedicalInsuranceClaim
-    >(`/medical-insurance-claims/${id}/decision`, {
+    >(`/medical-insurance-claims/${id}/decisions`, {
       action: "reject",
       admin_comment,
     });

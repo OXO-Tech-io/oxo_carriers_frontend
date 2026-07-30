@@ -70,7 +70,7 @@ export default function AdminMedicalInsurancePage() {
   const handleApprove = async (id: number) => {
     try {
       setError('');
-      await api.put(`/medical-insurance-claims/${id}/decision`, { action: 'approve' });
+      await api.put(`/medical-insurance-claims/${id}/decisions`, { action: 'approve' });
       setSuccess('Claim approved.');
       fetchClaims();
     } catch (err: any) {
@@ -85,7 +85,7 @@ export default function AdminMedicalInsurancePage() {
     }
     try {
       setError('');
-      await api.put(`/medical-insurance-claims/${id}/decision`, { action: 'reject', admin_comment: rejectComment.trim() });
+      await api.put(`/medical-insurance-claims/${id}/decisions`, { action: 'reject', admin_comment: rejectComment.trim() });
       setSuccess('Claim rejected.');
       setRejectingId(null);
       setRejectComment('');

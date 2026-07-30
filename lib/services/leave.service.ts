@@ -54,7 +54,7 @@ export const leaveService = {
     input: ApproveLeaveInput
   ): Promise<LeaveRequest> => {
     const res = await api.put<ApiResponse<LeaveRequest>>(
-      `/leaves/${id}/approval`,
+      `/leaves/${id}/approvals`,
       input
     );
     return res.data.data;
@@ -65,7 +65,7 @@ export const leaveService = {
     input: RejectLeaveInput
   ): Promise<LeaveRequest> => {
     const res = await api.put<ApiResponse<LeaveRequest>>(
-      `/leaves/${id}/rejection`,
+      `/leaves/${id}/rejections`,
       input
     );
     return res.data.data;

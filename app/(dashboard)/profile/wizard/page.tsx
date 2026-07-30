@@ -60,18 +60,18 @@ export default function ProfileWizardPage() {
   const router = useRouter();
   const { data: profile } = useProfileQuery();
   const { data: pii, isLoading: piiLoading } = useEmployeePiiQuery(profile?.id, { enabled: !!profile?.id });
-  const { data: nominees, isLoading: nomineesLoading } = useEmployeeNomineesQuery(profile?.employee_id, {
-    enabled: !!profile?.employee_id,
+  const { data: nominees, isLoading: nomineesLoading } = useEmployeeNomineesQuery(profile?.id, {
+    enabled: !!profile?.id,
   });
-  const { data: dependents, isLoading: dependentsLoading } = useEmployeeDependentsQuery(profile?.employee_id, {
-    enabled: !!profile?.employee_id,
+  const { data: dependents, isLoading: dependentsLoading } = useEmployeeDependentsQuery(profile?.id, {
+    enabled: !!profile?.id,
   });
   const { data: emergencyContacts, isLoading: contactsLoading } = useEmployeeEmergencyContactsQuery(
-    profile?.employee_id,
-    { enabled: !!profile?.employee_id }
+    profile?.id,
+    { enabled: !!profile?.id }
   );
-  const { data: welfareInfo, isLoading: welfareLoading } = useEmployeeWelfareInfoQuery(profile?.employee_id, {
-    enabled: !!profile?.employee_id,
+  const { data: welfareInfo, isLoading: welfareLoading } = useEmployeeWelfareInfoQuery(profile?.id, {
+    enabled: !!profile?.id,
   });
 
   const isLoading = !profile || piiLoading || nomineesLoading || dependentsLoading || contactsLoading || welfareLoading;

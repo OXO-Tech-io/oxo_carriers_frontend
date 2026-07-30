@@ -71,7 +71,7 @@ export const voucherService = {
     payload: ReviewVoucherInput,
   ): Promise<PaymentVoucher> => {
     const res = await api.put<ApiResponse<PaymentVoucher> | PaymentVoucher>(
-      `/vouchers/${id}/review`,
+      `/vouchers/${id}/reviews`,
       payload,
     );
     return extractData<PaymentVoucher>(res as never);
@@ -79,21 +79,21 @@ export const voucherService = {
 
   resubmitVoucher: async (id: number): Promise<PaymentVoucher> => {
     const res = await api.put<ApiResponse<PaymentVoucher> | PaymentVoucher>(
-      `/vouchers/${id}/resubmission`,
+      `/vouchers/${id}/resubmissions`,
     );
     return extractData<PaymentVoucher>(res as never);
   },
 
   markVoucherBankUploaded: async (id: number): Promise<PaymentVoucher> => {
     const res = await api.put<ApiResponse<PaymentVoucher> | PaymentVoucher>(
-      `/vouchers/${id}/bank-upload`,
+      `/vouchers/${id}/bank-uploads`,
     );
     return extractData<PaymentVoucher>(res as never);
   },
 
   markVoucherPaid: async (id: number): Promise<PaymentVoucher> => {
     const res = await api.put<ApiResponse<PaymentVoucher> | PaymentVoucher>(
-      `/vouchers/${id}/paid`,
+      `/vouchers/${id}/payments`,
     );
     return extractData<PaymentVoucher>(res as never);
   },

@@ -1,11 +1,11 @@
 import { useQuery } from '@tanstack/react-query';
 import { profileService } from '@/lib/services/profile.service';
 
-export const employeeDependentsQueryKey = (employeeId: string | undefined) => ['employee-dependents', employeeId] as const;
+export const employeeDependentsQueryKey = (employeeUserId: number | undefined) => ['employee-dependents', employeeUserId] as const;
 
-export const useEmployeeDependentsQuery = (employeeId: string | undefined, options?: { enabled?: boolean }) =>
+export const useEmployeeDependentsQuery = (employeeUserId: number | undefined, options?: { enabled?: boolean }) =>
   useQuery({
-    queryKey: employeeDependentsQueryKey(employeeId),
-    queryFn: () => profileService.getDependents(employeeId as string),
-    enabled: (options?.enabled ?? true) && !!employeeId,
+    queryKey: employeeDependentsQueryKey(employeeUserId),
+    queryFn: () => profileService.getDependents(employeeUserId as number),
+    enabled: (options?.enabled ?? true) && !!employeeUserId,
   });

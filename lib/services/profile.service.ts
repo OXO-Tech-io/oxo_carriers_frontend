@@ -52,32 +52,32 @@ export const profileService = {
   },
 
   getEmployeePii: async (userId: number): Promise<EmployeePii | null> => {
-    const res = await api.get<{ success: boolean; pii: EmployeePii | null }>(`/employees/${userId}/pii`);
+    const res = await api.get<{ success: boolean; pii: EmployeePii | null }>(`/users/${userId}/pii`);
     return res.data.pii;
   },
 
-  // These 4 read-only endpoints are mounted at /employees/:employeeId/... (the
-  // employee's string employeeId, not their numeric id) - the backend service
-  // branches self-vs-HR access same as education/work-history, but self-role
-  // callers always get their own records regardless of which employeeId is
-  // in the URL, so passing your own employeeId is always safe.
-  getNominees: async (employeeId: string): Promise<EmployeeNominee[]> => {
-    const res = await api.get<ApiResponse<EmployeeNominee[]>>(`/employees/${employeeId}/nominees`);
+  // These 4 read-only endpoints are mounted at /employees/:employeeUserId/...
+  // (the employee's numeric id, not their string employeeId) - the backend
+  // service branches self-vs-HR access same as education/work-history, but
+  // self-role callers always get their own records regardless of which
+  // employeeUserId is in the URL, so passing your own id is always safe.
+  getNominees: async (employeeUserId: number): Promise<EmployeeNominee[]> => {
+    const res = await api.get<ApiResponse<EmployeeNominee[]>>(`/employees/${employeeUserId}/nominees`);
     return res.data.data;
   },
 
-  getDependents: async (employeeId: string): Promise<EmployeeDependent[]> => {
-    const res = await api.get<ApiResponse<EmployeeDependent[]>>(`/employees/${employeeId}/dependents`);
+  getDependents: async (employeeUserId: number): Promise<EmployeeDependent[]> => {
+    const res = await api.get<ApiResponse<EmployeeDependent[]>>(`/employees/${employeeUserId}/dependents`);
     return res.data.data;
   },
 
-  getEmergencyContacts: async (employeeId: string): Promise<EmployeeEmergencyContact[]> => {
-    const res = await api.get<ApiResponse<EmployeeEmergencyContact[]>>(`/employees/${employeeId}/emergency-contacts`);
+  getEmergencyContacts: async (employeeUserId: number): Promise<EmployeeEmergencyContact[]> => {
+    const res = await api.get<ApiResponse<EmployeeEmergencyContact[]>>(`/employees/${employeeUserId}/emergency-contacts`);
     return res.data.data;
   },
 
-  getWelfareInfo: async (employeeId: string): Promise<EmployeeWelfareInfo | null> => {
-    const res = await api.get<ApiResponse<EmployeeWelfareInfo | null>>(`/employees/${employeeId}/welfare-informations`);
+  getWelfareInfo: async (employeeUserId: number): Promise<EmployeeWelfareInfo | null> => {
+    const res = await api.get<ApiResponse<EmployeeWelfareInfo | null>>(`/employees/${employeeUserId}/welfare-informations`);
     return res.data.data;
   },
 
@@ -112,7 +112,7 @@ export const profileService = {
   },
 
   approveChangeRequest: async (id: number, reviewerComments?: string): Promise<ProfileChangeRequest> => {
-    const res = await api.put<ApiResponse<ProfileChangeRequest>>(`/profile-change-requests/${id}/decision`, {
+    const res = await api.put<ApiResponse<ProfileChangeRequest>>(`/profile-change-requests/${id}/decisions`, {
       decision: 'approved',
       reviewerComments,
     });
@@ -120,7 +120,7 @@ export const profileService = {
   },
 
   rejectChangeRequest: async (id: number, reviewerComments: string): Promise<ProfileChangeRequest> => {
-    const res = await api.put<ApiResponse<ProfileChangeRequest>>(`/profile-change-requests/${id}/decision`, {
+    const res = await api.put<ApiResponse<ProfileChangeRequest>>(`/profile-change-requests/${id}/decisions`, {
       decision: 'rejected',
       reviewerComments,
     });
@@ -128,7 +128,7 @@ export const profileService = {
   },
 
   returnChangeRequest: async (id: number, reviewerComments: string): Promise<ProfileChangeRequest> => {
-    const res = await api.put<ApiResponse<ProfileChangeRequest>>(`/profile-change-requests/${id}/decision`, {
+    const res = await api.put<ApiResponse<ProfileChangeRequest>>(`/profile-change-requests/${id}/decisions`, {
       decision: 'returned_for_modification',
       reviewerComments,
     });

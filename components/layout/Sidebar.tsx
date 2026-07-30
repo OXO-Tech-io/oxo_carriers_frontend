@@ -114,13 +114,6 @@ const navigation: MenuItem[] = [
     requiredLevel: "read",
   },
   {
-    name: "Reports",
-    href: "/reports",
-    icon: BarChart3,
-    permissionKeys: ["reports"],
-    requiredLevel: "read",
-  },
-  {
     name: "Work Log",
     href: "/work-logs",
     icon: ClipboardList,
@@ -232,6 +225,13 @@ const adminNavigation: MenuItem[] = [
     href: "/admin/groups",
     icon: Users2,
     permissionKeys: ["groups"],
+    requiredLevel: "write",
+  },
+  {
+    name: "Reports & Analytics",
+    href: "/reports",
+    icon: BarChart3,
+    permissionKeys: ["reports"],
     requiredLevel: "write",
   },
   {

@@ -90,7 +90,7 @@ export const facilityService = {
   },
 
   cancelBooking: async (id: number): Promise<void> => {
-    await api.put(`/facilities/bookings/${id}/cancellation`);
+    await api.put(`/facilities/bookings/${id}/cancellations`);
   },
 
   getAllBookings: async (

@@ -203,7 +203,7 @@ describe("frontend services", () => {
       params: { mine: true },
     });
     expect(apiMock.put).toHaveBeenCalledWith(
-      "/facilities/bookings/2/cancellation",
+      "/facilities/bookings/2/cancellations",
     );
     expect(apiMock.get).toHaveBeenCalledWith("/facilities/bookings", {
       params: { start_date: "a", end_date: "b", facility_id: 1 },
@@ -240,12 +240,12 @@ describe("frontend services", () => {
       vendor_id: 1,
       amount: 100,
     });
-    expect(apiMock.put).toHaveBeenCalledWith("/vouchers/1/review", {
+    expect(apiMock.put).toHaveBeenCalledWith("/vouchers/1/reviews", {
       action: "approve",
     });
-    expect(apiMock.put).toHaveBeenCalledWith("/vouchers/1/resubmission");
-    expect(apiMock.put).toHaveBeenCalledWith("/vouchers/1/bank-upload");
-    expect(apiMock.put).toHaveBeenCalledWith("/vouchers/1/paid");
+    expect(apiMock.put).toHaveBeenCalledWith("/vouchers/1/resubmissions");
+    expect(apiMock.put).toHaveBeenCalledWith("/vouchers/1/bank-uploads");
+    expect(apiMock.put).toHaveBeenCalledWith("/vouchers/1/payments");
   });
 
   it("salaryService methods call expected endpoints", async () => {
@@ -317,11 +317,11 @@ describe("frontend services", () => {
       expect.any(FormData),
     );
     expect(apiMock.put).toHaveBeenCalledWith(
-      "/medical-insurance-claims/1/decision",
+      "/medical-insurance-claims/1/decisions",
       { action: "approve" },
     );
     expect(apiMock.put).toHaveBeenCalledWith(
-      "/medical-insurance-claims/1/decision",
+      "/medical-insurance-claims/1/decisions",
       { action: "reject", admin_comment: "missing docs" },
     );
   });
@@ -429,10 +429,10 @@ describe("frontend services", () => {
     });
     expect(apiMock.get).toHaveBeenCalledWith("/leaves/1");
     expect(apiMock.post).toHaveBeenCalledWith("/leaves", expect.any(FormData));
-    expect(apiMock.put).toHaveBeenCalledWith("/leaves/1/approval", {
+    expect(apiMock.put).toHaveBeenCalledWith("/leaves/1/approvals", {
       approvedBy: "hr",
     });
-    expect(apiMock.put).toHaveBeenCalledWith("/leaves/1/rejection", {
+    expect(apiMock.put).toHaveBeenCalledWith("/leaves/1/rejections", {
       rejectionReason: "x",
     });
     expect(apiMock.get).toHaveBeenCalledWith("/leave-calendars/range", {
