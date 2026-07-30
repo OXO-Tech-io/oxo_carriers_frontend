@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/Button';
 import { Stepper, StepPanel, type StepDefinition } from '@/components/ui/Stepper';
 import { useToast } from '@/contexts/ToastContext';
 import { useProfileQuery } from '@/hooks/queries/use-profile-query';
-import { useEmployeePiiQuery } from '@/hooks/queries/use-employee-pii-query';
+import { useEmployeePersonalDetailsQuery } from '@/hooks/queries/use-employee-personal-details-query';
 import { useEmployeeNomineesQuery } from '@/hooks/queries/use-employee-nominees-query';
 import { useEmployeeDependentsQuery } from '@/hooks/queries/use-employee-dependents-query';
 import { useEmployeeEmergencyContactsQuery } from '@/hooks/queries/use-employee-emergency-contacts-query';
@@ -35,8 +35,8 @@ const STEPS: StepDefinition[] = [
 const STEP_FIELD_NAMES: (keyof WizardFormValues)[][] = [
   [
     'nationalId',
-    'fullNameAsNic',
-    'nameWithInitials',
+    'legalName',
+    'initialsName',
     'permanentAddressLine1',
     'permanentCity',
     'permanentDistrict',
@@ -59,7 +59,7 @@ const STEP_FIELD_NAMES: (keyof WizardFormValues)[][] = [
 export default function ProfileWizardPage() {
   const router = useRouter();
   const { data: profile } = useProfileQuery();
-  const { data: pii, isLoading: piiLoading } = useEmployeePiiQuery(profile?.id, { enabled: !!profile?.id });
+  const { data: pii, isLoading: piiLoading } = useEmployeePersonalDetailsQuery(profile?.id, { enabled: !!profile?.id });
   const { data: nominees, isLoading: nomineesLoading } = useEmployeeNomineesQuery(profile?.id, {
     enabled: !!profile?.id,
   });

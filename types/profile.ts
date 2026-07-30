@@ -119,8 +119,8 @@ export interface EmployeePii {
   emergencyContactPhone: string | null;
   emergencyContactRelationship: string | null;
   // Tab 1 - statutory
-  fullNameAsNic: string | null;
-  nameWithInitials: string | null;
+  legalName: string | null;
+  initialsName: string | null;
   dateOfBirth: string | null;
   birthPlace: string | null;
   sex: Sex | null;

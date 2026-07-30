@@ -10,8 +10,8 @@ import type {
 import type { WizardDependent, WizardEmergencyContact, WizardFormValues, WizardNominee } from './wizardTypes';
 
 const SCALAR_PII_FIELDS: { key: keyof WizardFormValues; field: ScalarPiiField }[] = [
-  { key: 'fullNameAsNic', field: 'full_name_as_nic' },
-  { key: 'nameWithInitials', field: 'name_with_initials' },
+  { key: 'legalName', field: 'full_name_as_nic' },
+  { key: 'initialsName', field: 'name_with_initials' },
   { key: 'dateOfBirth', field: 'date_of_birth' },
   { key: 'birthPlace', field: 'birth_place' },
   { key: 'nationality', field: 'nationality' },

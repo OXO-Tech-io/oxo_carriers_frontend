@@ -25,8 +25,8 @@ import type { NomineeValue, DependentValue, EmergencyContactRecordValue, BloodTy
 export interface CreateEmployeeProfilePayload {
   statutory: {
     nationalId: string;
-    fullNameAsNic: string;
-    nameWithInitials: string;
+    legalName: string;
+    initialsName: string;
     addressLine1: string;
     addressLine2: string | null;
     city: string;
@@ -121,8 +121,8 @@ function stepFieldNames(stepKey: string, role: UserRole): (keyof EmployeeWizardV
     case "statutory":
       return [
         "nationalId",
-        "fullNameAsNic",
-        "nameWithInitials",
+        "legalName",
+        "initialsName",
         "permanentAddressLine1",
         "permanentCity",
         "permanentDistrict",
@@ -244,8 +244,8 @@ export default function CreateUserModal({
             profile: {
               statutory: {
                 nationalId: values.nationalId,
-                fullNameAsNic: values.fullNameAsNic,
-                nameWithInitials: values.nameWithInitials,
+                legalName: values.legalName,
+                initialsName: values.initialsName,
                 addressLine1: values.permanentAddressLine1,
                 addressLine2: values.permanentAddressLine2 || null,
                 city: values.permanentCity,

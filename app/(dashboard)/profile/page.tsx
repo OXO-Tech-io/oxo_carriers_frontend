@@ -37,7 +37,7 @@ import { format } from 'date-fns';
 import { useProfileQuery } from '@/hooks/queries/use-profile-query';
 import { useEmployeeEducationQuery } from '@/hooks/queries/use-employee-education-query';
 import { useEmployeeWorkHistoryQuery } from '@/hooks/queries/use-employee-work-history-query';
-import { useEmployeePiiQuery } from '@/hooks/queries/use-employee-pii-query';
+import { useEmployeePersonalDetailsQuery } from '@/hooks/queries/use-employee-personal-details-query';
 import { useMyChangeRequestsQuery } from '@/hooks/queries/use-my-change-requests-query';
 import { useSubmitProfileChangeMutation } from '@/hooks/mutations/use-submit-profile-change-mutation';
 import ProfileChangeRequestModal from '@/components/modals/ProfileChangeRequestModal';
@@ -90,7 +90,7 @@ export default function ProfilePage() {
 
   const { data: education = [], isLoading: educationLoading } = useEmployeeEducationQuery();
   const { data: workHistory = [], isLoading: workHistoryLoading } = useEmployeeWorkHistoryQuery();
-  const { data: pii } = useEmployeePiiQuery(displayUser?.id);
+  const { data: pii } = useEmployeePersonalDetailsQuery(displayUser?.id);
   const { data: changeRequests = [], isLoading: changeRequestsLoading } = useMyChangeRequestsQuery();
   const submitChange = useSubmitProfileChangeMutation();
 

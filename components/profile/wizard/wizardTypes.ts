@@ -38,8 +38,8 @@ export interface WizardEmergencyContact {
 export interface WizardFormValues {
   // Tab 1 - Statutory Employee Information
   nationalId: string;
-  fullNameAsNic: string;
-  nameWithInitials: string;
+  legalName: string;
+  initialsName: string;
   permanentAddressLine1: string;
   permanentAddressLine2: string;
   permanentCity: string;
@@ -95,8 +95,8 @@ export function buildDefaultValues(source: WizardSourceData): WizardFormValues {
   const { user, pii, nominees, dependents, emergencyContacts, welfareInfo } = source;
   return {
     nationalId: pii?.nationalId ?? '',
-    fullNameAsNic: pii?.fullNameAsNic ?? '',
-    nameWithInitials: pii?.nameWithInitials ?? '',
+    legalName: pii?.legalName ?? '',
+    initialsName: pii?.initialsName ?? '',
     permanentAddressLine1: pii?.addressLine1 ?? '',
     permanentAddressLine2: pii?.addressLine2 ?? '',
     permanentCity: pii?.city ?? '',

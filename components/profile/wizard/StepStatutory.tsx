@@ -28,11 +28,11 @@ export default function StepStatutory({ form, email, designation }: StepProps) {
         <Field label="National Identity Card Number" error={errors.nationalId?.message}>
           <input {...register('nationalId', { required: 'NIC number is required' })} className={inputClass} />
         </Field>
-        <Field label="Full Name as in NIC" error={errors.fullNameAsNic?.message}>
-          <input {...register('fullNameAsNic', { required: 'Full name is required' })} className={inputClass} />
+        <Field label="Full Name as in NIC" error={errors.legalName?.message}>
+          <input {...register('legalName', { required: 'Full name is required' })} className={inputClass} />
         </Field>
-        <Field label="Name with Initials" error={errors.nameWithInitials?.message}>
-          <input {...register('nameWithInitials', { required: 'Name with initials is required' })} className={inputClass} />
+        <Field label="Name with Initials" error={errors.initialsName?.message}>
+          <input {...register('initialsName', { required: 'Name with initials is required' })} className={inputClass} />
         </Field>
         <Field label="Designation">
           <input value={designation} disabled className={inputClass} />

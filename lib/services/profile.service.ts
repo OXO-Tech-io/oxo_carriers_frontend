@@ -51,9 +51,9 @@ export const profileService = {
     return res.data.data;
   },
 
-  getEmployeePii: async (userId: number): Promise<EmployeePii | null> => {
-    const res = await api.get<{ success: boolean; pii: EmployeePii | null }>(`/users/${userId}/pii`);
-    return res.data.pii;
+  getEmployeePersonalDetails: async (userId: number): Promise<EmployeePii | null> => {
+    const res = await api.get<{ success: boolean; personalDetails: EmployeePii | null }>(`/users/${userId}/personal-details`);
+    return res.data.personalDetails;
   },
 
   // These 4 read-only endpoints are mounted at /employees/:employeeUserId/...
