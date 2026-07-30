@@ -120,12 +120,12 @@ export const reportsService = {
   },
 
   getSubmissionsBreakdown: async (params: SubmissionBreakdownParams): Promise<SubmissionBreakdownData> => {
-    const res = await api.get<SubmissionBreakdownData>("/reports/submissions-breakdown", { params });
+    const res = await api.get<SubmissionBreakdownData>("/reports/submission-breakdowns", { params });
     return res.data;
   },
 
   downloadSubmissionsBreakdownExcel: async (params: SubmissionBreakdownParams): Promise<Blob> => {
-    const res = await api.get<Blob>("/reports/submissions-breakdown", {
+    const res = await api.get<Blob>("/reports/submission-breakdowns", {
       params: { ...params, format: 'excel' },
       responseType: "blob",
     });

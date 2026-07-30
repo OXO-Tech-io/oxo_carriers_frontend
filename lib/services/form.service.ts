@@ -146,7 +146,7 @@ export const formService = {
   },
 
   getMyResponse: async (id: number): Promise<MyFormResponse> => {
-    const res = await api.get<ApiResponse<MyFormResponse>>(`/forms/${id}/my-response`);
+    const res = await api.get<ApiResponse<MyFormResponse>>(`/forms/${id}/my-responses`);
     return extractData(res);
   },
 
@@ -215,7 +215,7 @@ export const formService = {
   },
 
   getTheme: async (formId: number): Promise<FormTheme> => {
-    const res = await api.get<ApiResponse<FormTheme>>(`/forms/${formId}/theme`);
+    const res = await api.get<ApiResponse<FormTheme>>(`/forms/${formId}/themes`);
     return extractData(res);
   },
 
@@ -226,12 +226,12 @@ export const formService = {
         if (value != null) formData.append(key, String(value));
       });
       formData.append('headerImage', headerImage);
-      const res = await api.put<ApiResponse<FormTheme>>(`/forms/${formId}/theme`, formData, {
+      const res = await api.put<ApiResponse<FormTheme>>(`/forms/${formId}/themes`, formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
       return extractData(res);
     }
-    const res = await api.put<ApiResponse<FormTheme>>(`/forms/${formId}/theme`, patch);
+    const res = await api.put<ApiResponse<FormTheme>>(`/forms/${formId}/themes`, patch);
     return extractData(res);
   },
 

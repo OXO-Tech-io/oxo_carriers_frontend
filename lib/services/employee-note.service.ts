@@ -16,7 +16,7 @@ export const employeeNoteService = {
   },
 
   listForEmployee: async (employeeId: number): Promise<EmployeeNote[]> => {
-    const res = await api.get<ApiResponse<EmployeeNote[]>>(`/employee-notes/employee/${employeeId}`);
+    const res = await api.get<ApiResponse<EmployeeNote[]>>(`/employee-notes/employees/${employeeId}`);
     return extractData(res);
   },
 
