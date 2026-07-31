@@ -51,8 +51,9 @@ export const profileService = {
     return res.data.data;
   },
 
+  // PII now rides along on GET /users/:id (the personal-details route was folded into it).
   getEmployeePersonalDetails: async (userId: number): Promise<EmployeePii | null> => {
-    const res = await api.get<{ success: boolean; personalDetails: EmployeePii | null }>(`/users/${userId}/personal-details`);
+    const res = await api.get<{ success: boolean; personalDetails: EmployeePii | null }>(`/users/${userId}`);
     return res.data.personalDetails;
   },
 
