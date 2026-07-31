@@ -1,12 +1,11 @@
 import EventDetailClient from './EventDetailClient';
+import { generateNumericStaticParams } from '@/lib/utils';
 
-// Required for static export with dynamic routes - same pattern as
-// app/(dashboard)/salary/slips/[id]/page.tsx.
+// Required for static export with dynamic routes
 export const dynamicParams = false;
 
 export async function generateStaticParams() {
-  const ids = Array.from({ length: 500 }, (_, i) => ({ id: String(i + 1) }));
-  return ids;
+  return generateNumericStaticParams();
 }
 
 export default function EventDetailPage() {

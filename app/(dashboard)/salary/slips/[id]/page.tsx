@@ -1,11 +1,11 @@
 import SalarySlipDetailClient from '../[[...id]]/SalarySlipDetailClient';
+import { generateNumericStaticParams } from '@/lib/utils';
 
 // Required for static export with dynamic routes
 export const dynamicParams = false;
 
 export async function generateStaticParams() {
-  const ids = Array.from({ length: 500 }, (_, i) => ({ id: String(i + 1) }));
-  return ids;
+  return generateNumericStaticParams();
 }
 
 export default function SalarySlipDetailPage() {
