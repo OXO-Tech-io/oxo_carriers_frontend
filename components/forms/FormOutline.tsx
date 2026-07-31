@@ -36,7 +36,7 @@ export function FormOutline({ sections, questions, logicRules, activeQuestionId,
   const warnings = [
     ...(untitledCount > 0 ? [`${untitledCount} untitled question${untitledCount === 1 ? '' : 's'}`] : []),
     ...(duplicateTitleCount > 0 ? [`${duplicateTitleCount} duplicate question title${duplicateTitleCount === 1 ? '' : 's'}`] : []),
-    ...(brokenRules.length > 0 ? [`${brokenRules.length} logic rule${brokenRules.length === 1 ? '' : 's'} need attention`] : []),
+    ...(brokenRules.length > 0 ? [`${brokenRules.length} logic rule${brokenRules.length === 1 ? '' : 's'} ${brokenRules.length === 1 ? 'needs' : 'need'} attention`] : []),
   ];
 
   const ungrouped = questions.filter((q) => q.sectionId == null).sort((a, b) => a.orderIndex - b.orderIndex);
