@@ -124,6 +124,11 @@ jobs:
       - name: Deploy to Cloud Run
         id: deploy
         run: |
+          # Unique, length-safe revision suffix: short sha + run attempt (avoids
+          # ALREADY_EXISTS on retries/re-runs of the same commit, and stays under
+          # Cloud Run's 63-char revision name limit)
+          REVISION_SUFFIX=$(echo ${{ github.sha }} | cut -c1-12)-${{ github.run_attempt }}
+
           # Deploy the service
           gcloud run deploy $SERVICE_NAME \
             --image=$AR_HOSTNAME/$PROJECT_ID/$REPOSITORY/$SERVICE_NAME:${{ steps.application-version.outputs.version }} \
@@ -138,7 +143,7 @@ jobs:
             --set-env-vars="NEXT_PUBLIC_KEYCLOAK_URL=${{ secrets.NEXT_PUBLIC_KEYCLOAK_URL }}" \
             --set-env-vars="NEXT_PUBLIC_KEYCLOAK_REALM=${{ secrets.NEXT_PUBLIC_KEYCLOAK_REALM }}" \
             --set-env-vars="NEXT_PUBLIC_KEYCLOAK_CLIENT_ID=${{ secrets.NEXT_PUBLIC_KEYCLOAK_CLIENT_ID }}" \
-            --revision-suffix=${{ github.sha }} \
+            --revision-suffix=$REVISION_SUFFIX \
             --labels="commit=${{ github.sha }},branch=develop,app=oxo-carriers-frontend" \
             --quiet
 
