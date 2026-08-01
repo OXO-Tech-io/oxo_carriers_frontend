@@ -72,7 +72,7 @@ export default function FacilitiesPage() {
 
   const fetchMyBookings = async () => {
     try {
-      const response = await api.get('/facilities/my-bookings');
+      const response = await api.get('/facilities/bookings', { params: { mine: true } });
       setBookings(response.data || []);
     } catch (err) {
       console.error(err);
@@ -83,7 +83,7 @@ export default function FacilitiesPage() {
 
   const handleBookingSubmit = async (data: any) => {
     try {
-      await api.post('/facilities/book', data);
+      await api.post('/facilities/bookings', data);
       setSuccess('Booking confirmed successfully!');
       setShowBookingModal(false);
       fetchMyBookings();
@@ -96,7 +96,7 @@ export default function FacilitiesPage() {
   const handleCancelBooking = async (id: number) => {
     if (!confirm('Cancel this booking?')) return;
     try {
-      await api.put(`/facilities/bookings/${id}/cancel`);
+      await api.put(`/facilities/bookings/${id}/cancellations`);
       setSuccess('Booking cancelled');
       fetchMyBookings();
     } catch (err) {

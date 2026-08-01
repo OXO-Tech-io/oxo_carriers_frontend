@@ -19,12 +19,12 @@ export interface RejectLeaveInput {
 
 export const leaveService = {
   getLeaveTypes: async (): Promise<LeaveType[]> => {
-    const res = await api.get<ApiResponse<LeaveType[]>>('/leaves/types');
+    const res = await api.get<ApiResponse<LeaveType[]>>('/leave-types');
     return res.data.data;
   },
 
-  getLeaveBalance: async (year?: number): Promise<LeaveBalance[]> => {
-    const res = await api.get<ApiResponse<LeaveBalance[]>>('/leaves/balance', {
+  getLeaveBalance: async (employeeId: string, year?: number): Promise<LeaveBalance[]> => {
+    const res = await api.get<ApiResponse<LeaveBalance[]>>(`/leaves/${employeeId}/balances`, {
       params: year ? { year } : undefined,
     });
     return res.data.data;
@@ -54,7 +54,7 @@ export const leaveService = {
     input: ApproveLeaveInput
   ): Promise<LeaveRequest> => {
     const res = await api.put<ApiResponse<LeaveRequest>>(
-      `/leaves/${id}/approve`,
+      `/leaves/${id}/approvals`,
       input
     );
     return res.data.data;
@@ -65,7 +65,7 @@ export const leaveService = {
     input: RejectLeaveInput
   ): Promise<LeaveRequest> => {
     const res = await api.put<ApiResponse<LeaveRequest>>(
-      `/leaves/${id}/reject`,
+      `/leaves/${id}/rejections`,
       input
     );
     return res.data.data;

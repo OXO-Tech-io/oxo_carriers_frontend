@@ -4,7 +4,6 @@ import { useAuth } from '@/hooks/useAuth';
 import { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
 import {
-  Bell,
   Search,
   LogOut,
   User,
@@ -14,6 +13,7 @@ import {
   Moon,
 } from 'lucide-react';
 import { useTheme } from '@/contexts/ThemeContext';
+import { NotificationBell } from './NotificationBell';
 
 export default function Header() {
   const { user, logout } = useAuth();
@@ -83,17 +83,7 @@ export default function Header() {
           </button>
 
           {/* Notifications */}
-          <button
-            type="button"
-            className="relative p-2.5 rounded-xl text-[var(--gray-400)] hover:bg-[var(--gray-50)] hover:text-[var(--foreground)] transition-colors duration-200"
-            aria-label="Notifications"
-          >
-            <Bell className="h-5 w-5" />
-            <span className="absolute top-1.5 right-1.5 flex h-2 w-2">
-              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-red-400 opacity-75" />
-              <span className="relative inline-flex h-2 w-2 rounded-full bg-red-500" />
-            </span>
-          </button>
+          <NotificationBell />
 
           {/* Profile dropdown */}
           <div className="relative" ref={dropdownRef}>

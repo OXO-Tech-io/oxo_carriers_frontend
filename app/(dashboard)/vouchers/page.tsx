@@ -233,7 +233,7 @@ function VoucherPageContent() {
     setActioningId(id);
     setError("");
     try {
-      await api.put(`/vouchers/${id}/resubmit`);
+      await api.put(`/vouchers/${id}/resubmissions`);
       setSuccess("Voucher resubmitted for review.");
       fetchVouchers();
     } catch (err: any) {
@@ -247,7 +247,7 @@ function VoucherPageContent() {
     setActioningId(id);
     setError("");
     try {
-      await api.put(`/vouchers/${id}/bank-upload`);
+      await api.put(`/vouchers/${id}/bank-uploads`);
       setSuccess("Marked as Bank Upload.");
       fetchVouchers();
     } catch (err: any) {
@@ -261,7 +261,7 @@ function VoucherPageContent() {
     setActioningId(id);
     setError("");
     try {
-      await api.put(`/vouchers/${id}/paid`);
+      await api.put(`/vouchers/${id}/payments`);
       setSuccess("Voucher marked as Paid.");
       fetchVouchers();
     } catch (err: any) {

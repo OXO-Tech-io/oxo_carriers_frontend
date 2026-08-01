@@ -78,8 +78,8 @@ export default function MedicalInsurancePage() {
       setLoading(true);
       setError('');
       const [claimsRes, limitsRes] = await Promise.all([
-        api.get('/medical-insurance'),
-        api.get('/medical-insurance/limits'),
+        api.get('/medical-insurance-claims'),
+        api.get('/medical-insurance-claims/limits'),
       ]);
       setClaims(claimsRes.data.claims || []);
       setLimits(limitsRes.data);
@@ -116,7 +116,7 @@ export default function MedicalInsurancePage() {
         fd.append('amount', formData.amount);
         fd.append('supportive_document', supportiveFile);
         if (relevantFile) fd.append('relevant_document', relevantFile);
-        await api.post(`/medical-insurance/${resubmitClaimId}/resubmit`, fd, { headers: { 'Content-Type': 'multipart/form-data' } });
+        await api.post(`/medical-insurance-claims/${resubmitClaimId}/resubmissions`, fd, { headers: { 'Content-Type': 'multipart/form-data' } });
         setSuccess('Claim resubmitted successfully.');
         setResubmitClaimId(null);
         setFormData({ type: '', quarter: limits?.currentQuarter ?? '', amount: '' });
@@ -140,7 +140,7 @@ export default function MedicalInsurancePage() {
         fd.append('amount', formData.amount);
         if (supportiveFile) fd.append('supportive_document', supportiveFile);
         if (relevantFile) fd.append('relevant_document', relevantFile);
-        await api.post('/medical-insurance', fd, { headers: { 'Content-Type': 'multipart/form-data' } });
+        await api.post('/medical-insurance-claims', fd, { headers: { 'Content-Type': 'multipart/form-data' } });
         setSuccess('Medical insurance claim submitted. Status: Pending.');
         setFormData({ type: '', quarter: limits?.currentQuarter ?? '', amount: '' });
         setSupportiveFile(null);

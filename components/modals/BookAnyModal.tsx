@@ -94,7 +94,7 @@ export default function BookAnyModal({
     setLoadingAvailable(true);
     try {
       const { start_time, end_time } = step2Form.getValues();
-      const res = await api.get('/facilities/available', {
+      const res = await api.get('/facilities', {
         params: { type: selectedType, start_time, end_time },
       });
       const list: Facility[] = res.data || [];
@@ -117,7 +117,7 @@ export default function BookAnyModal({
     const { facility_id, purpose } = step3Form.getValues();
     const { start_time, end_time } = step2Form.getValues();
     try {
-      await api.post('/facilities/book', {
+      await api.post('/facilities/bookings', {
         facility_id,
         start_time,
         end_time,

@@ -67,13 +67,13 @@ export default function SalaryPage() {
   const fetchSalaries = async () => {
     try {
       setLoading(true);
-      const response = await api.get(`/salary?year=${year}`);
+      const response = await api.get(`/salaries?year=${year}`);
       const salariesData = response.data.salaries || [];
       
       const salariesWithDetails = await Promise.all(
         salariesData.map(async (salary: Salary) => {
           try {
-            const detailResponse = await api.get(`/salary/${salary.id}`);
+            const detailResponse = await api.get(`/salaries/${salary.id}`);
             return {
               ...salary,
               details: detailResponse.data.details || []
@@ -96,7 +96,7 @@ export default function SalaryPage() {
 
   const fetchYTD = async () => {
     try {
-      const response = await api.get(`/salary/ytd?year=${year}`);
+      const response = await api.get(`/salaries/ytd?year=${year}`);
       setYtdEarnings(response.data);
     } catch (err) {
       console.error('Failed to fetch YTD earnings:', err);
@@ -105,7 +105,7 @@ export default function SalaryPage() {
 
   const downloadPDF = async (salaryId: number) => {
     try {
-      const response = await api.get(`/salary/${salaryId}/pdf`, {
+      const response = await api.get(`/salaries/${salaryId}/pdf`, {
         responseType: 'blob',
       });
       

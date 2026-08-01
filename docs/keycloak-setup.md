@@ -14,28 +14,26 @@ realm name is **case-sensitive** — copy it exactly from the admin console.
 ```
 NEXT_PUBLIC_API_URL=http://localhost:5000
 NEXT_PUBLIC_KEYCLOAK_URL=http://localhost:5400
-NEXT_PUBLIC_KEYCLOAK_REALM=hris
-NEXT_PUBLIC_KEYCLOAK_CLIENT_ID=oxo-hris-frontend
+NEXT_PUBLIC_KEYCLOAK_REALM=oxo-hris
+NEXT_PUBLIC_KEYCLOAK_CLIENT_ID=oxo-carriers-frontend
 ```
 
 ### `oxo_carriers_backend/.env`
 
 ```
 KC_URL=http://localhost:5400
-KC_REALM=hris
+KC_REALM=oxo-hris
 KC_AUDIENCE=oxo-hris-backend
 KC_BACKEND_CLIENT_ID=oxo-hris-backend
 KC_BACKEND_CLIENT_SECRET=<from-keycloak>
 ```
 
-> ⚠️ Currently the frontend has `HRIS` (uppercase) and the backend has `hris`
-> (lowercase). Pick whichever matches the actual realm in your Keycloak and
-> make both files agree.
+> Use exactly the same realm value everywhere: `oxo-hris`.
 
-## 2. Keycloak client config — `oxo-hris-frontend`
+## 2. Keycloak client config — `oxo-carriers-frontend`
 
 In the Keycloak admin console (`http://localhost:5400/admin`):
-**Clients → `oxo-hris-frontend` → Settings**
+**Clients → `oxo-carriers-frontend` → Settings**
 
 | Setting | Value |
 |---|---|
@@ -61,12 +59,32 @@ For production, add the deployed origins to the lists above
 
 **Advanced → Proof Key for Code Exchange Code Challenge Method:** `S256`
 
-## 3. Audience mapper on `oxo-hris-frontend`
+## 2.1. Activate custom OXO login theme on Keycloak
+
+Your frontend always redirects to Keycloak's login page, so branding must be
+enabled in Keycloak realm settings.
+
+1. Build/deploy Keycloak with the theme folder copied to:
+   `/opt/keycloak/themes/oxo-hris`
+2. In admin console, open **Realm settings → Themes**
+3. Set **Login theme** to `oxo-hris`
+4. Save and test in a private/incognito browser window
+
+Theme source is in:
+`keycloak-theme/themes/oxo-hris/login/`
+
+If you deploy via Docker image, use this copy step in your Keycloak image build:
+
+```dockerfile
+COPY themes/oxo-hris /opt/keycloak/themes/oxo-hris
+```
+
+## 3. Audience mapper on `oxo-carriers-frontend`
 
 The backend rejects tokens whose `aud` doesn't include `oxo-hris-backend`. By
 default, frontend-issued tokens won't include it. Add a mapper once:
 
-**Clients → `oxo-hris-frontend` → Client Scopes → `oxo-hris-frontend-dedicated`
+**Clients → `oxo-carriers-frontend` → Client Scopes → `oxo-carriers-frontend-dedicated`
 → Add mapper → By configuration → Audience**
 
 | Field | Value |
@@ -116,4 +134,4 @@ Assign realm roles on the **Role mapping** tab (`employee`, `hr_manager`,
 | Redirect loop on `/login/` | Realm/client name mismatch in `.env`, or `Valid redirect URIs` doesn't include `/login/`. |
 | `Invalid parameter: redirect_uri` from Keycloak | Frontend redirect URI not in the client's allowed list. |
 | Browser console: `Failed to receive message from SSO iframe` | `silent-check-sso.html` not reachable at `/silent-check-sso.html`. It's served from `public/`. |
-| Login works but every API call 401s | Audience mapper missing on `oxo-hris-frontend` (step 3). |
+| Login works but every API call 401s | Audience mapper missing on `oxo-carriers-frontend` (step 3). |

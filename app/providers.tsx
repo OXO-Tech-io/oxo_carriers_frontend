@@ -7,6 +7,7 @@ import { queryClient } from '@/lib/queryClient';
 import { useAuthStore } from '@/store/authStore';
 import { initKeycloak } from '@/lib/keycloak';
 import api from '@/lib/api';
+import { mapDbUserToAppUser } from '@/lib/mappers/user.mapper';
 
 /**
  * Initialize keycloak-js once on mount, then sync tokens into the auth store
@@ -67,7 +68,7 @@ function AuthHydrator({ children }: { children: ReactNode }) {
     api
       .get('/auth/me')
       .then((res) => {
-        if (active) setUser(res.data?.data ?? null);
+        if (active) setUser(mapDbUserToAppUser(res.data?.data));
       })
       .catch((err) => {
         console.error('Failed to load /auth/me:', err);

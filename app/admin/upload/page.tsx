@@ -60,7 +60,7 @@ export default function AdminUploadPage() {
       formData.append('month', selectedMonth);
       formData.append('year', selectedYear.toString());
 
-      const response = await api.post('/salary/bulk-upload', formData, {
+      const response = await api.post('/salaries/bulk-uploads', formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
         },
