@@ -51,7 +51,6 @@ import {
   useUpdateLeaveCalendarEntryMutation,
   useDeleteLeaveCalendarEntryMutation,
 } from "@/hooks/mutations/use-leave-calendar-mutations";
-import { useSendTestEmailMutation } from "@/hooks/mutations/use-email-mutations";
 
 const {
   leaveServiceMock,
@@ -63,7 +62,6 @@ const {
   medicalInsuranceServiceMock,
   consultantSubmissionServiceMock,
   leaveCalendarAdminServiceMock,
-  emailServiceMock,
 } = vi.hoisted(() => ({
   leaveServiceMock: {
     createLeaveRequest: vi.fn(),
@@ -125,10 +123,6 @@ const {
     updateEntry: vi.fn(),
     deleteEntry: vi.fn(),
   },
-
-  emailServiceMock: {
-    sendTestEmail: vi.fn(),
-  },
 }));
 
 vi.mock("@/lib/services/leave.service", () => ({
@@ -157,9 +151,6 @@ vi.mock("@/lib/services/consultant-submission.service", () => ({
 }));
 vi.mock("@/lib/services/leave-calendar-admin.service", () => ({
   leaveCalendarAdminService: leaveCalendarAdminServiceMock,
-}));
-vi.mock("@/lib/services/email.service", () => ({
-  emailService: emailServiceMock,
 }));
 
 const createWrapper = () => {
@@ -229,8 +220,6 @@ describe("mutation hooks", () => {
     leaveCalendarAdminServiceMock.createEntry.mockResolvedValue({ id: 1 });
     leaveCalendarAdminServiceMock.updateEntry.mockResolvedValue({ id: 1 });
     leaveCalendarAdminServiceMock.deleteEntry.mockResolvedValue(undefined);
-
-    emailServiceMock.sendTestEmail.mockResolvedValue({ success: true });
   });
 
   const runMutation = async <T,>(
@@ -413,8 +402,6 @@ describe("mutation hooks", () => {
     });
     await runMutation(useDeleteLeaveCalendarEntryMutation, 1);
 
-    await runMutation(useSendTestEmailMutation, { email: "a@a.com" });
-
     expect(salaryServiceMock.bulkUpload).toHaveBeenCalledWith(
       expect.any(FormData),
     );
@@ -449,9 +436,5 @@ describe("mutation hooks", () => {
       name: "Holiday",
     });
     expect(leaveCalendarAdminServiceMock.deleteEntry).toHaveBeenCalledWith(1);
-
-    expect(emailServiceMock.sendTestEmail).toHaveBeenCalledWith({
-      email: "a@a.com",
-    });
   });
 });

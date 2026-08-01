@@ -58,7 +58,7 @@ export default function AdminMedicalInsurancePage() {
       if (filterStatus) params.append('status', filterStatus);
       if (filterType) params.append('type', filterType);
       const qs = params.toString();
-      const res = await api.get(`/medical-insurance${qs ? `?${qs}` : ''}`);
+      const res = await api.get(`/medical-insurance-claims${qs ? `?${qs}` : ''}`);
       setClaims(res.data.claims || []);
     } catch (err: any) {
       setError(err.response?.data?.message || 'Failed to load claims');
@@ -70,7 +70,7 @@ export default function AdminMedicalInsurancePage() {
   const handleApprove = async (id: number) => {
     try {
       setError('');
-      await api.put(`/medical-insurance/${id}/approve`);
+      await api.put(`/medical-insurance-claims/${id}/decisions`, { action: 'approve' });
       setSuccess('Claim approved.');
       fetchClaims();
     } catch (err: any) {
@@ -85,7 +85,7 @@ export default function AdminMedicalInsurancePage() {
     }
     try {
       setError('');
-      await api.put(`/medical-insurance/${id}/reject`, { admin_comment: rejectComment.trim() });
+      await api.put(`/medical-insurance-claims/${id}/decisions`, { action: 'reject', admin_comment: rejectComment.trim() });
       setSuccess('Claim rejected.');
       setRejectingId(null);
       setRejectComment('');

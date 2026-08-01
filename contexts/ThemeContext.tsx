@@ -44,9 +44,17 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  // Prevent flash of incorrect theme by rendering children only after mounting
+  // Prevent flash of incorrect theme by visually hiding children until mounted. The context is
+  // still provided in both branches — omitting it here previously meant any descendant that
+  // calls useTheme() unconditionally (e.g. components/layout/Header.tsx) would throw during
+  // this initial pre-hydration render, since useContext(ThemeContext) resolves to `undefined`
+  // without a Provider ancestor.
   if (!mounted) {
-    return <div className="invisible">{children}</div>;
+    return (
+      <ThemeContext.Provider value={{ theme, toggleTheme }}>
+        <div className="invisible">{children}</div>
+      </ThemeContext.Provider>
+    );
   }
 
   return (

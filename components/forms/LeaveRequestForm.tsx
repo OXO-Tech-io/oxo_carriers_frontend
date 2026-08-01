@@ -7,6 +7,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import api from '@/lib/api';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useAuth } from '@/hooks/useAuth';
 
 const leaveRequestSchema = z.object({
   leave_type_id: z.string().min(1, 'Leave type is required'),
@@ -19,6 +20,7 @@ const leaveRequestSchema = z.object({
 type LeaveRequestFormData = z.infer<typeof leaveRequestSchema>;
 
 export default function LeaveRequestForm() {
+  const { user } = useAuth();
   const [attachmentPreview, setAttachmentPreview] = useState<string | null>(null);
   const queryClient = useQueryClient();
   
@@ -30,18 +32,19 @@ export default function LeaveRequestForm() {
   const { data: leaveTypes } = useQuery({
     queryKey: ['leaveTypes'],
     queryFn: async () => {
-      const response = await api.get('/leaves/types');
+      const response = await api.get('/leave-types');
       return response.data.data;
     }
   });
   
   // Fetch leave balance
   const { data: leaveBalance } = useQuery({
-    queryKey: ['leaveBalance'],
+    queryKey: ['leaveBalance', user?.employee_id],
     queryFn: async () => {
-      const response = await api.get('/leaves/balance');
+      const response = await api.get(`/leaves/${user?.employee_id}/balances`);
       return response.data.data;
-    }
+    },
+    enabled: !!user?.employee_id,
   });
   
   const leaveRequestMutation = useMutation({
@@ -90,7 +93,7 @@ export default function LeaveRequestForm() {
     queryKey: ['holidays', startDate, endDate],
     queryFn: async () => {
       if (!startDate || !endDate) return [];
-      const response = await api.get(`/leave-calendar/range?startDate=${startDate}&endDate=${endDate}`);
+      const response = await api.get(`/leave-calendars/range?startDate=${startDate}&endDate=${endDate}`);
       return response.data.data || [];
     },
     enabled: !!startDate && !!endDate

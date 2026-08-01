@@ -63,7 +63,7 @@ export default function SalarySlipDetailClient() {
     
     try {
       setLoading(true);
-      const response = await api.get(`/salary/${salaryId}`);
+      const response = await api.get(`/salaries/${salaryId}`);
       setSalary(response.data.salary);
       setDetails(response.data.details || []);
       setError('');
@@ -78,7 +78,7 @@ export default function SalarySlipDetailClient() {
     if (!salary) return;
     
     try {
-      const response = await api.get(`/salary/${salary.id}/pdf`, {
+      const response = await api.get(`/salaries/${salary.id}/pdf`, {
         responseType: 'blob',
       });
       

@@ -84,7 +84,7 @@ export const userService = {
     userId: number,
   ): Promise<{ message?: string; success?: boolean }> => {
     const res = await api.post<{ message?: string; success?: boolean }>(
-      `/users/${userId}/reset-password`,
+      `/users/${userId}/password-resets`,
     );
     return res.data;
   },

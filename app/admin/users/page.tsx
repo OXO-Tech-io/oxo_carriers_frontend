@@ -11,13 +11,32 @@ import {
   KeyIcon,
   UserGroupIcon,
   FunnelIcon,
+  DocumentTextIcon,
 } from "@heroicons/react/24/outline";
 import { UserRole, Vendor } from "@/types";
-import CreateUserModal from "@/components/modals/CreateUserModal";
+import CreateUserModal, {
+  CreateEmployeeProfilePayload,
+} from "@/components/modals/CreateUserModal";
 import CreateServiceProviderModal, {
   CreateServiceProviderPayload,
 } from "@/components/modals/CreateServiceProviderModal";
 import ResetPasswordModal from "@/components/modals/ResetPasswordModal";
+import { EmployeeNotesModal } from "@/components/modals/EmployeeNotesModal";
+import { mapDbUserToAppUser } from "@/lib/mappers/user.mapper";
+
+// GET /users is driven by the local employee table, cross-referenced against
+// Keycloak status where available (see users.service.ts#getAll) - the
+// employee fields we display live under `employee`, not at the top level.
+interface KeycloakUserRow {
+  keycloakId: string;
+  email: string;
+  firstName: string;
+  lastName: string;
+  enabled: boolean;
+  emailVerified: boolean;
+  requiredActions: string[];
+  employee: Parameters<typeof mapDbUserToAppUser>[0];
+}
 
 interface User {
   id: number;
@@ -29,7 +48,7 @@ interface User {
   department?: string;
   position?: string;
   hire_date?: string;
-  must_change_password: boolean;
+  requiredActions: string[];
   created_at: string;
 }
 
@@ -47,7 +66,12 @@ export default function AdminUsersPage() {
   const [showCreateServiceProviderModal, setShowCreateServiceProviderModal] =
     useState(false);
   const [showResetModal, setShowResetModal] = useState(false);
+  const [showNotesModal, setShowNotesModal] = useState(false);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
+  const canManageNotes =
+    currentUser?.role === UserRole.HR_EXECUTIVE ||
+    currentUser?.role === UserRole.HR_MANAGER ||
+    isSuperAdmin;
   const [searchTerm, setSearchTerm] = useState("");
   const [filterRole, setFilterRole] = useState<string>("");
   const [filterDepartment, setFilterDepartment] = useState<string>("");
@@ -58,7 +82,9 @@ export default function AdminUsersPage() {
       fetchUsers();
       if (!isFinance) fetchDepartments();
     }
-  }, [canAccessUsers, isFinance, searchTerm, filterRole, filterDepartment]);
+    // filterRole/filterDepartment are applied client-side (see filteredItems
+    // below), not refetched - the backend doesn't support those filters.
+  }, [canAccessUsers, isFinance, searchTerm]);
 
   const fetchUsers = async () => {
     try {
@@ -69,12 +95,23 @@ export default function AdminUsersPage() {
         const response = await api.get(`/vendors?${params.toString()}`);
         setListItems(response.data.vendors || []);
       } else {
+        // The backend only supports filtering by `search` - role/department
+        // filters are applied client-side below.
         const params = new URLSearchParams();
         if (searchTerm) params.append("search", searchTerm);
-        if (filterRole) params.append("role", filterRole);
-        if (filterDepartment) params.append("department", filterDepartment);
         const response = await api.get(`/users?${params.toString()}`);
-        setListItems(response.data.users || []);
+        const rows: KeycloakUserRow[] = response.data.users || [];
+        const mapped = rows
+          .filter((row) => row.employee)
+          .map((row) => {
+            const employee = mapDbUserToAppUser(row.employee)!;
+            return {
+              ...employee,
+              role: employee.role as UserRole,
+              requiredActions: row.requiredActions ?? [],
+            };
+          });
+        setListItems(mapped);
       }
     } catch (err: any) {
       console.error("Failed to fetch:", err);
@@ -111,8 +148,11 @@ export default function AdminUsersPage() {
     account_holder_name?: string;
     account_number?: string;
     bank_branch?: string;
+    bank_branch_code?: string;
+    swift_code?: string;
     company_name?: string;
     contact_number?: string;
+    profile?: CreateEmployeeProfilePayload;
   }) => {
     let createdUser: any = null;
     try {
@@ -134,7 +174,7 @@ export default function AdminUsersPage() {
     // 2. Provision in Keycloak (skip for service providers/vendors)
     if (createdUser && formData.role !== UserRole.SERVICE_PROVIDER) {
       try {
-        const kcResponse = await api.post(`/users/${createdUser.id}/keycloak`);
+        const kcResponse = await api.post(`/users/${createdUser.id}/keycloak-accounts`);
         toast.success(
           "Keycloak Provisioned",
           kcResponse.data.message || "Keycloak identity provisioned successfully and email sent."
@@ -212,6 +252,13 @@ export default function AdminUsersPage() {
       );
     }
   };
+
+  const filteredItems = listItems.filter((item) => {
+    if (isVendor(item)) return true;
+    if (filterRole && item.role !== filterRole) return false;
+    if (filterDepartment && item.department !== filterDepartment) return false;
+    return true;
+  });
 
   if (!canAccessUsers) {
     return (
@@ -376,7 +423,7 @@ export default function AdminUsersPage() {
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-[#E4E7EC]">
-                {listItems.length === 0 ? (
+                {filteredItems.length === 0 ? (
                   <tr>
                     <td
                       colSpan={isFinance ? 2 : 6}
@@ -394,7 +441,7 @@ export default function AdminUsersPage() {
                     </td>
                   </tr>
                 ) : (
-                  listItems.map((item) =>
+                  filteredItems.map((item) =>
                     isVendor(item) ? (
                       <tr
                         key={item.id}
@@ -444,7 +491,7 @@ export default function AdminUsersPage() {
                           {item.position || "—"}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
-                          {item.must_change_password ? (
+                          {item.requiredActions.includes("UPDATE_PASSWORD") ? (
                             <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-700">
                               Password Setup Required
                             </span>
@@ -456,6 +503,18 @@ export default function AdminUsersPage() {
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                           <div className="flex items-center justify-end space-x-2">
+                            {canManageNotes && (
+                              <button
+                                onClick={() => {
+                                  setSelectedUser(item);
+                                  setShowNotesModal(true);
+                                }}
+                                className="p-2 text-[#465FFF] hover:bg-[#ECF3FF] rounded-lg transition-colors"
+                                title="Employee Notes"
+                              >
+                                <DocumentTextIcon className="h-5 w-5" />
+                              </button>
+                            )}
                             <button
                               onClick={() => {
                                 setSelectedUser(item);
@@ -512,6 +571,19 @@ export default function AdminUsersPage() {
         onConfirm={handleResetPassword}
         userEmail={selectedUser?.email || ""}
       />
+
+      {/* Employee Notes Modal (HR Team can add-only; HR Manager can view/edit) */}
+      {selectedUser && !isVendor(selectedUser) && (
+        <EmployeeNotesModal
+          isOpen={showNotesModal}
+          onClose={() => {
+            setShowNotesModal(false);
+            setSelectedUser(null);
+          }}
+          employeeId={selectedUser.id}
+          employeeName={`${selectedUser.first_name} ${selectedUser.last_name}`}
+        />
+      )}
     </div>
   );
 }

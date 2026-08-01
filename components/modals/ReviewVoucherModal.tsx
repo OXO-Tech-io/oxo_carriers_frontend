@@ -32,7 +32,7 @@ export default function ReviewVoucherModal({
     setError('');
     setSubmitting(true);
     try {
-      await api.put(`/vouchers/${voucher.id}/review`, { action, comment: comment.trim() || undefined });
+      await api.put(`/vouchers/${voucher.id}/reviews`, { action, comment: comment.trim() || undefined });
       onSuccess();
       onClose();
       setComment('');

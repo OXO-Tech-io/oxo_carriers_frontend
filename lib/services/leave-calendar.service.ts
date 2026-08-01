@@ -16,7 +16,7 @@ export const leaveCalendarService = {
     endDate: string
   ): Promise<Holiday[]> => {
     const res = await api.get<ApiResponse<Holiday[]>>(
-      '/leave-calendar/range',
+      '/leave-calendars/range',
       { params: { startDate, endDate } }
     );
     return res.data.data ?? [];

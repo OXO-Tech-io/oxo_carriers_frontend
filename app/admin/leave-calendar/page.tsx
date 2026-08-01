@@ -49,7 +49,7 @@ export default function LeaveCalendarPage() {
   const fetchEntries = async () => {
     try {
       setLoading(true);
-      const response = await api.get(`/leave-calendar?year=${selectedYear}`);
+      const response = await api.get(`/leave-calendars?year=${selectedYear}`);
       setEntries(response.data.data || []);
     } catch (err: any) {
       console.error('Error fetching calendar entries:', err);
@@ -71,10 +71,10 @@ export default function LeaveCalendarPage() {
 
     try {
       if (editingEntry) {
-        await api.put(`/leave-calendar/${editingEntry.id}`, formDataToSubmit);
+        await api.put(`/leave-calendars/${editingEntry.id}`, formDataToSubmit);
         setSuccess('Calendar entry updated successfully');
       } else {
-        await api.post('/leave-calendar', formDataToSubmit);
+        await api.post('/leave-calendars', formDataToSubmit);
         setSuccess('Calendar entry created successfully');
       }
       setShowModal(false);
@@ -111,7 +111,7 @@ export default function LeaveCalendarPage() {
     }
 
     try {
-      await api.delete(`/leave-calendar/${id}`);
+      await api.delete(`/leave-calendars/${id}`);
       setSuccess('Calendar entry deleted successfully');
       fetchEntries();
       setTimeout(() => setSuccess(''), 3000);
