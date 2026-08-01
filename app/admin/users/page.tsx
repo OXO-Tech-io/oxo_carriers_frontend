@@ -217,7 +217,7 @@ export default function AdminUsersPage() {
     if (!selectedUser) return;
     try {
       const response = await api.post(
-        `/users/${selectedUser.id}/reset-password`,
+        `/users/${selectedUser.id}/password-resets`,
       );
       toast.success(
         "Password reset sent",
