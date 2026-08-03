@@ -1,10 +1,10 @@
 import React from "react";
 import { describe, it, expect, vi } from "vitest";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import ProfileChangeDecisionModal from "@/components/modals/ProfileChangeDecisionModal";
 
 describe("ProfileChangeDecisionModal", () => {
-  it("renders reject-specific copy and disables confirm until a reason is entered", () => {
+  it("renders reject-specific copy and disables confirm until a reason is entered", async () => {
     const onConfirm = vi.fn();
     render(
       <ProfileChangeDecisionModal isOpen onClose={vi.fn()} decision="rejected" onConfirm={onConfirm} />,
@@ -16,7 +16,9 @@ describe("ProfileChangeDecisionModal", () => {
     fireEvent.change(screen.getByPlaceholderText(/Explain why/), { target: { value: "Missing docs" } });
     expect(confirmButton).not.toBeDisabled();
     fireEvent.click(confirmButton);
-    expect(onConfirm).toHaveBeenCalledWith("Missing docs");
+    // handleConfirm is declared `async`, so even a synchronous onConfirm mock still resolves via a
+    // microtask after this click — await it so the ensuing setComments('') doesn't fire outside act.
+    await waitFor(() => expect(onConfirm).toHaveBeenCalledWith("Missing docs"));
   });
 
   it("renders return-for-modification copy and trims whitespace-only input as empty", () => {
@@ -38,7 +40,7 @@ describe("ProfileChangeDecisionModal", () => {
     const textarea = screen.getByPlaceholderText(/Explain why/);
     fireEvent.change(textarea, { target: { value: "Bad data" } });
     fireEvent.click(screen.getByRole("button", { name: "Reject Request" }));
-    await vi.waitFor(() => expect(textarea).toHaveValue(""));
+    await waitFor(() => expect(textarea).toHaveValue(""));
   });
 
   it("disables Cancel and shows a loading confirm button while isLoading", () => {
