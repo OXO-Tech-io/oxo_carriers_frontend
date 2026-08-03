@@ -346,7 +346,33 @@ export interface WorkLog {
   taskDescription: string;
   hoursSpent: string;
   remarks: string | null;
+  /** True when submitted after that work date's deadline. Late entries are still accepted. */
+  isLate: boolean;
+  /** Deadline that applied, or null for weekends, holidays, and entries logged with the deadline off. */
+  deadlineAt: string | null;
   createdAt: string;
+}
+
+/** Why a work date has no deadline. `null` means a deadline does apply. */
+export type WorkLogDeadlineExemption = 'disabled' | 'weekend' | 'holiday' | null;
+
+export interface WorkLogDeadline {
+  workDate: string;
+  isEnabled: boolean;
+  /** 24-hour 'HH:MM'. */
+  deadlineTime: string;
+  timezone: string;
+  deadlineAt: string | null;
+  exemptReason: WorkLogDeadlineExemption;
+  hasPassed: boolean;
+  /** Whether the caller holds work_logs write access and may change the deadline. */
+  canEdit: boolean;
+}
+
+export interface WorkLogDeadlineSettingsUpdate {
+  isEnabled?: boolean;
+  deadlineTime?: string;
+  timezone?: string;
 }
 
 export interface WorkLogEntryDraft {
@@ -356,10 +382,22 @@ export interface WorkLogEntryDraft {
   remarks?: string;
 }
 
+export interface WorkLogDailyStatus {
+  date: string;
+  /** Employees holding the work_logs permission (any level) - who's expected to log. */
+  totalEligible: number;
+  submittedCount: number;
+  onTimeCount: number;
+  lateCount: number;
+  pendingCount: number;
+}
+
 export interface BulkUploadResult {
   success: number;
   failed: number;
   errors: string[];
+  /** How many of the uploaded rows landed after their deadline. */
+  late?: number;
 }
 
 export interface WorkLogUserSummary {
@@ -369,4 +407,5 @@ export interface WorkLogUserSummary {
   lastName: string;
   totalHours: number;
   entryCount: number;
+  lateCount: number;
 }
