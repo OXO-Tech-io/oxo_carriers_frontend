@@ -17,7 +17,8 @@ import {
   BellRing,
   Award,
 } from 'lucide-react';
-import { Card, CardHeader } from '@/components/ui/Card';
+import { Card } from '@/components/ui/Card';
+import { StatCard } from '@/components/ui/StatCard';
 import { DashboardSkeleton } from '@/components/ui/Skeleton';
 
 interface DashboardStats {
@@ -123,6 +124,7 @@ export default function HomePage() {
           className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4"
         >
           <StatCard
+            hover
             title="Total Employees"
             value={stats.totalEmployees ?? 0}
             icon={Users}
@@ -130,6 +132,7 @@ export default function HomePage() {
             trend="+2.5% vs last month"
           />
           <StatCard
+            hover
             title="Pending Leaves"
             value={stats.pendingLeaveRequests ?? 0}
             icon={Clock}
@@ -137,6 +140,7 @@ export default function HomePage() {
             trend="Needs attention"
           />
           <StatCard
+            hover
             title="Active Leaves"
             value={stats.leaveRequestsThisMonth ?? 0}
             icon={Calendar}
@@ -144,6 +148,7 @@ export default function HomePage() {
             trend="Currently on leave"
           />
           <StatCard
+            hover
             title="Processed Payroll"
             value={stats.salariesPaidThisMonth ?? 0}
             icon={FileText}
@@ -260,44 +265,6 @@ export default function HomePage() {
         </motion.div>
       </div>
     </motion.div>
-  );
-}
-
-function StatCard({
-  title,
-  value,
-  icon: Icon,
-  accentColor,
-  trend,
-}: {
-  title: string;
-  value: string | number;
-  icon: React.ComponentType<{ className?: string }>;
-  accentColor: string;
-  trend?: string;
-}) {
-  return (
-    <Card hover padding="md" className="group relative overflow-hidden">
-      <div className="absolute top-0 left-0 h-1.5 w-full" style={{ backgroundColor: accentColor }} />
-      <div className="flex items-start justify-between">
-        <div className="space-y-1">
-          <p className="text-xs font-bold text-[var(--gray-400)] uppercase tracking-wider">{title}</p>
-          <p className="text-3xl font-extrabold text-[var(--foreground)] tracking-tight">{value}</p>
-          {trend && (
-            <div className="pt-2 flex items-center gap-1 text-[11px] font-semibold text-[var(--gray-500)]">
-              <TrendingUp className="h-3.5 w-3.5 text-[var(--primary)]" />
-              <span>{trend}</span>
-            </div>
-          )}
-        </div>
-        <div
-          className="flex h-12 w-12 items-center justify-center rounded-2xl text-white shadow-md transition-transform duration-300 group-hover:scale-110 active:scale-95 shrink-0"
-          style={{ backgroundColor: accentColor }}
-        >
-          <Icon className="h-5 w-5" />
-        </div>
-      </div>
-    </Card>
   );
 }
 

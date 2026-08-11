@@ -8,6 +8,8 @@ import {
   logoutRedirect,
 } from '@/lib/keycloakAuth';
 import { getKeycloak } from '@/lib/keycloak';
+import { API_BASE_URL } from '@/lib/apiConfig';
+import { endSessionBeacon } from '@/lib/attendance/endSessionBeacon';
 
 /**
  * Auth state mirrored from the singleton keycloak-js instance. `keycloak-js`
@@ -52,6 +54,10 @@ export const useAuthStore = create<AuthState>()((set) => ({
 
   logout: async () => {
     set({ user: null });
+    // Close the attendance work session first: logoutRedirect() navigates away
+    // to Keycloak's end-session endpoint and never resolves, so anything after
+    // it would never run.
+    endSessionBeacon(API_BASE_URL);
     await logoutRedirect();
   },
 

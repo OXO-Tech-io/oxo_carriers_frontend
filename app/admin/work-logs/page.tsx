@@ -8,12 +8,15 @@ import { useAllWorkLogsQuery, useWorkLogSummaryQuery } from '@/hooks/queries/use
 import { workLogService } from '@/lib/services/work-log.service';
 import { Button, DataTable } from '@/components/ui';
 import type { WorkLog, WorkLogUserSummary } from '@/types/hrModules';
+import { Button, DataTable, StatCard } from '@/components/ui';
+import { WorkLogDayBreakdownModal } from '@/components/modals/WorkLogDayBreakdownModal';
+import { downloadBlob } from '@/lib/utils';
+import type { WorkLogUserSummary } from '@/types/hrModules';
 
 type WorkLogTab = 'summary' | 'detailed';
 
 function downloadBlob(blob: Blob, filename: string) {
   const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
   a.href = url;
   a.download = filename;
   document.body.appendChild(a);
@@ -23,8 +26,6 @@ function downloadBlob(blob: Blob, filename: string) {
 }
 
 export default function AdminWorkLogsPage() {
-  const { isHRManager, isSuperAdmin } = useAuth();
-  const [activeTab, setActiveTab] = useState<WorkLogTab>('summary');
   const [from, setFrom] = useState('');
   const [to, setTo] = useState('');
   const [isExporting, setIsExporting] = useState(false);
@@ -127,6 +128,41 @@ export default function AdminWorkLogsPage() {
       ) : (
         <DataTable columns={detailedColumns} data={detailedQuery.data ?? []} isLoading={detailedQuery.isLoading} />
       )}
+      <div>
+        <label className="text-xs font-semibold text-[var(--gray-400)]">Date</label>
+        <input
+          type="date"
+          value={date}
+          max={todayIso()}
+          onChange={(e) => setDate(e.target.value)}
+          className="mt-1 block rounded-lg border border-[var(--gray-200)] bg-[var(--card-bg)] p-2 text-sm text-[var(--foreground)]"
+        />
+      </div>
+
+      {/* Attendance-style snapshot for the selected day. */}
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <StatCard title="Submitted" value={dailyStatusQuery.data?.submittedCount ?? 0} icon={Users} accentColor="var(--primary)" />
+        <StatCard title="On Time" value={dailyStatusQuery.data?.onTimeCount ?? 0} icon={CheckCircle2} accentColor="#16a34a" />
+        <StatCard title="Late" value={dailyStatusQuery.data?.lateCount ?? 0} icon={AlertTriangle} accentColor="#d97706" />
+        <StatCard title="Pending" value={dailyStatusQuery.data?.pendingCount ?? 0} icon={Hourglass} accentColor="#64748b" />
+      </div>
+
+      <DataTable
+        columns={summaryColumns}
+        data={summaryQuery.data ?? []}
+        isLoading={summaryQuery.isLoading}
+        onRowClick={(row) =>
+          setBreakdown({ userId: row.userId, employeeName: `${row.firstName} ${row.lastName}` })
+        }
+      />
+
+      <WorkLogDayBreakdownModal
+        isOpen={!!breakdown}
+        onClose={() => setBreakdown(null)}
+        userId={breakdown?.userId ?? null}
+        employeeName={breakdown?.employeeName ?? ''}
+        date={date}
+      />
     </div>
   );
 }

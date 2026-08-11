@@ -32,6 +32,8 @@ import {
   Mail,
   FileSignature,
   Users2,
+  Clock,
+  Activity,
 } from "lucide-react";
 
 type AccessLevel = "read" | "write";
@@ -119,6 +121,14 @@ const navigation: MenuItem[] = [
     icon: ClipboardList,
     permissionKeys: ["work_logs"],
     requiredLevel: "read",
+  },
+  {
+    name: "My Attendance",
+    href: "/attendance",
+    icon: Clock,
+    permissionKeys: ["attendance"],
+    requiredLevel: "read",
+    children: [{ name: "History", href: "/attendance/history" }],
   },
   {
     name: "My Communications",
@@ -239,6 +249,25 @@ const adminNavigation: MenuItem[] = [
     href: "/admin/work-logs",
     icon: ClipboardList,
     permissionKeys: ["work_logs"],
+    requiredLevel: "write",
+  },
+  {
+    name: "Attendance",
+    href: "/admin/attendance",
+    icon: Activity,
+    permissionKeys: ["attendance"],
+    requiredLevel: "write",
+    children: [
+      { name: "Summary", href: "/admin/attendance" },
+      { name: "Live Monitoring", href: "/admin/attendance/live" },
+      { name: "History", href: "/admin/attendance/history" },
+    ],
+  },
+  {
+    name: "Attendance Reports",
+    href: "/admin/attendance/reports",
+    icon: BarChart3,
+    permissionKeys: ["attendance"],
     requiredLevel: "write",
   },
 ];

@@ -2,11 +2,16 @@ import axios from 'axios';
 import { useAuthStore } from '@/store/authStore';
 import { ensureFreshToken } from '@/lib/keycloakAuth';
 
-const API_URL =
-  process.env.NEXT_PUBLIC_API_URL ||
-  (process.env.NODE_ENV === 'production'
-    ? 'https://backend.oxocareers.com/api/v1'
-    : 'http://localhost:5000/api/v1');
+import { API_BASE_URL } from '@/lib/apiConfig';
+
+const API_URL = API_BASE_URL;
+
+/**
+ * Re-exported for the handful of callers that cannot go through axios at all -
+ * notably the attendance end-session beacon, which fires from
+ * `navigator.sendBeacon` on unload and so builds its own URL.
+ */
+export { API_BASE_URL };
 
 const api = axios.create({
   baseURL: API_URL,

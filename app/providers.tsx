@@ -83,6 +83,8 @@ function AuthHydrator({ children }: { children: ReactNode }) {
 }
 
 import { ThemeProvider } from '@/contexts/ThemeContext';
+import { AttendanceProvider } from '@/contexts/AttendanceTrackingContext';
+import { SessionConflictModal } from '@/components/modals/SessionConflictModal';
 
 export function Providers({ children }: { children: ReactNode }) {
   return (
@@ -90,7 +92,14 @@ export function Providers({ children }: { children: ReactNode }) {
       <ThemeProvider>
         <ToastProvider>
           <KeycloakBootstrap>
-            <AuthHydrator>{children}</AuthHydrator>
+            <AuthHydrator>
+              {/* Inside AuthHydrator so the tracker reads a hydrated auth state,
+                  and above the page tree so a work session spans navigation. */}
+              <AttendanceProvider>
+                {children}
+                <SessionConflictModal />
+              </AttendanceProvider>
+            </AuthHydrator>
           </KeycloakBootstrap>
         </ToastProvider>
       </ThemeProvider>
