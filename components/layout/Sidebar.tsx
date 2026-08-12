@@ -23,7 +23,6 @@ import {
   Upload,
   UserCheck,
   ChevronDown,
-  ChevronLeft,
   ChevronRight,
   Menu,
   X,
@@ -32,6 +31,8 @@ import {
   Mail,
   FileSignature,
   Users2,
+  Megaphone,
+  ChevronsLeft,
 } from "lucide-react";
 
 type AccessLevel = "read" | "write";
@@ -228,6 +229,13 @@ const adminNavigation: MenuItem[] = [
     requiredLevel: "write",
   },
   {
+    name: "Notice Board",
+    href: "/admin/notices",
+    icon: Megaphone,
+    permissionKeys: ["notices"],
+    requiredLevel: "write",
+  },
+  {
     name: "Reports & Analytics",
     href: "/reports",
     icon: BarChart3,
@@ -270,7 +278,7 @@ function NavItems({
               href={item.href}
               title={collapsed ? item.name : undefined}
               className={`
-                group relative flex items-center rounded-xl px-3 py-2.5 text-sm font-semibold
+                group relative flex items-center rounded-2xl px-3 py-2.5 text-sm font-semibold
                 transition-all duration-200 ease-out
                 ${collapsed ? "justify-center" : "gap-3"}
                 ${
@@ -280,13 +288,6 @@ function NavItems({
                 }
               `}
             >
-              {/* Active indicator bar */}
-              {isParentActive && !collapsed && (
-                <span
-                  className="absolute left-0 top-1/2 -translate-y-1/2 w-1.5 h-8 rounded-r-full"
-                  style={{ backgroundColor: "var(--sidebar-indicator)" }}
-                />
-              )}
               <Icon
                 className={`h-5 w-5 shrink-0 transition-transform duration-200 group-hover:scale-105 ${
                   isParentActive ? "text-[var(--sidebar-indicator)]" : "text-[var(--sidebar-text)] group-hover:text-[var(--sidebar-text-active)]"
@@ -520,31 +521,6 @@ export default function Sidebar() {
             </div>
           )}
       </nav>
-
-      {/* User chip at bottom */}
-      {!collapsed && (
-        <div
-          className="mx-3 mb-4 flex items-center gap-3 rounded-xl px-3 py-2.5 border border-[var(--sidebar-border)] bg-[var(--background)]"
-        >
-          <div
-            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-xs font-bold text-white shadow-sm"
-            style={{ background: "var(--primary)" }}
-          >
-            {user.first_name?.[0]}
-            {user.last_name?.[0]}
-          </div>
-          <div className="min-w-0 flex-1">
-            <p className="truncate text-xs font-bold text-[var(--sidebar-text-active)]">
-              {user.first_name} {user.last_name}
-            </p>
-            <p
-              className="truncate text-[10px] capitalize font-medium text-[var(--gray-400)]"
-            >
-              {user.role.replaceAll("_", " ")}
-            </p>
-          </div>
-        </div>
-      )}
     </>
   );
 
@@ -565,14 +541,14 @@ export default function Sidebar() {
         <button
           type="button"
           onClick={toggle}
-          className="group absolute top-1/2 -right-3.5 -translate-y-1/2 h-7 w-7 rounded-full border border-[var(--sidebar-border)] bg-[var(--card-bg)] shadow-sm flex items-center justify-center cursor-pointer transition-transform hover:scale-105 active:scale-95 z-50"
+          className="group absolute top-1/2 -right-3.5 -translate-y-1/2 h-7 w-7 rounded-full shadow-[var(--shadow-sm)] bg-[var(--card-bg)] flex items-center justify-center cursor-pointer transition-transform hover:scale-105 active:scale-95 z-50"
           aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
         >
           <span className="text-[var(--sidebar-indicator)]">
             {collapsed ? (
               <ChevronRight className="h-4 w-4" />
             ) : (
-              <ChevronLeft className="h-4 w-4" />
+              <ChevronsLeft className="h-4 w-4" />
             )}
           </span>
         </button>
@@ -618,6 +594,20 @@ export default function Sidebar() {
             <X className="h-5 w-5" />
           </button>
         </div>
+
+        <div className="flex items-center gap-2.5 px-4 py-3.5">
+          <div
+            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-bold text-white shadow-sm"
+            style={{ background: "var(--primary)" }}
+          >
+            {user.first_name?.[0]}
+            {user.last_name?.[0]}
+          </div>
+          <p className="min-w-0 flex-1 truncate text-sm font-bold text-[var(--sidebar-text-active)]">
+            {user.first_name} {user.last_name}
+          </p>
+        </div>
+
         <nav className="flex-1 overflow-y-auto px-3 py-5 scrollbar-thin">
           <div className="space-y-1">
             <Suspense

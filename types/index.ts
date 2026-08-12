@@ -65,6 +65,12 @@ export interface PaymentVoucher {
 
 export type UserTitle = 'mr' | 'ms' | 'mrs' | 'dr' | 'prof';
 
+export enum EmployeeStatus {
+  ACTIVE = "active",
+  INACTIVE = "inactive",
+  ON_HOLD = "on_hold",
+}
+
 export interface User {
   id: number;
   employee_id: string;
@@ -82,6 +88,7 @@ export interface User {
     | "employee"
     | "consultant"
     | "service_provider";
+  status?: EmployeeStatus | "active" | "inactive" | "on_hold";
   department: string;
   position: string;
   hire_date: string;

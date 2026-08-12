@@ -16,13 +16,13 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 }
 
 const baseStyles =
-  'inline-flex items-center justify-center font-semibold rounded-xl transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none';
+  'inline-flex items-center justify-center font-semibold rounded-full transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none';
 
 const variants = {
   primary:
-    'bg-[var(--primary)] text-white hover:bg-[var(--primary-hover)] shadow-sm hover:shadow-md focus:ring-[var(--primary-ring)] active:scale-[0.98]',
+    'bg-[var(--primary)] text-white hover:bg-[var(--primary-hover)] shadow-[var(--shadow-indigo)] hover:shadow-md focus:ring-[var(--primary-ring)] active:scale-[0.98]',
   outline:
-    'border-2 border-[var(--gray-300)] bg-transparent text-[var(--gray-700)] hover:bg-[var(--gray-50)] hover:border-[var(--primary)] hover:text-[var(--primary)] focus:ring-[var(--primary)]',
+    'border border-[var(--gray-200)] bg-[var(--card-bg)] text-[var(--gray-600)] hover:bg-[var(--gray-50)] hover:border-[var(--primary)] hover:text-[var(--primary)] focus:ring-[var(--primary)]',
   ghost:
     'bg-transparent text-[var(--gray-700)] hover:bg-[var(--gray-100)] focus:ring-[var(--gray-400)]',
   danger:

@@ -20,10 +20,10 @@ export function Card({ children, className = '', padding = 'md', hover = false }
   return (
     <div
       className={`
-        rounded-2xl bg-[var(--card-bg)] border border-[var(--gray-100)]
+        rounded-[1.375rem] bg-[var(--card-bg)]
         shadow-[var(--shadow)] transition-all duration-300 ease-out
         ${paddingClass} ${className}
-        ${hover ? 'hover:shadow-[var(--shadow-lg)] hover:border-[var(--primary)] hover:-translate-y-1' : ''}
+        ${hover ? 'hover:shadow-[var(--shadow-lg)] hover:-translate-y-1' : ''}
       `}
     >
       {children}

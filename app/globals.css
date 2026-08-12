@@ -1,92 +1,95 @@
 @import "tailwindcss";
 
-/* ── OXO Carriers Theme: Calm Neutral · Light Sidebar · No Gradients ── */
+/* ── OXO Carriers Theme: "Stratify" — soft, borderless, pill-shaped ── */
 :root {
   /* Page background & text */
-  --background: #F8FAFC;
-  --foreground: #0F172A;
+  --background: #F5F7FB;
+  --foreground: #12142B;
   --card-bg: #FFFFFF;
 
-  /* Sidebar: light slate — clean nav */
+  /* Sidebar: white, borderless, pill active-state */
   --sidebar-bg: #FFFFFF;
-  --sidebar-hover: #F1F5F9;
-  --sidebar-active: #2563EB;
-  --sidebar-active-bg: #EFF6FF;
-  --sidebar-text: #64748B;
-  --sidebar-text-active: #0F172A;
-  --sidebar-border: #E2E8F0;
-  --sidebar-indicator: #2563EB;
+  --sidebar-hover: #F2F4F9;
+  --sidebar-active: #4C6FFF;
+  --sidebar-active-bg: #EAEFFF;
+  --sidebar-text: #6B7280;
+  --sidebar-text-active: #12142B;
+  --sidebar-border: #EEF0F5;
+  --sidebar-indicator: #4C6FFF;
 
-  /* Primary accent: Modern Blue */
-  --primary: #2563EB;
-  --primary-hover: #1D4ED8;
-  --primary-light: #EFF6FF;
-  --primary-ring: rgba(37, 99, 235, 0.22);
+  /* Primary accent: Stratify Blue */
+  --primary: #4C6FFF;
+  --primary-hover: #3A5CE0;
+  --primary-light: #EAEFFF;
+  --primary-ring: rgba(76, 111, 255, 0.22);
 
   /* Secondary accent: Teal */
   --secondary: #14B8A6;
   --secondary-hover: #0D9488;
   --secondary-light: #F0FDFA;
 
-  /* Status colors — Modern Hues */
+  /* Status colors — soft pastel bg + saturated text, pill-tag friendly */
   --success: #22C55E;
-  --success-light: #F0FDF4;
+  --success-light: #DEF7E7;
   --success-text: #15803D;
   --warning: #F59E0B;
   --warning-light: #FEF3C7;
   --warning-text: #B45309;
   --error: #EF4444;
-  --error-light: #FEF2F2;
-  --error-text: #B91C1C;
+  --error-light: #FEE2E2;
+  --error-text: #DC2626;
   --info: #3B82F6;
-  --info-light: #EFF6FF;
-  --info-text: #1D4ED8;
+  --info-light: #DBEAFE;
+  --info-text: #2563EB;
+  --purple: #9333EA;
+  --purple-light: #F3E8FF;
+  --purple-text: #7C3AED;
 
-  /* Gray palette (slate) */
-  --gray-25:  #F8FAFC;
-  --gray-50:  #F1F5F9;
-  --gray-100: #E2E8F0;
-  --gray-200: #CBD5E1;
-  --gray-300: #94A3B8;
-  --gray-400: #64748B;
-  --gray-500: #475569;
-  --gray-600: #334155;
-  --gray-700: #1E293B;
-  --gray-800: #0F172A;
-  --gray-900: #020617;
+  /* Gray palette (cool neutral, slightly bluer than slate) */
+  --gray-25:  #F8F9FC;
+  --gray-50:  #F2F4F9;
+  --gray-100: #E9EBF2;
+  --gray-200: #D6D9E3;
+  --gray-300: #A6ACC1;
+  --gray-400: #8B93A6;
+  --gray-500: #656D82;
+  --gray-600: #3F4457;
+  --gray-700: #262A3D;
+  --gray-800: #171A2C;
+  --gray-900: #0A0B17;
 
-  /* Shadows — elegant, floating */
-  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-  --shadow:    0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px -1px rgba(0, 0, 0, 0.1);
-  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.08), 0 2px 4px -2px rgba(0, 0, 0, 0.08);
-  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.08), 0 4px 6px -4px rgba(0, 0, 0, 0.08);
-  --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
-  --shadow-indigo: 0 4px 14px 0 rgba(37, 99, 235, 0.12);
+  /* Shadows — soft, diffuse, borderless cards rely on these instead of borders */
+  --shadow-sm: 0 1px 2px 0 rgba(18, 20, 43, 0.04);
+  --shadow:    0 2px 8px 0 rgba(18, 20, 43, 0.06);
+  --shadow-md: 0 8px 24px -4px rgba(18, 20, 43, 0.08);
+  --shadow-lg: 0 16px 40px -8px rgba(18, 20, 43, 0.10);
+  --shadow-xl: 0 24px 56px -12px rgba(18, 20, 43, 0.14);
+  --shadow-indigo: 0 8px 24px 0 rgba(76, 111, 255, 0.18);
 
-  --radius-xl: 1rem;
-  --radius-2xl: 1.5rem;
+  --radius-xl: 1.125rem;
+  --radius-2xl: 1.375rem;
   --transition: 200ms ease;
 }
 
 .dark {
-  --background: #0B0F19;
-  --foreground: #F1F5F9;
-  --card-bg: #111827;
-  
-  /* Sidebar: dark slate */
-  --sidebar-bg: #0E131F;
-  --sidebar-hover: #1F2937;
-  --sidebar-active-bg: #1E293B;
-  --sidebar-text: #94A3B8;
-  --sidebar-text-active: #F8FAFC;
-  --sidebar-border: #1E293B;
-  --sidebar-indicator: #3B82F6;
+  --background: #0B0D17;
+  --foreground: #F1F3F9;
+  --card-bg: #151827;
 
-  /* Primary Accent: Dark Mode Blue */
-  --primary: #3B82F6;
-  --primary-hover: #60A5FA;
-  --primary-light: #1E293B;
-  --primary-ring: rgba(59, 130, 246, 0.25);
+  /* Sidebar: dark, borderless */
+  --sidebar-bg: #10121D;
+  --sidebar-hover: #1B1E2E;
+  --sidebar-active-bg: #23264A;
+  --sidebar-text: #8B93A6;
+  --sidebar-text-active: #F8F9FC;
+  --sidebar-border: #1E2133;
+  --sidebar-indicator: #6C87FF;
+
+  /* Primary Accent: Dark Mode Stratify Blue */
+  --primary: #6C87FF;
+  --primary-hover: #8AA0FF;
+  --primary-light: #1E2240;
+  --primary-ring: rgba(108, 135, 255, 0.3);
 
   /* Secondary Accent: Dark Mode Teal */
   --secondary: #0D9488;
@@ -106,19 +109,30 @@
   --info: #3B82F6;
   --info-light: #1E3A8A;
   --info-text: #93C5FD;
+  --purple: #A855F7;
+  --purple-light: #3B1E63;
+  --purple-text: #D8B4FE;
 
   /* Dark mode gray palette */
-  --gray-25:  #0F172A;
-  --gray-50:  #1E293B;
-  --gray-100: #334155;
-  --gray-200: #475569;
-  --gray-300: #64748B;
-  --gray-400: #94A3B8;
-  --gray-500: #CBD5E1;
-  --gray-600: #E2E8F0;
-  --gray-700: #F1F5F9;
-  --gray-800: #F8FAFC;
+  --gray-25:  #10121D;
+  --gray-50:  #1B1E2E;
+  --gray-100: #2B2F45;
+  --gray-200: #3F4457;
+  --gray-300: #656D82;
+  --gray-400: #8B93A6;
+  --gray-500: #A6ACC1;
+  --gray-600: #D6D9E3;
+  --gray-700: #E9EBF2;
+  --gray-800: #F8F9FC;
   --gray-900: #FFFFFF;
+
+  /* Shadows are barely visible on dark backgrounds - lean on a subtle border instead */
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.4);
+  --shadow:    0 2px 8px 0 rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.04);
+  --shadow-md: 0 8px 24px -4px rgba(0, 0, 0, 0.55), 0 0 0 1px rgba(255, 255, 255, 0.05);
+  --shadow-lg: 0 16px 40px -8px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(255, 255, 255, 0.06);
+  --shadow-xl: 0 24px 56px -12px rgba(0, 0, 0, 0.65), 0 0 0 1px rgba(255, 255, 255, 0.06);
+  --shadow-indigo: 0 8px 24px 0 rgba(108, 135, 255, 0.25);
 }
 
 @theme inline {

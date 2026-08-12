@@ -1,0 +1,28 @@
+import api from '@/lib/api';
+import { extractData } from '@/lib/services/http';
+import type { ApiResponse } from '@/types/api';
+import type { AttendanceHistoryDay, AttendanceSession, TodayAttendance } from '@/types/attendance';
+
+export const attendanceService = {
+  clockIn: async (): Promise<AttendanceSession> => {
+    const res = await api.post<ApiResponse<AttendanceSession>>('/attendance/session/start');
+    return extractData(res);
+  },
+
+  clockOut: async (): Promise<AttendanceSession> => {
+    const res = await api.post<ApiResponse<AttendanceSession>>('/attendance/session/end');
+    return extractData(res);
+  },
+
+  getToday: async (): Promise<TodayAttendance> => {
+    const res = await api.get<ApiResponse<TodayAttendance>>('/attendance/me/today');
+    return extractData(res);
+  },
+
+  getHistory: async (limit?: number): Promise<AttendanceHistoryDay[]> => {
+    const res = await api.get<ApiResponse<AttendanceHistoryDay[]>>('/attendance/me/history', {
+      params: limit ? { limit } : undefined,
+    });
+    return extractData(res);
+  },
+};

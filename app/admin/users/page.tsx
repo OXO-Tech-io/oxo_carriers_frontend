@@ -13,7 +13,7 @@ import {
   FunnelIcon,
   DocumentTextIcon,
 } from "@heroicons/react/24/outline";
-import { UserRole, Vendor } from "@/types";
+import { UserRole, EmployeeStatus, Vendor } from "@/types";
 import CreateUserModal, {
   CreateEmployeeProfilePayload,
 } from "@/components/modals/CreateUserModal";
@@ -45,6 +45,7 @@ interface User {
   first_name: string;
   last_name: string;
   role: UserRole;
+  status?: EmployeeStatus;
   department?: string;
   position?: string;
   hire_date?: string;
@@ -54,6 +55,18 @@ interface User {
 
 function isVendor(item: User | Vendor): item is Vendor {
   return "company_name" in item && !("role" in item);
+}
+
+function statusLabel(status?: EmployeeStatus): string {
+  if (status === EmployeeStatus.INACTIVE) return "Inactive";
+  if (status === EmployeeStatus.ON_HOLD) return "On Hold";
+  return "Active";
+}
+
+function statusBadgeClass(status?: EmployeeStatus): string {
+  if (status === EmployeeStatus.INACTIVE) return "bg-red-100 text-red-700";
+  if (status === EmployeeStatus.ON_HOLD) return "bg-amber-100 text-amber-700";
+  return "bg-emerald-100 text-emerald-700";
 }
 
 export default function AdminUsersPage() {
@@ -69,6 +82,10 @@ export default function AdminUsersPage() {
   const [showNotesModal, setShowNotesModal] = useState(false);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const canManageNotes =
+    currentUser?.role === UserRole.HR_EXECUTIVE ||
+    currentUser?.role === UserRole.HR_MANAGER ||
+    isSuperAdmin;
+  const canManageStatus =
     currentUser?.role === UserRole.HR_EXECUTIVE ||
     currentUser?.role === UserRole.HR_MANAGER ||
     isSuperAdmin;
@@ -108,6 +125,7 @@ export default function AdminUsersPage() {
             return {
               ...employee,
               role: employee.role as UserRole,
+              status: employee.status as EmployeeStatus | undefined,
               requiredActions: row.requiredActions ?? [],
             };
           });
@@ -249,6 +267,19 @@ export default function AdminUsersPage() {
       toast.error(
         "Failed to delete user",
         err.response?.data?.message || "Could not delete the user",
+      );
+    }
+  };
+
+  const handleStatusChange = async (userId: number, status: EmployeeStatus) => {
+    try {
+      await api.patch(`/users/${userId}/status`, { status });
+      toast.success("Status updated", "The employee's account status has been changed");
+      fetchUsers();
+    } catch (err: any) {
+      toast.error(
+        "Failed to update status",
+        err.response?.data?.message || "Could not update the employee's status",
       );
     }
   };
@@ -406,7 +437,10 @@ export default function AdminUsersPage() {
                         Position
                       </th>
                       <th className="px-6 py-4 text-left text-xs font-bold text-[#344054] uppercase tracking-wider">
-                        Status
+                        Onboarding
+                      </th>
+                      <th className="px-6 py-4 text-left text-xs font-bold text-[#344054] uppercase tracking-wider">
+                        Account Status
                       </th>
                     </>
                   )}
@@ -426,7 +460,7 @@ export default function AdminUsersPage() {
                 {filteredItems.length === 0 ? (
                   <tr>
                     <td
-                      colSpan={isFinance ? 2 : 6}
+                      colSpan={isFinance ? 2 : 7}
                       className="px-6 py-12 text-center"
                     >
                       <UserGroupIcon className="h-12 w-12 text-[#98A2B3] mx-auto mb-4" />
@@ -501,6 +535,27 @@ export default function AdminUsersPage() {
                             </span>
                           )}
                         </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          {canManageStatus && currentUser?.id !== item.id ? (
+                            <select
+                              value={item.status ?? EmployeeStatus.ACTIVE}
+                              onChange={(e) =>
+                                handleStatusChange(item.id, e.target.value as EmployeeStatus)
+                              }
+                              className={`text-xs font-semibold rounded-full px-2.5 py-1 border-0 focus:outline-none focus:ring-2 focus:ring-[#465FFF] cursor-pointer ${statusBadgeClass(item.status)}`}
+                            >
+                              <option value={EmployeeStatus.ACTIVE}>Active</option>
+                              <option value={EmployeeStatus.INACTIVE}>Inactive</option>
+                              <option value={EmployeeStatus.ON_HOLD}>On Hold</option>
+                            </select>
+                          ) : (
+                            <span
+                              className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${statusBadgeClass(item.status)}`}
+                            >
+                              {statusLabel(item.status)}
+                            </span>
+                          )}
+                        </td>
                         <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                           <div className="flex items-center justify-end space-x-2">
                             {canManageNotes && (
@@ -525,7 +580,7 @@ export default function AdminUsersPage() {
                             >
                               <KeyIcon className="h-5 w-5" />
                             </button>
-                            {currentUser?.role === UserRole.HR_MANAGER && (
+                            {(currentUser?.role === UserRole.HR_MANAGER || isSuperAdmin) && (
                               <button
                                 onClick={() => handleDeleteUser(item.id)}
                                 className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"

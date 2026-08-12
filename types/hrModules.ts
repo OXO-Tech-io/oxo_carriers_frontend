@@ -337,6 +337,19 @@ export interface GroupWithMembers {
   members: GroupMemberSummary[];
 }
 
+// ─── Notices ────────────────────────────────────────────────────────────────
+
+export interface Notice {
+  id: number;
+  title: string;
+  message: string;
+  isActive: boolean;
+  createdBy: number | null;
+  updatedBy: number | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
 // ─── Work Log ────────────────────────────────────────────────────────────────
 
 export interface WorkLog {
