@@ -254,14 +254,17 @@ export default function AdminUsersPage() {
   const handleDeleteUser = async (userId: number) => {
     if (
       !confirm(
-        "Are you sure you want to delete this user? This action cannot be undone.",
+        "Are you sure you want to delete this user? Their personal data and Keycloak login will be removed and the account deactivated, but other records (leave, salary, attendance, etc.) will be kept. This action cannot be undone.",
       )
     ) {
       return;
     }
     try {
       await api.delete(`/users/${userId}`);
-      toast.success("User deleted", "The user account has been removed");
+      toast.success(
+        "User deleted",
+        "Personal data and Keycloak access have been removed; the account is now inactive",
+      );
       fetchUsers();
     } catch (err: any) {
       toast.error(
