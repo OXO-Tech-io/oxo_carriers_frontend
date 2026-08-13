@@ -12,6 +12,7 @@ import {
   UserGroupIcon,
   FunnelIcon,
   DocumentTextIcon,
+  FolderIcon,
 } from "@heroicons/react/24/outline";
 import { UserRole, EmployeeStatus, Vendor } from "@/types";
 import CreateUserModal, {
@@ -22,6 +23,7 @@ import CreateServiceProviderModal, {
 } from "@/components/modals/CreateServiceProviderModal";
 import ResetPasswordModal from "@/components/modals/ResetPasswordModal";
 import { EmployeeNotesModal } from "@/components/modals/EmployeeNotesModal";
+import { DocumentVaultModal } from "@/components/modals/DocumentVaultModal";
 import { mapDbUserToAppUser } from "@/lib/mappers/user.mapper";
 
 // GET /users is driven by the local employee table, cross-referenced against
@@ -80,11 +82,13 @@ export default function AdminUsersPage() {
     useState(false);
   const [showResetModal, setShowResetModal] = useState(false);
   const [showNotesModal, setShowNotesModal] = useState(false);
+  const [showDocumentVaultModal, setShowDocumentVaultModal] = useState(false);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const canManageNotes =
     currentUser?.role === UserRole.HR_EXECUTIVE ||
     currentUser?.role === UserRole.HR_MANAGER ||
     isSuperAdmin;
+  const canManageDocumentVault = canManageNotes;
   const canManageStatus =
     currentUser?.role === UserRole.HR_EXECUTIVE ||
     currentUser?.role === UserRole.HR_MANAGER ||
@@ -573,6 +577,18 @@ export default function AdminUsersPage() {
                                 <DocumentTextIcon className="h-5 w-5" />
                               </button>
                             )}
+                            {canManageDocumentVault && !isVendor(item) && (
+                              <button
+                                onClick={() => {
+                                  setSelectedUser(item);
+                                  setShowDocumentVaultModal(true);
+                                }}
+                                className="p-2 text-[#465FFF] hover:bg-[#ECF3FF] rounded-lg transition-colors"
+                                title="Document Vault"
+                              >
+                                <FolderIcon className="h-5 w-5" />
+                              </button>
+                            )}
                             <button
                               onClick={() => {
                                 setSelectedUser(item);
@@ -636,6 +652,19 @@ export default function AdminUsersPage() {
           isOpen={showNotesModal}
           onClose={() => {
             setShowNotesModal(false);
+            setSelectedUser(null);
+          }}
+          employeeId={selectedUser.id}
+          employeeName={`${selectedUser.first_name} ${selectedUser.last_name}`}
+        />
+      )}
+
+      {/* Document Vault Modal */}
+      {selectedUser && !isVendor(selectedUser) && (
+        <DocumentVaultModal
+          isOpen={showDocumentVaultModal}
+          onClose={() => {
+            setShowDocumentVaultModal(false);
             setSelectedUser(null);
           }}
           employeeId={selectedUser.id}

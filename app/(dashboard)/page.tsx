@@ -23,6 +23,9 @@ import { DashboardSkeleton } from '@/components/ui/Skeleton';
 import { useNoticesQuery } from '@/hooks/queries/use-notices-query';
 import { AttendanceCard } from '@/components/attendance/AttendanceCard';
 
+const API_BASE = process.env.NEXT_PUBLIC_API_URL?.replace(/\/api(\/v\d+)?\/?$/, '') || 'http://localhost:5000';
+const resolveImageUrl = (url: string) => `${API_BASE}${url}`;
+
 interface DashboardStats {
   totalEmployees?: number;
   pendingLeaveRequests?: number;
@@ -225,6 +228,7 @@ export default function HomePage() {
                     key={notice.id}
                     title={notice.title}
                     message={notice.message}
+                    imageUrl={notice.imageUrl ? resolveImageUrl(notice.imageUrl) : null}
                     time={formatDistanceToNow(new Date(notice.createdAt), { addSuffix: true })}
                     icon={Megaphone}
                     iconColor="var(--primary)"
@@ -327,6 +331,7 @@ function NotificationItem({
   icon: Icon,
   iconColor,
   iconBg,
+  imageUrl,
 }: {
   title: string;
   message: string;
@@ -334,16 +339,25 @@ function NotificationItem({
   icon: React.ComponentType<{ className?: string }>;
   iconColor: string;
   iconBg: string;
+  imageUrl?: string | null;
 }) {
   return (
-    <div className="flex items-start gap-3.5 p-4 transition-colors duration-200 hover:bg-[var(--gray-50)]">
-      <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full ${iconBg}`} style={{ color: iconColor }}>
-        <Icon className="h-5 w-5 shrink-0" />
-      </div>
-      <div className="min-w-0 flex-1 space-y-1">
-        <p className="text-sm font-bold text-[var(--foreground)]">{title}</p>
-        <p className="text-xs text-[var(--gray-400)] line-clamp-2 leading-relaxed">{message}</p>
-        <Badge variant="gray" className="mt-1">{time}</Badge>
+    <div className="p-4 transition-colors duration-200 hover:bg-[var(--gray-50)]">
+      {imageUrl && (
+        <div className="mb-3 overflow-hidden rounded-xl shadow-sm">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={imageUrl} alt="" className="h-32 w-full object-cover" loading="lazy" />
+        </div>
+      )}
+      <div className="flex items-start gap-3.5">
+        <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full ${iconBg}`} style={{ color: iconColor }}>
+          <Icon className="h-5 w-5 shrink-0" />
+        </div>
+        <div className="min-w-0 flex-1 space-y-1">
+          <p className="text-sm font-bold text-[var(--foreground)]">{title}</p>
+          <p className="text-xs text-[var(--gray-400)] line-clamp-2 leading-relaxed">{message}</p>
+          <Badge variant="gray" className="mt-1">{time}</Badge>
+        </div>
       </div>
     </div>
   );

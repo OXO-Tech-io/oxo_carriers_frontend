@@ -39,6 +39,7 @@ import { useEmployeeEducationQuery } from '@/hooks/queries/use-employee-educatio
 import { useEmployeeWorkHistoryQuery } from '@/hooks/queries/use-employee-work-history-query';
 import { useEmployeePersonalDetailsQuery } from '@/hooks/queries/use-employee-personal-details-query';
 import { useMyChangeRequestsQuery } from '@/hooks/queries/use-my-change-requests-query';
+import { useMyDocumentsQuery } from '@/hooks/queries/use-documents-query';
 import { useSubmitProfileChangeMutation } from '@/hooks/mutations/use-submit-profile-change-mutation';
 import ProfileChangeRequestModal from '@/components/modals/ProfileChangeRequestModal';
 import ContactDetailsChangeModal from '@/components/modals/ContactDetailsChangeModal';
@@ -53,6 +54,9 @@ import { QUALIFICATION_LEVEL_OPTIONS, TITLE_OPTIONS, type EmployeeEducation, typ
 import type { ColumnDef } from '@tanstack/react-table';
 
 type ProfileTab = 'personal' | 'contacts' | 'education' | 'work-history' | 'pending-changes' | 'employment' | 'documents' | 'settings';
+
+const API_BASE = process.env.NEXT_PUBLIC_API_URL?.replace(/\/api(\/v\d+)?\/?$/, '') || 'http://localhost:5000';
+const resolveFileUrl = (url: string) => `${API_BASE}${url}`;
 
 const STATUS_BADGES: Record<ProfileChangeRequest['status'], { label: string; className: string }> = {
   pending_approval: { label: 'Pending', className: 'bg-amber-50 text-amber-700 border-amber-200' },
@@ -93,6 +97,10 @@ export default function ProfilePage() {
   const { data: pii } = useEmployeePersonalDetailsQuery(displayUser?.id);
   const { data: changeRequests = [], isLoading: changeRequestsLoading } = useMyChangeRequestsQuery();
   const submitChange = useSubmitProfileChangeMutation();
+  const documentsQuery = useMyDocumentsQuery();
+  // Document Vault shows only documents targeted at this employee individually -
+  // company-wide ('all') documents live on the separate Documents page/sidebar item instead.
+  const myDocuments = (documentsQuery.data ?? []).filter((doc) => doc.targetType === 'individual');
 
   const [showChangeRequestModal, setShowChangeRequestModal] = useState(false);
   const [showContactsModal, setShowContactsModal] = useState(false);
@@ -704,44 +712,50 @@ export default function ProfilePage() {
               <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
                 <Card className="shadow-sm border-[var(--gray-100)] p-6">
                   <div className="flex justify-between items-center mb-6">
-                    <h3 className="text-base font-bold text-[var(--foreground)]">Your Signed Agreements</h3>
+                    <h3 className="text-base font-bold text-[var(--foreground)]">Document Vault</h3>
                     <span className="text-[10px] font-bold text-[var(--gray-400)] uppercase tracking-wider bg-[var(--gray-50)] border border-[var(--gray-100)] px-2 py-0.5 rounded-full">
-                      4 documents
+                      {myDocuments.reduce((count, doc) => count + (doc.attachments?.length ?? 0), 0)} documents
                     </span>
                   </div>
 
-                  <div className="space-y-3">
-                    {[
-                      { name: 'OXO_Employment_Agreement_2026.pdf', size: '1.4 MB', type: 'Employment Agreement' },
-                      { name: 'Mutual_Non_Disclosure_Agreement.pdf', size: '820 KB', type: 'Security NDA' },
-                      { name: 'Medical_Insurance_Coverage_Booklet.pdf', size: '2.5 MB', type: 'Insurance policy' },
-                      { name: 'Corporate_Code_of_Conduct.pdf', size: '1.1 MB', type: 'Company Policy' }
-                    ].map((doc, idx) => (
-                      <div
-                        key={idx}
-                        className="flex items-center justify-between p-4 bg-[var(--gray-25)] hover:bg-[var(--gray-50)] border border-[var(--gray-100)] hover:border-[var(--primary-ring)] rounded-2xl transition-all duration-200"
-                      >
-                        <div className="flex items-center gap-3">
-                          <div className="p-2.5 bg-white text-[var(--primary)] border border-[var(--gray-100)] rounded-xl shrink-0">
-                            <FileText className="h-4 w-4" />
-                          </div>
-                          <div>
-                            <p className="text-xs font-bold text-[var(--foreground)] truncate max-w-[200px] sm:max-w-md">{doc.name}</p>
-                            <span className="text-[10px] font-bold text-[var(--gray-400)] uppercase tracking-wider block mt-0.5">
-                              {doc.type} · {doc.size}
-                            </span>
-                          </div>
-                        </div>
+                  {documentsQuery.isLoading && (
+                    <p className="text-sm text-[var(--gray-400)]">Loading documents...</p>
+                  )}
+                  {!documentsQuery.isLoading && myDocuments.length === 0 && (
+                    <p className="text-sm text-[var(--gray-400)]">No documents have been shared with you yet.</p>
+                  )}
 
-                        <button
-                          onClick={() => alert(`Downloading: ${doc.name}`)}
-                          className="p-2 bg-white text-[var(--gray-500)] hover:text-[var(--primary)] border border-[var(--gray-100)] hover:border-[var(--primary-ring)] rounded-xl hover:shadow-sm cursor-pointer transition-colors shrink-0"
-                          title="Download Document"
+                  <div className="space-y-3">
+                    {myDocuments.flatMap((doc) =>
+                      (doc.attachments ?? []).map((attachment) => (
+                        <a
+                          key={attachment.id}
+                          href={resolveFileUrl(attachment.fileUrl)}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="flex items-center justify-between p-4 bg-[var(--gray-25)] hover:bg-[var(--gray-50)] border border-[var(--gray-100)] hover:border-[var(--primary-ring)] rounded-2xl transition-all duration-200"
                         >
-                          <Download className="h-4 w-4" />
-                        </button>
-                      </div>
-                    ))}
+                          <div className="flex items-center gap-3">
+                            <div className="p-2.5 bg-white text-[var(--primary)] border border-[var(--gray-100)] rounded-xl shrink-0">
+                              <FileText className="h-4 w-4" />
+                            </div>
+                            <div>
+                              <p className="text-xs font-bold text-[var(--foreground)] truncate max-w-[200px] sm:max-w-md">{attachment.fileName}</p>
+                              <span className="text-[10px] font-bold text-[var(--gray-400)] uppercase tracking-wider block mt-0.5">
+                                {doc.title}
+                              </span>
+                            </div>
+                          </div>
+
+                          <span
+                            className="p-2 bg-white text-[var(--gray-500)] hover:text-[var(--primary)] border border-[var(--gray-100)] hover:border-[var(--primary-ring)] rounded-xl hover:shadow-sm transition-colors shrink-0"
+                            title="Download Document"
+                          >
+                            <Download className="h-4 w-4" />
+                          </span>
+                        </a>
+                      ))
+                    )}
                   </div>
                 </Card>
               </motion.div>

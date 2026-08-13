@@ -13,6 +13,10 @@ import {
   useDeleteCommunicationMutation,
 } from "@/hooks/mutations/use-communication-mutations";
 import {
+  useCreateDocumentMutation,
+  useDeleteDocumentMutation,
+} from "@/hooks/mutations/use-document-mutations";
+import {
   useCreateEmployeeNoteMutation,
   useUpdateEmployeeNoteMutation,
 } from "@/hooks/mutations/use-employee-note-mutations";
@@ -61,6 +65,7 @@ import {
 const {
   profileServiceMock,
   communicationServiceMock,
+  documentServiceMock,
   employeeNoteServiceMock,
   eventServiceMock,
   groupServiceMock,
@@ -78,6 +83,10 @@ const {
     create: vi.fn(),
     respond: vi.fn(),
     delete: vi.fn(),
+  },
+  documentServiceMock: {
+    create: vi.fn(),
+    remove: vi.fn(),
   },
   employeeNoteServiceMock: {
     create: vi.fn(),
@@ -130,6 +139,7 @@ const {
 
 vi.mock("@/lib/services/profile.service", () => ({ profileService: profileServiceMock }));
 vi.mock("@/lib/services/communication.service", () => ({ communicationService: communicationServiceMock }));
+vi.mock("@/lib/services/document.service", () => ({ documentService: documentServiceMock }));
 vi.mock("@/lib/services/employee-note.service", () => ({ employeeNoteService: employeeNoteServiceMock }));
 vi.mock("@/lib/services/event.service", () => ({ eventService: eventServiceMock }));
 vi.mock("@/lib/services/group.service", () => ({ groupService: groupServiceMock }));
@@ -165,6 +175,7 @@ describe("remaining mutation hooks", () => {
     vi.clearAllMocks();
     Object.values(profileServiceMock).forEach((fn) => fn.mockResolvedValue({ id: 1 }));
     Object.values(communicationServiceMock).forEach((fn) => fn.mockResolvedValue({ id: 1 }));
+    Object.values(documentServiceMock).forEach((fn) => fn.mockResolvedValue({ id: 1 }));
     Object.values(employeeNoteServiceMock).forEach((fn) => fn.mockResolvedValue({ id: 1 }));
     Object.values(eventServiceMock).forEach((fn) => fn.mockResolvedValue({ id: 1 }));
     Object.values(groupServiceMock).forEach((fn) => fn.mockResolvedValue({ id: 1 }));
@@ -199,6 +210,24 @@ describe("remaining mutation hooks", () => {
     expect(communicationServiceMock.create).toHaveBeenCalledWith("T", "B", [1], [2], [], undefined, undefined);
     expect(communicationServiceMock.respond).toHaveBeenCalledWith(1, "ack");
     expect(communicationServiceMock.delete).toHaveBeenCalledWith(1);
+  });
+
+  it("document mutations execute service methods", async () => {
+    await runMutation(useCreateDocumentMutation, {
+      title: "Contract",
+      targetType: "individual",
+      individualEmployeeIds: [1],
+      files: [],
+    });
+    await runMutation(useDeleteDocumentMutation, 1);
+
+    expect(documentServiceMock.create).toHaveBeenCalledWith({
+      title: "Contract",
+      targetType: "individual",
+      individualEmployeeIds: [1],
+      files: [],
+    });
+    expect(documentServiceMock.remove).toHaveBeenCalledWith(1);
   });
 
   it("employee note mutations execute service methods scoped to an employee", async () => {

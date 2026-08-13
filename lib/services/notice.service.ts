@@ -7,9 +7,20 @@ export interface CreateNoticeInput {
   title: string;
   message: string;
   isActive?: boolean;
+  image?: File | null;
 }
 
-export type UpdateNoticeInput = Partial<CreateNoticeInput>;
+export type UpdateNoticeInput = Partial<CreateNoticeInput> & { removeImage?: boolean };
+
+const toFormData = (input: CreateNoticeInput | UpdateNoticeInput): FormData => {
+  const formData = new FormData();
+  if (input.title !== undefined) formData.append('title', input.title);
+  if (input.message !== undefined) formData.append('message', input.message);
+  if (input.isActive !== undefined) formData.append('isActive', String(input.isActive));
+  if ('removeImage' in input && input.removeImage) formData.append('removeImage', 'true');
+  if (input.image) formData.append('image', input.image);
+  return formData;
+};
 
 export const noticeService = {
   /** Active notices only - what every employee/system user sees on their dashboard. */
@@ -25,12 +36,16 @@ export const noticeService = {
   },
 
   create: async (input: CreateNoticeInput): Promise<Notice> => {
-    const res = await api.post<ApiResponse<Notice>>('/notices', input);
+    const res = await api.post<ApiResponse<Notice>>('/notices', toFormData(input), {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
     return extractData(res);
   },
 
   update: async (id: number, input: UpdateNoticeInput): Promise<Notice> => {
-    const res = await api.patch<ApiResponse<Notice>>(`/notices/${id}`, input);
+    const res = await api.patch<ApiResponse<Notice>>(`/notices/${id}`, toFormData(input), {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
     return extractData(res);
   },
 

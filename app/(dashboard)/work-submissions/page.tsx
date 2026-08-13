@@ -12,7 +12,7 @@ import {
 } from '@heroicons/react/24/outline';
 import type { ConsultantWorkSubmission, ConsultantSubmissionStatus } from '@/types';
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL?.replace(/\/api\/?$/, '') || 'http://localhost:5000';
+const API_BASE = process.env.NEXT_PUBLIC_API_URL?.replace(/\/api(\/v\d+)?\/?$/, '') || 'http://localhost:5000';
 
 export default function WorkSubmissionsPage() {
   const { isConsultant, isSuperAdmin } = useAuth();

@@ -40,7 +40,7 @@ interface Limits {
   OPD: { maxPerQuarter: number; yearlyTotal: number };
 }
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL?.replace(/\/api\/?$/, '') || 'http://localhost:5000';
+const API_BASE = process.env.NEXT_PUBLIC_API_URL?.replace(/\/api(\/v\d+)?\/?$/, '') || 'http://localhost:5000';
 
 const formatCurrency = (value: number | string | undefined): string => {
   const numValue = typeof value === 'string' ? parseFloat(value) : (value || 0);

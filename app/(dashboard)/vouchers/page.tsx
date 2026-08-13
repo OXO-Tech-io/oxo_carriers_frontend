@@ -105,7 +105,7 @@ function VoucherPageContent() {
   const searchParams = useSearchParams();
   const statusParam = searchParams.get("status");
   const apiBaseUrl = (process.env.NEXT_PUBLIC_API_URL || "").replace(
-    /\/api\/?$/,
+    /\/api(\/v\d+)?\/?$/,
     "",
   );
 

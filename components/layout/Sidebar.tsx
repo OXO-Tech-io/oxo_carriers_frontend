@@ -33,6 +33,8 @@ import {
   Users2,
   Megaphone,
   ChevronsLeft,
+  Clock,
+  FolderOpen,
 } from "lucide-react";
 
 type AccessLevel = "read" | "write";
@@ -133,6 +135,13 @@ const navigation: MenuItem[] = [
     href: "/my-forms",
     icon: FileSignature,
     permissionKeys: ["forms"],
+    requiredLevel: "read",
+  },
+  {
+    name: "Documents",
+    href: "/my-documents",
+    icon: FolderOpen,
+    permissionKeys: ["document_vault"],
     requiredLevel: "read",
   },
 ];
@@ -236,6 +245,13 @@ const adminNavigation: MenuItem[] = [
     requiredLevel: "write",
   },
   {
+    name: "Document Vault",
+    href: "/admin/documents",
+    icon: FolderOpen,
+    permissionKeys: ["document_vault"],
+    requiredLevel: "write",
+  },
+  {
     name: "Reports & Analytics",
     href: "/reports",
     icon: BarChart3,
@@ -248,6 +264,13 @@ const adminNavigation: MenuItem[] = [
     icon: ClipboardList,
     permissionKeys: ["work_logs"],
     requiredLevel: "write",
+  },
+  {
+    name: "Attendance",
+    href: "/admin/attendance",
+    icon: Clock,
+    permissionKeys: ["attendance"],
+    requiredLevel: "read",
   },
 ];
 

@@ -1,8 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { ColumnDef } from '@tanstack/react-table';
-import { Trash2 } from 'lucide-react';
+import { ImageOff, Trash2, X } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useManageNoticesQuery } from '@/hooks/queries/use-notices-query';
 import {
@@ -11,9 +11,19 @@ import {
   useDeleteNoticeMutation,
 } from '@/hooks/mutations/use-notice-mutations';
 import { Modal, Button, DataTable, ConfirmationDialog } from '@/components/ui';
+import { FileUpload } from '@/components/ui/FileUpload';
 import type { Notice } from '@/types/hrModules';
 
-const emptyDraft = { title: '', message: '', isActive: true };
+const API_BASE = process.env.NEXT_PUBLIC_API_URL?.replace(/\/api(\/v\d+)?\/?$/, '') || 'http://localhost:5000';
+const resolveImageUrl = (url: string) => `${API_BASE}${url}`;
+
+const emptyDraft = {
+  title: '',
+  message: '',
+  isActive: true,
+  image: null as File | null,
+  removeImage: false,
+};
 
 export default function AdminNoticesPage() {
   const { isHR, isSuperAdmin } = useAuth();
@@ -27,6 +37,21 @@ export default function AdminNoticesPage() {
   const updateMutation = useUpdateNoticeMutation();
   const deleteMutation = useDeleteNoticeMutation();
 
+  const [newImagePreview, setNewImagePreview] = useState<string | null>(null);
+  useEffect(() => {
+    if (!draft.image) {
+      setNewImagePreview(null);
+      return;
+    }
+    const url = URL.createObjectURL(draft.image);
+    setNewImagePreview(url);
+    return () => URL.revokeObjectURL(url);
+  }, [draft.image]);
+
+  const existingImageUrl =
+    editingNotice?.imageUrl && !draft.removeImage ? resolveImageUrl(editingNotice.imageUrl) : null;
+  const imagePreviewUrl = newImagePreview ?? existingImageUrl;
+
   if (!isHR && !isSuperAdmin) {
     return <p className="text-sm text-[var(--gray-400)]">You do not have access to this page.</p>;
   }
@@ -39,7 +64,13 @@ export default function AdminNoticesPage() {
 
   const openEdit = (notice: Notice) => {
     setEditingNotice(notice);
-    setDraft({ title: notice.title, message: notice.message, isActive: notice.isActive });
+    setDraft({
+      title: notice.title,
+      message: notice.message,
+      isActive: notice.isActive,
+      image: null,
+      removeImage: false,
+    });
     setShowModal(true);
   };
 
@@ -59,6 +90,14 @@ export default function AdminNoticesPage() {
     closeModal();
   };
 
+  const handleImageSelected = (files: File[]) => {
+    setDraft((prev) => ({ ...prev, image: files[0] ?? null, removeImage: false }));
+  };
+
+  const handleRemoveImage = () => {
+    setDraft((prev) => (prev.image ? { ...prev, image: null } : { ...prev, removeImage: true }));
+  };
+
   const handleToggleActive = async (notice: Notice) => {
     await updateMutation.mutateAsync({ id: notice.id, input: { isActive: !notice.isActive } });
   };
@@ -72,6 +111,23 @@ export default function AdminNoticesPage() {
   const isSaving = createMutation.isPending || updateMutation.isPending;
 
   const columns: ColumnDef<Notice, any>[] = [
+    {
+      id: 'image',
+      header: '',
+      cell: ({ row }) =>
+        row.original.imageUrl ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={resolveImageUrl(row.original.imageUrl)}
+            alt=""
+            className="h-10 w-14 rounded-lg object-cover border border-[var(--gray-100)]"
+          />
+        ) : (
+          <div className="flex h-10 w-14 items-center justify-center rounded-lg bg-[var(--gray-50)] text-[var(--gray-300)]">
+            <ImageOff className="h-4 w-4" />
+          </div>
+        ),
+    },
     { accessorKey: 'title', header: 'Title' },
     {
       accessorKey: 'message',
@@ -159,6 +215,28 @@ export default function AdminNoticesPage() {
               placeholder="Notice details..."
               className="mt-1 w-full rounded-xl border border-[var(--gray-200)] bg-[var(--card-bg)] p-2.5 text-sm text-[var(--foreground)]"
             />
+          </div>
+          <div>
+            <label className="text-sm font-semibold text-[var(--foreground)]">Image (optional)</label>
+            <p className="text-xs text-[var(--gray-400)] mb-1.5">
+              Shown as a banner on the notice card on everyone&apos;s dashboard.
+            </p>
+            {imagePreviewUrl ? (
+              <div className="relative overflow-hidden rounded-xl border border-[var(--gray-200)]">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={imagePreviewUrl} alt="" className="h-40 w-full object-cover" />
+                <button
+                  type="button"
+                  onClick={handleRemoveImage}
+                  className="absolute top-2 right-2 rounded-full bg-black/60 p-1.5 text-white hover:bg-black/80"
+                  aria-label="Remove image"
+                >
+                  <X className="h-3.5 w-3.5" />
+                </button>
+              </div>
+            ) : (
+              <FileUpload accept="image/*" maxSizeMB={5} onFilesSelected={handleImageSelected} />
+            )}
           </div>
           <div className="flex items-center gap-2">
             <input

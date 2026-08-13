@@ -27,3 +27,10 @@ export interface AttendanceHistoryDay {
   totalDurationSec: number;
   sessionCount: number;
 }
+
+// Admin/report view (GET /attendance) - one row per employee per day.
+export interface AttendanceHistoryDayForEmployee extends AttendanceHistoryDay {
+  employeeId: string;
+  firstName: string;
+  lastName: string;
+}

@@ -343,11 +343,30 @@ export interface Notice {
   id: number;
   title: string;
   message: string;
+  imageUrl: string | null;
   isActive: boolean;
   createdBy: number | null;
   updatedBy: number | null;
   createdAt: string;
   updatedAt: string;
+}
+
+// ─── Document Vault ─────────────────────────────────────────────────────────
+
+export type DocumentTargetType = 'individual' | 'all';
+
+// Named VaultDocument, not Document, to avoid colliding with the DOM global.
+export interface VaultDocument {
+  id: number;
+  title: string;
+  description: string | null;
+  targetType: DocumentTargetType;
+  createdBy: number | null;
+  createdAt: string;
+  updatedAt: string;
+  attachments?: Attachment[];
+  /** Only present on the admin "manage" list, showing who was individually targeted. */
+  recipientEmployeeIds?: string[];
 }
 
 // ─── Work Log ────────────────────────────────────────────────────────────────

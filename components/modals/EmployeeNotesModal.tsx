@@ -107,7 +107,7 @@ export function EmployeeNotesModal({ isOpen, onClose, employeeId, employeeName }
                           {note.attachments.map((a) => (
                             <li key={a.id}>
                               <a
-                                href={`${process.env.NEXT_PUBLIC_API_URL?.replace(/\/api$/, '') ?? ''}${a.fileUrl}`}
+                                href={`${process.env.NEXT_PUBLIC_API_URL?.replace(/\/api(\/v\d+)?\/?$/, '') ?? ''}${a.fileUrl}`}
                                 target="_blank"
                                 rel="noreferrer"
                                 className="text-xs font-semibold text-[var(--primary)]"
