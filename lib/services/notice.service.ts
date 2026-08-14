@@ -25,13 +25,13 @@ const toFormData = (input: CreateNoticeInput | UpdateNoticeInput): FormData => {
 export const noticeService = {
   /** Active notices only - what every employee/system user sees on their dashboard. */
   list: async (): Promise<Notice[]> => {
-    const res = await api.get<ApiResponse<Notice[]>>('/notices');
+    const res = await api.get<ApiResponse<Notice[]>>('/notices', { params: { status: 'active' } });
     return extractData(res);
   },
 
   /** Full board including inactive notices - requires the `notices` write permission. */
   listAll: async (): Promise<Notice[]> => {
-    const res = await api.get<ApiResponse<Notice[]>>('/notices/manage');
+    const res = await api.get<ApiResponse<Notice[]>>('/notices');
     return extractData(res);
   },
 

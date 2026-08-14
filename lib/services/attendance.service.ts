@@ -7,6 +7,7 @@ import type {
   AttendanceSession,
   TodayAttendance,
 } from '@/types/attendance';
+import { SessionAction } from '@/types/attendance';
 
 export interface GetAllAttendanceParams {
   from?: string;
@@ -14,31 +15,38 @@ export interface GetAllAttendanceParams {
 }
 
 export const attendanceService = {
-  clockIn: async (): Promise<AttendanceSession> => {
-    const res = await api.post<ApiResponse<AttendanceSession>>('/attendance/session/start');
+  clockIn: async (employeeId: string): Promise<AttendanceSession> => {
+    const res = await api.post<ApiResponse<AttendanceSession>>(
+      `/employees/${employeeId}/attendances/session`,
+      { action: SessionAction.CLOCK_IN },
+    );
     return extractData(res);
   },
 
-  clockOut: async (): Promise<AttendanceSession> => {
-    const res = await api.post<ApiResponse<AttendanceSession>>('/attendance/session/end');
+  clockOut: async (employeeId: string): Promise<AttendanceSession> => {
+    const res = await api.post<ApiResponse<AttendanceSession>>(
+      `/employees/${employeeId}/attendances/session`,
+      { action: SessionAction.CLOCK_OUT },
+    );
     return extractData(res);
   },
 
-  getToday: async (): Promise<TodayAttendance> => {
-    const res = await api.get<ApiResponse<TodayAttendance>>('/attendance/me/today');
+  getToday: async (employeeId: string): Promise<TodayAttendance> => {
+    const res = await api.get<ApiResponse<TodayAttendance>>(`/employees/${employeeId}/attendances/today`);
     return extractData(res);
   },
 
-  getHistory: async (limit?: number): Promise<AttendanceHistoryDay[]> => {
-    const res = await api.get<ApiResponse<AttendanceHistoryDay[]>>('/attendance/me/history', {
-      params: limit ? { limit } : undefined,
-    });
+  getHistory: async (employeeId: string, limit?: number): Promise<AttendanceHistoryDay[]> => {
+    const res = await api.get<ApiResponse<AttendanceHistoryDay[]>>(
+      `/employees/${employeeId}/attendances/history`,
+      { params: limit ? { limit } : undefined },
+    );
     return extractData(res);
   },
 
   /** Admin/report view - every employee's in/out time and daily hours. */
   getAll: async (params: GetAllAttendanceParams = {}): Promise<AttendanceHistoryDayForEmployee[]> => {
-    const res = await api.get<ApiResponse<AttendanceHistoryDayForEmployee[]>>('/attendance', { params });
+    const res = await api.get<ApiResponse<AttendanceHistoryDayForEmployee[]>>('/employees/attendances', { params });
     return extractData(res);
   },
 };

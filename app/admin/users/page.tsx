@@ -280,7 +280,7 @@ export default function AdminUsersPage() {
 
   const handleStatusChange = async (userId: number, status: EmployeeStatus) => {
     try {
-      await api.patch(`/users/${userId}/status`, { status });
+      await api.patch(`/users/${userId}/statuses`, { status });
       toast.success("Status updated", "The employee's account status has been changed");
       fetchUsers();
     } catch (err: any) {

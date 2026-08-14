@@ -155,7 +155,7 @@ describe("AdminUsersPage", () => {
     fireEvent.change(statusSelect, { target: { value: "inactive" } });
 
     await waitFor(() =>
-      expect(apiMock.patch).toHaveBeenCalledWith("/users/10/status", { status: "inactive" }),
+      expect(apiMock.patch).toHaveBeenCalledWith("/users/10/statuses", { status: "inactive" }),
     );
     expect(toastMock.success).toHaveBeenCalledWith(
       "Status updated",

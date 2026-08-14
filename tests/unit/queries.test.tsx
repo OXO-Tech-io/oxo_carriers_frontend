@@ -77,7 +77,7 @@ const {
     getMyProfile: vi.fn(),
   },
   communicationServiceMock: { listAll: vi.fn(), listMine: vi.fn() },
-  documentServiceMock: { listAll: vi.fn(), listMine: vi.fn(), listForEmployee: vi.fn() },
+  documentServiceMock: { listAll: vi.fn(), listForEmployee: vi.fn() },
   employeeNoteServiceMock: { listForEmployee: vi.fn() },
   eventServiceMock: { list: vi.fn(), getWithParticipants: vi.fn() },
   formServiceMock: {
@@ -138,7 +138,7 @@ describe("query hooks", () => {
     Object.values(leaveServiceMock).forEach((fn) => fn.mockResolvedValue([]));
     Object.values(notificationServiceMock).forEach((fn) => fn.mockResolvedValue([]));
     Object.values(workLogServiceMock).forEach((fn) => fn.mockResolvedValue([]));
-    useAuthMock.mockReturnValue({ user: { employee_id: "E1" } });
+    useAuthMock.mockReturnValue({ user: { id: 7, employee_id: "E1" } });
   });
 
   it("useAllChangeRequestsQuery and useMyChangeRequestsQuery call listChangeRequests", async () => {
@@ -181,18 +181,25 @@ describe("query hooks", () => {
 
   it("useManageDocumentsQuery, useMyDocumentsQuery and useEmployeeDocumentsQuery call the right service methods", async () => {
     documentServiceMock.listAll.mockResolvedValue([{ id: 1 }]);
-    documentServiceMock.listMine.mockResolvedValue([{ id: 2 }]);
-    documentServiceMock.listForEmployee.mockResolvedValue([{ id: 3 }]);
+    documentServiceMock.listForEmployee.mockResolvedValueOnce([{ id: 2 }]).mockResolvedValueOnce([{ id: 3 }]);
 
     const manage = await runQuery(() => useManageDocumentsQuery());
     expect(manage.data).toEqual([{ id: 1 }]);
 
     const mine = await runQuery(() => useMyDocumentsQuery());
     expect(mine.data).toEqual([{ id: 2 }]);
+    expect(documentServiceMock.listForEmployee).toHaveBeenCalledWith(7);
 
     const forEmployee = await runQuery(() => useEmployeeDocumentsQuery(5));
     expect(forEmployee.data).toEqual([{ id: 3 }]);
     expect(documentServiceMock.listForEmployee).toHaveBeenCalledWith(5);
+  });
+
+  it("useMyDocumentsQuery is disabled without a user id", () => {
+    useAuthMock.mockReturnValue({ user: null });
+    const { result } = renderHook(() => useMyDocumentsQuery(), { wrapper: createWrapper() });
+    expect(result.current.isFetched).toBe(false);
+    expect(documentServiceMock.listForEmployee).not.toHaveBeenCalled();
   });
 
   it("useManageDocumentsQuery is disabled when enabled=false", () => {

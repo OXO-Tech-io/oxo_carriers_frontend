@@ -1,17 +1,26 @@
 import { useQuery } from '@tanstack/react-query';
+import { useAuth } from '@/hooks/useAuth';
 import { attendanceService, type GetAllAttendanceParams } from '@/lib/services/attendance.service';
 
-export const useTodayAttendanceQuery = () =>
-  useQuery({
-    queryKey: ['attendance', 'today'],
-    queryFn: () => attendanceService.getToday(),
+export const useTodayAttendanceQuery = () => {
+  const { user } = useAuth();
+  const employeeId = user?.employee_id;
+  return useQuery({
+    queryKey: ['attendance', 'today', employeeId ?? null],
+    queryFn: () => attendanceService.getToday(employeeId!),
+    enabled: Boolean(employeeId),
   });
+};
 
-export const useAttendanceHistoryQuery = (limit?: number) =>
-  useQuery({
-    queryKey: ['attendance', 'history', limit ?? null],
-    queryFn: () => attendanceService.getHistory(limit),
+export const useAttendanceHistoryQuery = (limit?: number) => {
+  const { user } = useAuth();
+  const employeeId = user?.employee_id;
+  return useQuery({
+    queryKey: ['attendance', 'history', employeeId ?? null, limit ?? null],
+    queryFn: () => attendanceService.getHistory(employeeId!, limit),
+    enabled: Boolean(employeeId),
   });
+};
 
 /** Admin/report view - every employee's in/out time and daily hours. */
 export const useAllAttendanceQuery = (params: GetAllAttendanceParams = {}, enabled = true) =>

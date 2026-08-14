@@ -33,15 +33,13 @@ export const documentService = {
     return extractData(res);
   },
 
-  /** Merged view for the current employee: individually-targeted + 'All Employees' documents. */
-  listMine: async (): Promise<VaultDocument[]> => {
-    const res = await api.get<ApiResponse<VaultDocument[]>>('/documents');
-    return extractData(res);
-  },
-
-  /** Same merged view, for one employee - used by the admin Document Vault modal. */
+  /**
+   * Merged view (individually-targeted + 'All Employees' documents) for one employee.
+   * Own documents need no special permission; the backend requires document_vault
+   * write to fetch another employee's.
+   */
   listForEmployee: async (employeeId: number): Promise<VaultDocument[]> => {
-    const res = await api.get<ApiResponse<VaultDocument[]>>(`/documents/employees/${employeeId}`);
+    const res = await api.get<ApiResponse<VaultDocument[]>>(`/employees/${employeeId}/documents`);
     return extractData(res);
   },
 

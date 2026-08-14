@@ -3,6 +3,11 @@
 // feature/time-tracking branch). Mirrors the backend's attendance module
 // response shapes exactly (see oxo_carriers_backend/src/modules/attendance).
 
+export enum SessionAction {
+  CLOCK_IN = 'clock_in',
+  CLOCK_OUT = 'clock_out',
+}
+
 export interface AttendanceSession {
   id: number;
   employeeId: string;

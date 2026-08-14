@@ -68,17 +68,10 @@ describe("documentService", () => {
     expect(result).toEqual([{ id: 1 }]);
   });
 
-  it("listMine fetches the caller's merged view", async () => {
-    apiMock.get.mockResolvedValueOnce(asResponse({ data: [{ id: 2 }] }));
-    const result = await documentService.listMine();
-    expect(apiMock.get).toHaveBeenCalledWith("/documents");
-    expect(result).toEqual([{ id: 2 }]);
-  });
-
   it("listForEmployee fetches one employee's merged view by internal id", async () => {
     apiMock.get.mockResolvedValueOnce(asResponse({ data: [{ id: 3 }] }));
     const result = await documentService.listForEmployee(5);
-    expect(apiMock.get).toHaveBeenCalledWith("/documents/employees/5");
+    expect(apiMock.get).toHaveBeenCalledWith("/employees/5/documents");
     expect(result).toEqual([{ id: 3 }]);
   });
 
