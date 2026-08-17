@@ -7,10 +7,8 @@ import { useAuth } from '@/hooks/useAuth';
 import { useManageDocumentsQuery } from '@/hooks/queries/use-documents-query';
 import { useCreateDocumentMutation, useDeleteDocumentMutation } from '@/hooks/mutations/use-document-mutations';
 import { Modal, Button, DataTable, FileUpload, EmployeeMultiSelect, ConfirmationDialog } from '@/components/ui';
+import { resolveFileUrl } from '@/lib/constants';
 import type { DocumentTargetType, VaultDocument } from '@/types/hrModules';
-
-const API_BASE = process.env.NEXT_PUBLIC_API_URL?.replace(/\/api(\/v\d+)?\/?$/, '') || 'http://localhost:5000';
-const resolveFileUrl = (url: string) => `${API_BASE}${url}`;
 
 const emptyDraft = {
   title: '',

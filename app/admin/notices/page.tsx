@@ -12,10 +12,8 @@ import {
 } from '@/hooks/mutations/use-notice-mutations';
 import { Modal, Button, DataTable, ConfirmationDialog } from '@/components/ui';
 import { FileUpload } from '@/components/ui/FileUpload';
+import { resolveFileUrl as resolveImageUrl } from '@/lib/constants';
 import type { Notice } from '@/types/hrModules';
-
-const API_BASE = process.env.NEXT_PUBLIC_API_URL?.replace(/\/api(\/v\d+)?\/?$/, '') || 'http://localhost:5000';
-const resolveImageUrl = (url: string) => `${API_BASE}${url}`;
 
 const emptyDraft = {
   title: '',

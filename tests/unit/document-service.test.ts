@@ -35,7 +35,7 @@ describe("documentService", () => {
     });
 
     expect(apiMock.post).toHaveBeenCalledWith(
-      "/documents",
+      "/document-vaults",
       expect.any(FormData),
       { headers: { "Content-Type": "multipart/form-data" } },
     );
@@ -62,10 +62,19 @@ describe("documentService", () => {
   });
 
   it("listAll fetches the admin manage list", async () => {
-    apiMock.get.mockResolvedValueOnce(asResponse({ data: [{ id: 1 }] }));
+    const page = { items: [{ id: 1 }], total: 1, page: 1, pageSize: 10 };
+    apiMock.get.mockResolvedValueOnce(asResponse({ data: page }));
     const result = await documentService.listAll();
-    expect(apiMock.get).toHaveBeenCalledWith("/documents/manage");
-    expect(result).toEqual([{ id: 1 }]);
+    expect(apiMock.get).toHaveBeenCalledWith("/documents", { params: {} });
+    expect(result).toEqual(page);
+  });
+
+  it("listAll passes page and pageSize through as query params", async () => {
+    const page = { items: [], total: 30, page: 3, pageSize: 5 };
+    apiMock.get.mockResolvedValueOnce(asResponse({ data: page }));
+    const result = await documentService.listAll({ page: 3, pageSize: 5 });
+    expect(apiMock.get).toHaveBeenCalledWith("/documents", { params: { page: 3, pageSize: 5 } });
+    expect(result).toEqual(page);
   });
 
   it("listForEmployee fetches one employee's merged view by internal id", async () => {
@@ -78,6 +87,6 @@ describe("documentService", () => {
   it("remove deletes by id", async () => {
     apiMock.delete.mockResolvedValueOnce(asResponse(undefined));
     await documentService.remove(9);
-    expect(apiMock.delete).toHaveBeenCalledWith("/documents/9");
+    expect(apiMock.delete).toHaveBeenCalledWith("/document-vaults/9");
   });
 });

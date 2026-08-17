@@ -2,9 +2,7 @@
 
 import { Download, FileText } from 'lucide-react';
 import { useMyDocumentsQuery } from '@/hooks/queries/use-documents-query';
-
-const API_BASE = process.env.NEXT_PUBLIC_API_URL?.replace(/\/api(\/v\d+)?\/?$/, '') || 'http://localhost:5000';
-const resolveFileUrl = (url: string) => `${API_BASE}${url}`;
+import { resolveFileUrl } from '@/lib/constants';
 
 export default function MyDocumentsPage() {
   const documentsQuery = useMyDocumentsQuery();

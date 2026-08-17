@@ -18,6 +18,7 @@ import {
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { format } from 'date-fns';
+import { API_FILE_BASE_URL as API_BASE } from '@/lib/constants';
 
 type ClaimType = 'IN' | 'OPD';
 type ClaimStatus = 'pending' | 'approved' | 'rejected';
@@ -39,8 +40,6 @@ interface Limits {
   IN: { maxPerClaim: number };
   OPD: { maxPerQuarter: number; yearlyTotal: number };
 }
-
-const API_BASE = process.env.NEXT_PUBLIC_API_URL?.replace(/\/api(\/v\d+)?\/?$/, '') || 'http://localhost:5000';
 
 const formatCurrency = (value: number | string | undefined): string => {
   const numValue = typeof value === 'string' ? parseFloat(value) : (value || 0);

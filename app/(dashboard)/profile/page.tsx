@@ -51,12 +51,10 @@ import { WorkHistoryTimeline } from '@/components/profile/WorkHistoryTimeline';
 import { ExperienceSummaryCard } from '@/components/profile/ExperienceSummaryCard';
 import { useToast } from '@/contexts/ToastContext';
 import { QUALIFICATION_LEVEL_OPTIONS, TITLE_OPTIONS, type EmployeeEducation, type EmployeeWorkHistory, type ProfileChangeRequest } from '@/types/profile';
+import { resolveFileUrl } from '@/lib/constants';
 import type { ColumnDef } from '@tanstack/react-table';
 
 type ProfileTab = 'personal' | 'contacts' | 'education' | 'work-history' | 'pending-changes' | 'employment' | 'documents' | 'settings';
-
-const API_BASE = process.env.NEXT_PUBLIC_API_URL?.replace(/\/api(\/v\d+)?\/?$/, '') || 'http://localhost:5000';
-const resolveFileUrl = (url: string) => `${API_BASE}${url}`;
 
 const STATUS_BADGES: Record<ProfileChangeRequest['status'], { label: string; className: string }> = {
   pending_approval: { label: 'Pending', className: 'bg-amber-50 text-amber-700 border-amber-200' },

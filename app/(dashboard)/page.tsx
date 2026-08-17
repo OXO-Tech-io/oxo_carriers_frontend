@@ -22,9 +22,7 @@ import { Badge } from '@/components/ui/Badge';
 import { DashboardSkeleton } from '@/components/ui/Skeleton';
 import { useNoticesQuery } from '@/hooks/queries/use-notices-query';
 import { AttendanceCard } from '@/components/attendance/AttendanceCard';
-
-const API_BASE = process.env.NEXT_PUBLIC_API_URL?.replace(/\/api(\/v\d+)?\/?$/, '') || 'http://localhost:5000';
-const resolveImageUrl = (url: string) => `${API_BASE}${url}`;
+import { resolveFileUrl as resolveImageUrl } from '@/lib/constants';
 
 interface DashboardStats {
   totalEmployees?: number;

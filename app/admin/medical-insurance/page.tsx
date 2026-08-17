@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import api from '@/lib/api';
+import { API_FILE_BASE_URL as API_BASE } from '@/lib/constants';
 import {
   DocumentTextIcon,
   UserIcon,
@@ -33,8 +34,6 @@ interface MedicalClaim {
     employee_id: string;
   };
 }
-
-const API_BASE = process.env.NEXT_PUBLIC_API_URL?.replace(/\/api(\/v\d+)?\/?$/, '') || 'http://localhost:5000';
 
 export default function AdminMedicalInsurancePage() {
   const [claims, setClaims] = useState<MedicalClaim[]>([]);
