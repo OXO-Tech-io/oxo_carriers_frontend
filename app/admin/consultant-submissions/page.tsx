@@ -10,9 +10,8 @@ import {
   CheckCircleIcon,
   XCircleIcon,
 } from '@heroicons/react/24/outline';
+import { API_FILE_BASE_URL as API_BASE } from '@/lib/constants';
 import type { ConsultantWorkSubmission, ConsultantSubmissionStatus } from '@/types';
-
-const API_BASE = process.env.NEXT_PUBLIC_API_URL?.replace(/\/api\/?$/, '') || 'http://localhost:5000';
 
 export default function AdminConsultantSubmissionsPage() {
   const { isHR, isSuperAdmin } = useAuth();

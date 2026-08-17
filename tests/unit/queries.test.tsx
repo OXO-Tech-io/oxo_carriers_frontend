@@ -6,6 +6,11 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useAllChangeRequestsQuery } from "@/hooks/queries/use-all-change-requests-query";
 import { useChangeRequestDetailQuery } from "@/hooks/queries/use-change-request-detail-query";
 import { useCommunicationsQuery, useMyCommunicationsQuery } from "@/hooks/queries/use-communications-query";
+import {
+  useManageDocumentsQuery,
+  useMyDocumentsQuery,
+  useEmployeeDocumentsQuery,
+} from "@/hooks/queries/use-documents-query";
 import { useEmployeeDependentsQuery } from "@/hooks/queries/use-employee-dependents-query";
 import { useEmployeeEducationQuery } from "@/hooks/queries/use-employee-education-query";
 import { useEmployeeEmergencyContactsQuery } from "@/hooks/queries/use-employee-emergency-contacts-query";
@@ -44,6 +49,7 @@ import {
 const {
   profileServiceMock,
   communicationServiceMock,
+  documentServiceMock,
   employeeNoteServiceMock,
   eventServiceMock,
   formServiceMock,
@@ -71,6 +77,7 @@ const {
     getMyProfile: vi.fn(),
   },
   communicationServiceMock: { listAll: vi.fn(), listMine: vi.fn() },
+  documentServiceMock: { listAll: vi.fn(), listForEmployee: vi.fn() },
   employeeNoteServiceMock: { listForEmployee: vi.fn() },
   eventServiceMock: { list: vi.fn(), getWithParticipants: vi.fn() },
   formServiceMock: {
@@ -93,6 +100,7 @@ const {
 
 vi.mock("@/lib/services/profile.service", () => ({ profileService: profileServiceMock }));
 vi.mock("@/lib/services/communication.service", () => ({ communicationService: communicationServiceMock }));
+vi.mock("@/lib/services/document.service", () => ({ documentService: documentServiceMock }));
 vi.mock("@/lib/services/employee-note.service", () => ({ employeeNoteService: employeeNoteServiceMock }));
 vi.mock("@/lib/services/event.service", () => ({ eventService: eventServiceMock }));
 vi.mock("@/lib/services/form.service", () => ({ formService: formServiceMock }));
@@ -121,6 +129,7 @@ describe("query hooks", () => {
     vi.clearAllMocks();
     Object.values(profileServiceMock).forEach((fn) => fn.mockResolvedValue([]));
     Object.values(communicationServiceMock).forEach((fn) => fn.mockResolvedValue([]));
+    Object.values(documentServiceMock).forEach((fn) => fn.mockResolvedValue([]));
     Object.values(employeeNoteServiceMock).forEach((fn) => fn.mockResolvedValue([]));
     Object.values(eventServiceMock).forEach((fn) => fn.mockResolvedValue([]));
     Object.values(formServiceMock).forEach((fn) => fn.mockResolvedValue([]));
@@ -129,7 +138,7 @@ describe("query hooks", () => {
     Object.values(leaveServiceMock).forEach((fn) => fn.mockResolvedValue([]));
     Object.values(notificationServiceMock).forEach((fn) => fn.mockResolvedValue([]));
     Object.values(workLogServiceMock).forEach((fn) => fn.mockResolvedValue([]));
-    useAuthMock.mockReturnValue({ user: { employee_id: "E1" } });
+    useAuthMock.mockReturnValue({ user: { id: 7, employee_id: "E1" } });
   });
 
   it("useAllChangeRequestsQuery and useMyChangeRequestsQuery call listChangeRequests", async () => {
@@ -168,6 +177,35 @@ describe("query hooks", () => {
     const { result } = renderHook(() => useMyCommunicationsQuery(), { wrapper: createWrapper() });
     expect(result.current.isFetched).toBe(false);
     expect(communicationServiceMock.listMine).not.toHaveBeenCalled();
+  });
+
+  it("useManageDocumentsQuery, useMyDocumentsQuery and useEmployeeDocumentsQuery call the right service methods", async () => {
+    documentServiceMock.listAll.mockResolvedValue({ items: [{ id: 1 }], total: 1, page: 1, pageSize: 10 });
+    documentServiceMock.listForEmployee.mockResolvedValueOnce([{ id: 2 }]).mockResolvedValueOnce([{ id: 3 }]);
+
+    const manage = await runQuery(() => useManageDocumentsQuery());
+    expect(manage.data).toEqual({ items: [{ id: 1 }], total: 1, page: 1, pageSize: 10 });
+
+    const mine = await runQuery(() => useMyDocumentsQuery());
+    expect(mine.data).toEqual([{ id: 2 }]);
+    expect(documentServiceMock.listForEmployee).toHaveBeenCalledWith(7);
+
+    const forEmployee = await runQuery(() => useEmployeeDocumentsQuery(5));
+    expect(forEmployee.data).toEqual([{ id: 3 }]);
+    expect(documentServiceMock.listForEmployee).toHaveBeenCalledWith(5);
+  });
+
+  it("useMyDocumentsQuery is disabled without a user id", () => {
+    useAuthMock.mockReturnValue({ user: null });
+    const { result } = renderHook(() => useMyDocumentsQuery(), { wrapper: createWrapper() });
+    expect(result.current.isFetched).toBe(false);
+    expect(documentServiceMock.listForEmployee).not.toHaveBeenCalled();
+  });
+
+  it("useManageDocumentsQuery is disabled when enabled=false", () => {
+    const { result } = renderHook(() => useManageDocumentsQuery({}, false), { wrapper: createWrapper() });
+    expect(result.current.isFetched).toBe(false);
+    expect(documentServiceMock.listAll).not.toHaveBeenCalled();
   });
 
   it("profile sub-resource queries dispatch to the right profileService method", async () => {

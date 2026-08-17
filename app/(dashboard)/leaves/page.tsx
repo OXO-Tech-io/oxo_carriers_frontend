@@ -31,7 +31,8 @@ import { Button } from '@/components/ui/Button';
 type Tab = 'balance' | 'request' | 'history' | 'approvals';
 
 export default function LeavesPage() {
-  const { user, isHR } = useAuth();
+  const { user, isHR, isSuperAdmin } = useAuth();
+  const canApprove = isHR || isSuperAdmin;
   const [activeTab, setActiveTab] = useState<Tab>('balance');
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
@@ -519,7 +520,7 @@ export default function LeavesPage() {
               {tab === 'balance' ? 'Balances' : tab === 'request' ? 'Request Leave' : 'My Requests'}
             </button>
           ))}
-          {isHR && (
+          {canApprove && (
             <button
               onClick={() => setActiveTab('approvals')}
               className={`py-3 px-1 border-b-2 font-bold text-xs uppercase tracking-wider whitespace-nowrap transition-colors cursor-pointer ${
@@ -642,7 +643,7 @@ export default function LeavesPage() {
           )}
 
           {/* Approvals Tab (HR Only) */}
-          {activeTab === 'approvals' && isHR && (
+          {activeTab === 'approvals' && canApprove && (
             <div className="space-y-4 max-w-3xl mx-auto">
               {requests.length === 0 ? (
                 <Card className="text-center p-12">

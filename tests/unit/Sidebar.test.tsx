@@ -72,6 +72,16 @@ describe("Sidebar", () => {
     expect(screen.queryByText("Leave Calendar")).not.toBeInTheDocument();
   });
 
+  it("gates the employee-facing Documents item and admin Document Vault item by document_vault read/write", async () => {
+    useAuthMock.mockReturnValue({ user: { id: 5, first_name: "I", last_name: "J", role: "employee" }, isSuperAdmin: false });
+    apiMock.get.mockResolvedValue({ data: { permissionLevels: { document_vault: "read" } } });
+
+    render(<Sidebar />);
+    await waitFor(() => expect(screen.getAllByText("Documents").length).toBeGreaterThan(0));
+    // "Document Vault" (admin nav) requires write access to the same "document_vault" permission key.
+    expect(screen.queryByText("Document Vault")).not.toBeInTheDocument();
+  });
+
   it("falls back to no items when the permissions request fails", async () => {
     useAuthMock.mockReturnValue({ user: { id: 4, first_name: "G", last_name: "H", role: "employee" }, isSuperAdmin: false });
     apiMock.get.mockRejectedValue(new Error("network error"));

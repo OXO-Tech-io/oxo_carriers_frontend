@@ -1,5 +1,7 @@
 export { Card, CardHeader } from './Card';
 export { Button } from './Button';
+export { Badge } from './Badge';
+export type { BadgeVariant } from './Badge';
 export { Skeleton, StatCardSkeleton, TableRowSkeleton, DashboardSkeleton } from './Skeleton';
 export { BottomSheet } from './BottomSheet';
 export { Modal } from './Modal';

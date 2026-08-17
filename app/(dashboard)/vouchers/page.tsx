@@ -24,6 +24,7 @@ import CreateVoucherModal from "@/components/modals/CreateVoucherModal";
 import ReviewVoucherModal from "@/components/modals/ReviewVoucherModal";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
+import { API_FILE_BASE_URL as apiBaseUrl } from "@/lib/constants";
 
 const PERMISSIONS = {
   VIEW: "vouchers.view",
@@ -104,10 +105,6 @@ function VoucherPageContent() {
   const [actioningId, setActioningId] = useState<number | null>(null);
   const searchParams = useSearchParams();
   const statusParam = searchParams.get("status");
-  const apiBaseUrl = (process.env.NEXT_PUBLIC_API_URL || "").replace(
-    /\/api\/?$/,
-    "",
-  );
 
   const hasPermission = (key: string, level: AccessLevel = "read") => {
     const assigned = permissionLevels[key];

@@ -14,6 +14,7 @@ export interface DbUserResponse {
   firstName: string;
   lastName: string;
   role: string;
+  status?: string | null;
   department?: string | null;
   position?: string | null;
   hireDate?: string | null;
@@ -42,6 +43,7 @@ export function mapDbUserToAppUser(raw: DbUserResponse | null | undefined): User
     first_name: raw.firstName,
     last_name: raw.lastName,
     role: raw.role as User['role'],
+    status: (raw.status as User['status']) ?? undefined,
     department: raw.department ?? '',
     position: raw.position ?? '',
     hire_date: raw.hireDate ?? '',

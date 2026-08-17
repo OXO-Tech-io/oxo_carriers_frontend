@@ -5,20 +5,24 @@ import { useEffect, useState } from 'react';
 import api from '@/lib/api';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
+import { formatDistanceToNow } from 'date-fns';
 import {
   Calendar,
   FileText,
   Users,
   TrendingUp,
   Clock,
-  CheckCircle,
   ArrowRight,
-  Sparkles,
   BellRing,
+  Megaphone,
   Award,
 } from 'lucide-react';
-import { Card, CardHeader } from '@/components/ui/Card';
+import { Card } from '@/components/ui/Card';
+import { Badge } from '@/components/ui/Badge';
 import { DashboardSkeleton } from '@/components/ui/Skeleton';
+import { useNoticesQuery } from '@/hooks/queries/use-notices-query';
+import { AttendanceCard } from '@/components/attendance/AttendanceCard';
+import { resolveFileUrl as resolveImageUrl } from '@/lib/constants';
 
 interface DashboardStats {
   totalEmployees?: number;
@@ -29,16 +33,19 @@ interface DashboardStats {
 }
 
 export default function HomePage() {
-  const { user, isHR } = useAuth();
+  const { user, isHR, isSuperAdmin } = useAuth();
+  const canAccessHR = isHR || isSuperAdmin;
   const [stats, setStats] = useState<DashboardStats>({});
   const [loading, setLoading] = useState(true);
+  const noticesQuery = useNoticesQuery();
+  const notices = noticesQuery.data ?? [];
 
   useEffect(() => {
     if (!user) return;
 
     const fetchStats = async () => {
       try {
-        if (isHR) {
+        if (canAccessHR) {
           const response = await api.get('/reports/dashboard');
           setStats(response.data.metrics || response.data.data?.metrics || {});
         }
@@ -50,7 +57,7 @@ export default function HomePage() {
     };
 
     fetchStats();
-  }, [isHR, user]);
+  }, [canAccessHR, user]);
 
   if (loading) {
     return <DashboardSkeleton />;
@@ -89,35 +96,29 @@ export default function HomePage() {
       className="space-y-8"
     >
       {/* Welcome Hero */}
-      <motion.div 
-        variants={itemVariants} 
-        className="relative overflow-hidden rounded-3xl bg-linear-to-r from-blue-600 to-indigo-700 p-6 lg:p-8 text-white shadow-xl dark:from-slate-800 dark:to-slate-900 border border-white/10"
-      >
-        <div className="absolute right-0 top-0 -mr-12 -mt-12 h-48 w-48 rounded-full bg-white/10 blur-2xl" />
-        <div className="absolute left-1/3 bottom-0 -mb-16 h-36 w-36 rounded-full bg-white/5 blur-xl" />
-        
-        <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div className="space-y-2">
-            <div className="inline-flex items-center gap-1.5 rounded-full bg-white/15 px-3 py-1 text-xs font-semibold backdrop-blur-md">
-              <Sparkles className="h-3.5 w-3.5 text-amber-300 fill-amber-300" />
-              <span>Portal Active</span>
-            </div>
-            <h1 className="text-3xl lg:text-4xl font-extrabold tracking-tight">
+      <motion.div variants={itemVariants} className="flex flex-col md:flex-row md:items-end justify-between gap-4">
+        <div className="space-y-2">
+          <h1 className="text-3xl lg:text-4xl font-extrabold tracking-tight text-[var(--foreground)]">
+            <span className="inline-flex items-center gap-2 rounded-2xl bg-[var(--primary-light)] px-3 py-1 text-[var(--primary)]">
               Welcome back, {user?.first_name}!
-            </h1>
-            <p className="text-blue-100 dark:text-slate-300 text-sm font-medium">
-              We hope you are having an productive day. Here's your workspace overview.
-            </p>
-          </div>
-          <div className="text-left md:text-right shrink-0">
-            <span className="text-xs uppercase tracking-wider text-blue-200 dark:text-slate-400 font-bold">Today's Date</span>
-            <p className="text-lg font-bold">{currentDate}</p>
-          </div>
+              <span aria-hidden>👋</span>
+            </span>
+          </h1>
+          <p className="text-[var(--gray-400)] text-base font-medium">How can we help you today?</p>
+        </div>
+        <div className="shrink-0 rounded-full bg-[var(--card-bg)] shadow-[var(--shadow)] px-4 py-2">
+          <span className="text-[10px] uppercase tracking-wider text-[var(--gray-400)] font-bold block">Today</span>
+          <p className="text-sm font-bold text-[var(--foreground)]">{currentDate}</p>
         </div>
       </motion.div>
 
+      {/* Attendance */}
+      <motion.div variants={itemVariants}>
+        <AttendanceCard />
+      </motion.div>
+
       {/* KPI Stats (HR Only) */}
-      {isHR && (
+      {/* {canAccessHR && (
         <motion.div 
           variants={itemVariants}
           className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4"
@@ -126,7 +127,7 @@ export default function HomePage() {
             title="Total Employees"
             value={stats.totalEmployees ?? 0}
             icon={Users}
-            accentColor="var(--primary)"
+            accentColor="#4C6FFF"
             trend="+2.5% vs last month"
           />
           <StatCard
@@ -151,7 +152,7 @@ export default function HomePage() {
             trend="This month"
           />
         </motion.div>
-      )}
+      )} */}
 
       {/* Main Grid */}
       <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
@@ -176,7 +177,7 @@ export default function HomePage() {
               icon={FileText}
               iconBg="bg-teal-500/10 text-teal-500"
             />
-            {isHR && (
+            {canAccessHR && (
               <>
                 <QuickActionCard
                   title="Analytics & Reports"
@@ -205,57 +206,35 @@ export default function HomePage() {
           </div>
         </motion.div>
 
-        {/* Recent Updates */}
+        {/* Notice Board */}
         <motion.div variants={itemVariants} className="space-y-6">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <BellRing className="h-5 w-5 text-[var(--primary)]" />
-              <h2 className="text-xl font-bold text-[var(--foreground)]">Recent Updates</h2>
-            </div>
-            <button
-              type="button"
-              className="text-xs font-bold transition-opacity hover:opacity-85 text-[var(--primary)] hover:underline"
-            >
-              View all
-            </button>
+          <div className="flex items-center gap-2">
+            <BellRing className="h-5 w-5 text-[var(--primary)]" />
+            <h2 className="text-xl font-bold text-[var(--foreground)]">Notice Board</h2>
+            {notices.length > 0 && <Badge variant="primary">{notices.length}</Badge>}
           </div>
-          
+
           <Card padding="none" className="overflow-hidden shadow-md">
-            <div className="divide-y divide-[var(--gray-100)]">
-              <NotificationItem
-                title="System Update"
-                message="Payroll system successfully updated to v1.2"
-                time="2 hours ago"
-                icon={CheckCircle}
-                iconColor="#22C55E"
-                iconBg="bg-emerald-500/10 text-emerald-500"
-              />
-              <NotificationItem
-                title="Payroll Generated"
-                message="Salary slips for January 2026 are now available."
-                time="1 day ago"
-                icon={FileText}
-                iconColor="var(--primary)"
-                iconBg="bg-blue-500/10 text-blue-500"
-              />
-              <NotificationItem
-                title="Welcome!"
-                message="Welcome to the new HRIS dashboard."
-                time="3 days ago"
-                icon={Users}
-                iconColor="#8b5cf6"
-                iconBg="bg-purple-500/10 text-purple-500"
-              />
-            </div>
-            <div className="p-4 bg-[var(--gray-25)] border-t border-[var(--gray-100)]">
-              <button
-                type="button"
-                className="text-xs font-bold w-full text-center text-[var(--primary)] hover:underline flex items-center justify-center gap-1.5"
-              >
-                <span>View All Notifications</span>
-                <ArrowRight className="h-3.5 w-3.5" />
-              </button>
-            </div>
+            {noticesQuery.isLoading ? (
+              <p className="p-6 text-center text-xs font-semibold text-[var(--gray-400)]">Loading notices...</p>
+            ) : notices.length === 0 ? (
+              <p className="p-6 text-center text-xs font-semibold text-[var(--gray-400)]">No notices right now.</p>
+            ) : (
+              <div className="divide-y divide-[var(--gray-100)]">
+                {notices.map((notice) => (
+                  <NotificationItem
+                    key={notice.id}
+                    title={notice.title}
+                    message={notice.message}
+                    imageUrl={notice.imageUrl ? resolveImageUrl(notice.imageUrl) : null}
+                    time={formatDistanceToNow(new Date(notice.createdAt), { addSuffix: true })}
+                    icon={Megaphone}
+                    iconColor="var(--primary)"
+                    iconBg="bg-blue-500/10 text-blue-500"
+                  />
+                ))}
+              </div>
+            )}
           </Card>
         </motion.div>
       </div>
@@ -277,22 +256,21 @@ function StatCard({
   trend?: string;
 }) {
   return (
-    <Card hover padding="md" className="group relative overflow-hidden">
-      <div className="absolute top-0 left-0 h-1.5 w-full" style={{ backgroundColor: accentColor }} />
+    <Card hover padding="md" className="group">
       <div className="flex items-start justify-between">
         <div className="space-y-1">
           <p className="text-xs font-bold text-[var(--gray-400)] uppercase tracking-wider">{title}</p>
           <p className="text-3xl font-extrabold text-[var(--foreground)] tracking-tight">{value}</p>
           {trend && (
             <div className="pt-2 flex items-center gap-1 text-[11px] font-semibold text-[var(--gray-500)]">
-              <TrendingUp className="h-3.5 w-3.5 text-[var(--primary)]" />
+              <TrendingUp className="h-3.5 w-3.5" style={{ color: accentColor }} />
               <span>{trend}</span>
             </div>
           )}
         </div>
         <div
-          className="flex h-12 w-12 items-center justify-center rounded-2xl text-white shadow-md transition-transform duration-300 group-hover:scale-110 active:scale-95 shrink-0"
-          style={{ backgroundColor: accentColor }}
+          className="flex h-11 w-11 items-center justify-center rounded-full transition-transform duration-300 group-hover:scale-110 active:scale-95 shrink-0"
+          style={{ backgroundColor: `${accentColor}1A`, color: accentColor }}
         >
           <Icon className="h-5 w-5" />
         </div>
@@ -319,7 +297,7 @@ function QuickActionCard({
   return (
     <Link
       href={href}
-      className="group block rounded-2xl border border-[var(--gray-100)] bg-[var(--card-bg)] p-5 shadow-[var(--shadow)] hover:shadow-[var(--shadow-md)] transition-all duration-300 hover:border-[var(--primary)] hover:-translate-y-0.5"
+      className="group block rounded-[1.375rem] bg-[var(--card-bg)] p-5 shadow-[var(--shadow)] hover:shadow-[var(--shadow-md)] transition-all duration-300 hover:-translate-y-0.5"
     >
       <div className="flex items-start gap-4">
         <div
@@ -351,6 +329,7 @@ function NotificationItem({
   icon: Icon,
   iconColor,
   iconBg,
+  imageUrl,
 }: {
   title: string;
   message: string;
@@ -358,18 +337,25 @@ function NotificationItem({
   icon: React.ComponentType<{ className?: string }>;
   iconColor: string;
   iconBg: string;
+  imageUrl?: string | null;
 }) {
   return (
-    <div className="flex items-start gap-3.5 p-4 transition-colors duration-200 hover:bg-[var(--gray-50)]">
-      <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${iconBg}`} style={{ color: iconColor }}>
-        <Icon className="h-5 w-5 shrink-0" />
-      </div>
-      <div className="min-w-0 flex-1 space-y-0.5">
-        <div className="flex items-center justify-between gap-2">
-          <p className="text-sm font-bold text-[var(--foreground)]">{title}</p>
-          <p className="text-[10px] text-[var(--gray-400)] font-semibold shrink-0">{time}</p>
+    <div className="p-4 transition-colors duration-200 hover:bg-[var(--gray-50)]">
+      {imageUrl && (
+        <div className="mb-3 overflow-hidden rounded-xl shadow-sm">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={imageUrl} alt="" className="h-32 w-full object-cover" loading="lazy" />
         </div>
-        <p className="text-xs text-[var(--gray-400)] line-clamp-2 leading-relaxed">{message}</p>
+      )}
+      <div className="flex items-start gap-3.5">
+        <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full ${iconBg}`} style={{ color: iconColor }}>
+          <Icon className="h-5 w-5 shrink-0" />
+        </div>
+        <div className="min-w-0 flex-1 space-y-1">
+          <p className="text-sm font-bold text-[var(--foreground)]">{title}</p>
+          <p className="text-xs text-[var(--gray-400)] line-clamp-2 leading-relaxed">{message}</p>
+          <Badge variant="gray" className="mt-1">{time}</Badge>
+        </div>
       </div>
     </div>
   );
