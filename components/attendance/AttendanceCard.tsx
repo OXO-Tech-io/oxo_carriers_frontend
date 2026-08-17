@@ -1,14 +1,16 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { format } from 'date-fns';
+import { format, subDays } from 'date-fns';
 import { motion } from 'framer-motion';
 import { LogIn, LogOut, Loader2 } from 'lucide-react';
 import { Card } from '@/components/ui/Card';
 import { useToast } from '@/contexts/ToastContext';
-import { useTodayAttendanceQuery, useAttendanceHistoryQuery } from '@/hooks/queries/use-attendance-query';
+import { useAttendanceHistoryQuery } from '@/hooks/queries/use-attendance-query';
 import { useClockInMutation, useClockOutMutation } from '@/hooks/mutations/use-attendance-mutations';
 import type { AttendanceHistoryDay } from '@/types/attendance';
+
+const HISTORY_DAYS = 5;
 
 // Purely a visual reference for the progress ring - not a target enforced
 // anywhere else, just gives the ring something to fill toward.
@@ -43,12 +45,14 @@ function errorMessage(err: unknown, fallback: string): string {
 
 export function AttendanceCard() {
   const toast = useToast();
-  const todayQuery = useTodayAttendanceQuery();
-  const historyQuery = useAttendanceHistoryQuery(5);
+  const todayIso = format(new Date(), 'yyyy-MM-dd');
+  const historyStartIso = format(subDays(new Date(), HISTORY_DAYS - 1), 'yyyy-MM-dd');
+  const todayQuery = useAttendanceHistoryQuery({ from: todayIso, to: todayIso });
+  const historyQuery = useAttendanceHistoryQuery({ from: historyStartIso, to: todayIso });
   const clockInMutation = useClockInMutation();
   const clockOutMutation = useClockOutMutation();
 
-  const today = todayQuery.data;
+  const today = todayQuery.data?.[0];
   const activeSession = today?.sessions.find((s) => s.status === 'active');
   const isActive = Boolean(activeSession);
   const isPending = clockInMutation.isPending || clockOutMutation.isPending;

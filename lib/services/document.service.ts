@@ -21,7 +21,7 @@ export const documentService = {
       formData.append('individualEmployeeIds', JSON.stringify(input.individualEmployeeIds));
     }
     input.files.forEach((file) => formData.append('document', file));
-    const res = await api.post<ApiResponse<VaultDocument>>('/documents', formData, {
+    const res = await api.post<ApiResponse<VaultDocument>>('/document-vaults', formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
     });
     return extractData(res);
@@ -29,7 +29,7 @@ export const documentService = {
 
   /** Admin "manage" view - every document, requires document_vault write. */
   listAll: async (): Promise<VaultDocument[]> => {
-    const res = await api.get<ApiResponse<VaultDocument[]>>('/documents/manage');
+    const res = await api.get<ApiResponse<VaultDocument[]>>('/documents');
     return extractData(res);
   },
 
@@ -44,6 +44,6 @@ export const documentService = {
   },
 
   remove: async (id: number): Promise<void> => {
-    await api.delete(`/documents/${id}`);
+    await api.delete(`/document-vaults/${id}`);
   },
 };

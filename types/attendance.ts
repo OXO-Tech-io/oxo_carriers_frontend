@@ -17,7 +17,11 @@ export interface AttendanceSession {
   totalDurationSec: number | null;
 }
 
-export interface TodayAttendance {
+// GET /employees/:employeeId/attendances?from=...&to=... - one row per day in
+// range. Pass the same date for `from`/`to` for a "today" view (single-element
+// array), or a wider range for history.
+export interface AttendanceHistoryDay {
+  date: string;
   sessions: AttendanceSession[];
   firstLoginAt: string | null;
   lastLogoutAt: string | null;
@@ -25,17 +29,14 @@ export interface TodayAttendance {
   status: 'active' | 'ended' | 'none';
 }
 
-export interface AttendanceHistoryDay {
+// Admin/report view (GET /employees/attendances) - one row per employee per day.
+export interface AttendanceHistoryDayForEmployee {
   date: string;
+  employeeId: string;
+  firstName: string;
+  lastName: string;
   firstLoginAt: string | null;
   lastLogoutAt: string | null;
   totalDurationSec: number;
   sessionCount: number;
-}
-
-// Admin/report view (GET /attendance) - one row per employee per day.
-export interface AttendanceHistoryDayForEmployee extends AttendanceHistoryDay {
-  employeeId: string;
-  firstName: string;
-  lastName: string;
 }
