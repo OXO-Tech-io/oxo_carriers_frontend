@@ -1,12 +1,12 @@
 import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '@/hooks/useAuth';
-import { documentService } from '@/lib/services/document.service';
+import { documentService, type ListDocumentsParams } from '@/lib/services/document.service';
 
-/** Admin "manage" view - every document, requires document_vault write. */
-export const useManageDocumentsQuery = (enabled = true) =>
+/** Admin "manage" view - one page of documents at a time, requires document_vault write. */
+export const useManageDocumentsQuery = (params: ListDocumentsParams = {}, enabled = true) =>
   useQuery({
-    queryKey: ['documents', 'manage'],
-    queryFn: () => documentService.listAll(),
+    queryKey: ['documents', 'manage', params.page ?? 1, params.pageSize ?? null],
+    queryFn: () => documentService.listAll(params),
     enabled,
   });
 

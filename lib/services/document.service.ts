@@ -1,7 +1,7 @@
 import api from '@/lib/api';
 import { extractData } from '@/lib/services/http';
 import type { ApiResponse } from '@/types/api';
-import type { DocumentTargetType, VaultDocument } from '@/types/hrModules';
+import type { DocumentTargetType, PaginatedVaultDocuments, VaultDocument } from '@/types/hrModules';
 
 export interface CreateDocumentInput {
   title: string;
@@ -9,6 +9,11 @@ export interface CreateDocumentInput {
   targetType: DocumentTargetType;
   individualEmployeeIds: number[];
   files: File[];
+}
+
+export interface ListDocumentsParams {
+  page?: number;
+  pageSize?: number;
 }
 
 export const documentService = {
@@ -28,8 +33,8 @@ export const documentService = {
   },
 
   /** Admin "manage" view - every document, requires document_vault write. */
-  listAll: async (): Promise<VaultDocument[]> => {
-    const res = await api.get<ApiResponse<VaultDocument[]>>('/documents');
+  listAll: async (params: ListDocumentsParams = {}): Promise<PaginatedVaultDocuments> => {
+    const res = await api.get<ApiResponse<PaginatedVaultDocuments>>('/documents', { params });
     return extractData(res);
   },
 

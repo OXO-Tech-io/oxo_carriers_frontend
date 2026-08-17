@@ -369,6 +369,13 @@ export interface VaultDocument {
   recipientEmployeeIds?: string[];
 }
 
+export interface PaginatedVaultDocuments {
+  items: VaultDocument[];
+  total: number;
+  page: number;
+  pageSize: number;
+}
+
 // ─── Work Log ────────────────────────────────────────────────────────────────
 
 export interface WorkLog {

@@ -180,11 +180,11 @@ describe("query hooks", () => {
   });
 
   it("useManageDocumentsQuery, useMyDocumentsQuery and useEmployeeDocumentsQuery call the right service methods", async () => {
-    documentServiceMock.listAll.mockResolvedValue([{ id: 1 }]);
+    documentServiceMock.listAll.mockResolvedValue({ items: [{ id: 1 }], total: 1, page: 1, pageSize: 10 });
     documentServiceMock.listForEmployee.mockResolvedValueOnce([{ id: 2 }]).mockResolvedValueOnce([{ id: 3 }]);
 
     const manage = await runQuery(() => useManageDocumentsQuery());
-    expect(manage.data).toEqual([{ id: 1 }]);
+    expect(manage.data).toEqual({ items: [{ id: 1 }], total: 1, page: 1, pageSize: 10 });
 
     const mine = await runQuery(() => useMyDocumentsQuery());
     expect(mine.data).toEqual([{ id: 2 }]);
@@ -203,7 +203,7 @@ describe("query hooks", () => {
   });
 
   it("useManageDocumentsQuery is disabled when enabled=false", () => {
-    const { result } = renderHook(() => useManageDocumentsQuery(false), { wrapper: createWrapper() });
+    const { result } = renderHook(() => useManageDocumentsQuery({}, false), { wrapper: createWrapper() });
     expect(result.current.isFetched).toBe(false);
     expect(documentServiceMock.listAll).not.toHaveBeenCalled();
   });

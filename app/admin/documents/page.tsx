@@ -20,13 +20,19 @@ const emptyDraft = {
   files: [] as File[],
 };
 
+const PAGE_SIZE = 10;
+
 export default function AdminDocumentsPage() {
   const { isHR, isSuperAdmin } = useAuth();
   const [showModal, setShowModal] = useState(false);
   const [draft, setDraft] = useState(emptyDraft);
   const [deleteTarget, setDeleteTarget] = useState<VaultDocument | null>(null);
+  const [pageIndex, setPageIndex] = useState(0);
 
-  const documentsQuery = useManageDocumentsQuery(isHR || isSuperAdmin);
+  const documentsQuery = useManageDocumentsQuery(
+    { page: pageIndex + 1, pageSize: PAGE_SIZE },
+    isHR || isSuperAdmin,
+  );
   const createMutation = useCreateDocumentMutation();
   const deleteMutation = useDeleteDocumentMutation();
 
@@ -136,7 +142,16 @@ export default function AdminDocumentsPage() {
         <Button onClick={() => setShowModal(true)}>Upload Document</Button>
       </div>
 
-      <DataTable columns={columns} data={documentsQuery.data ?? []} isLoading={documentsQuery.isLoading} />
+      <DataTable
+        columns={columns}
+        data={documentsQuery.data?.items ?? []}
+        isLoading={documentsQuery.isLoading}
+        pageSize={PAGE_SIZE}
+        manualPagination
+        pageCount={Math.max(1, Math.ceil((documentsQuery.data?.total ?? 0) / PAGE_SIZE))}
+        pageIndex={pageIndex}
+        onPageChange={setPageIndex}
+      />
 
       <Modal isOpen={showModal} onClose={closeModal} title="Upload Document" size="lg">
         <div className="space-y-4">
