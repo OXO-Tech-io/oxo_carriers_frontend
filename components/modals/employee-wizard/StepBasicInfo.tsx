@@ -40,6 +40,9 @@ export default function StepBasicInfo({ form, currentUserRole }: StepProps) {
           {currentUserRole === UserRole.HR_MANAGER && (
             <option value={UserRole.HR_MANAGER}>HR Manager</option>
           )}
+          {currentUserRole === UserRole.SUPER_ADMIN && (
+            <option value={UserRole.SUPER_ADMIN}>Super Admin</option>
+          )}
         </select>
       </Field>
 
