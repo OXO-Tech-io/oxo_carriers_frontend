@@ -13,7 +13,8 @@ import {
   RefreshCw,
   ExternalLink,
   ChevronRight,
-  Info
+  Info,
+  Trash2
 } from 'lucide-react';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -67,6 +68,7 @@ export default function MedicalInsurancePage() {
   const [submitting, setSubmitting] = useState(false);
 
   const [resubmitClaimId, setResubmitClaimId] = useState<number | null>(null);
+  const [removingId, setRemovingId] = useState<number | null>(null);
 
   useEffect(() => {
     fetchData();
@@ -89,6 +91,22 @@ export default function MedicalInsurancePage() {
       setError(err.response?.data?.message || 'Failed to load data');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleRemove = async (claimId: number) => {
+    if (!window.confirm('Remove this claim? This cannot be undone.')) return;
+    setError('');
+    setSuccess('');
+    setRemovingId(claimId);
+    try {
+      await api.delete(`/medical-insurance-claims/${claimId}`);
+      setSuccess('Claim removed.');
+      fetchData();
+    } catch (err: any) {
+      setError(err.response?.data?.message || 'Failed to remove claim');
+    } finally {
+      setRemovingId(null);
     }
   };
 
@@ -535,6 +553,17 @@ export default function MedicalInsurancePage() {
                                         )}
                                       </div>
                                     )}
+                                    {claim.status === 'pending' && (
+                                      <button
+                                        type="button"
+                                        disabled={removingId === claim.id}
+                                        onClick={() => handleRemove(claim.id)}
+                                        className="inline-flex items-center gap-1 text-xs font-bold text-[var(--error-text)] hover:underline cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                                      >
+                                        <Trash2 className="h-3.5 w-3.5" />
+                                        <span>{removingId === claim.id ? 'Removing...' : 'Remove'}</span>
+                                      </button>
+                                    )}
                                   </div>
                                 </td>
                               </tr>
@@ -630,6 +659,18 @@ export default function MedicalInsurancePage() {
                               }}
                             >
                               Resubmit Claim
+                            </Button>
+                          )}
+                          {claim.status === 'pending' && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              disabled={removingId === claim.id}
+                              className="w-full text-xs mt-1 py-2 cursor-pointer text-[var(--error-text)] disabled:opacity-50 disabled:cursor-not-allowed"
+                              leftIcon={<Trash2 className="h-3.5 w-3.5" />}
+                              onClick={() => handleRemove(claim.id)}
+                            >
+                              {removingId === claim.id ? 'Removing...' : 'Remove Claim'}
                             </Button>
                           )}
                         </div>
