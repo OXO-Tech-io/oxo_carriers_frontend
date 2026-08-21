@@ -47,12 +47,14 @@ export function AttendanceCard() {
   const toast = useToast();
   const todayIso = format(new Date(), 'yyyy-MM-dd');
   const historyStartIso = format(subDays(new Date(), HISTORY_DAYS - 1), 'yyyy-MM-dd');
-  const todayQuery = useAttendanceHistoryQuery({ from: todayIso, to: todayIso });
+  // historyQuery's range already covers today (the most recent day, sorted
+  // first) - fetching it separately as todayQuery used to was a second,
+  // fully redundant network round trip on every load.
   const historyQuery = useAttendanceHistoryQuery({ from: historyStartIso, to: todayIso });
   const clockInMutation = useClockInMutation();
   const clockOutMutation = useClockOutMutation();
 
-  const today = todayQuery.data?.[0];
+  const today = historyQuery.data?.[0];
   const activeSession = today?.sessions.find((s) => s.status === 'active');
   const isActive = Boolean(activeSession);
   const isPending = clockInMutation.isPending || clockOutMutation.isPending;
@@ -104,7 +106,7 @@ export function AttendanceCard() {
           <button
             type="button"
             onClick={handleToggle}
-            disabled={isPending || todayQuery.isLoading}
+            disabled={isPending || historyQuery.isLoading}
             aria-label={isActive ? 'Clock out' : 'Clock in'}
             className="relative flex h-24 w-24 shrink-0 items-center justify-center disabled:cursor-not-allowed disabled:opacity-70"
           >
@@ -153,7 +155,7 @@ export function AttendanceCard() {
               {formatClock(liveSeconds)}
             </p>
             <p className="text-xs font-semibold text-[var(--gray-400)]">
-              {todayQuery.isLoading
+              {historyQuery.isLoading
                 ? 'Loading...'
                 : today?.status === 'none'
                   ? 'Tap the button to clock in'
