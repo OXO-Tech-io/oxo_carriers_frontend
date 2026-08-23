@@ -1,6 +1,6 @@
 'use client';
 
-import { ReactNode } from 'react';
+import { ReactNode, useEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 export interface StepDefinition {
@@ -15,57 +15,116 @@ interface StepperProps {
   onStepClick?: (index: number) => void;
 }
 
-// Generic step-progress header. Clicking a step only navigates if the caller
-// passes onStepClick and the step isn't disabled (e.g. Tab C before marital
-// status is set to Married) - this component has no opinion on validation,
-// it just renders the progress state the wizard hands it.
+// Progress bar + "Step N of M" caption, with a "View all steps" panel for
+// jumping around. Replaces the old always-all-labels-visible row, which
+// overlapped once a wizard grew past ~8 steps or picked up two-word labels
+// (its flex-1 cells shrink below the label's natural width, and the
+// unwrapped text spills onto the neighboring cell instead of scrolling).
+// Clicking a step only navigates if the caller passes onStepClick and the
+// step isn't disabled (e.g. Tab C before marital status is set to Married) -
+// this component has no opinion on validation, it just renders the progress
+// state the wizard hands it.
 export function Stepper({ steps, currentIndex, onStepClick }: StepperProps) {
-  return (
-    <div className="flex items-center w-full overflow-x-auto pb-2">
-      {steps.map((step, index) => {
-        const isActive = index === currentIndex;
-        const isComplete = index < currentIndex;
-        const isClickable = !!onStepClick && !step.disabled;
+  const [open, setOpen] = useState(false);
+  const rootRef = useRef<HTMLDivElement>(null);
+  const current = steps[currentIndex];
 
-        return (
-          <div key={step.key} className="flex items-center flex-1 min-w-[110px] last:flex-none last:min-w-0">
-            <button
-              type="button"
-              disabled={!isClickable}
-              onClick={() => isClickable && onStepClick?.(index)}
-              className={`flex flex-col items-center gap-1.5 group ${isClickable ? 'cursor-pointer' : 'cursor-default'}`}
-            >
-              <span
-                className={`flex items-center justify-center h-8 w-8 rounded-full text-xs font-bold border-2 transition-colors ${
-                  isActive
-                    ? 'bg-[var(--primary)] border-[var(--primary)] text-white'
-                    : isComplete
-                    ? 'bg-[var(--primary)]/10 border-[var(--primary)] text-[var(--primary)]'
-                    : step.disabled
-                    ? 'bg-[var(--gray-50)] border-[var(--gray-100)] text-[var(--gray-300)]'
-                    : 'bg-[var(--card-bg)] border-[var(--gray-200)] text-[var(--gray-400)]'
+  useEffect(() => {
+    if (!open) return;
+    const handleClickOutside = (e: MouseEvent) => {
+      if (rootRef.current && !rootRef.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [open]);
+
+  return (
+    <div ref={rootRef} className="relative w-full">
+      <div className="flex items-center justify-between gap-3 mb-2.5">
+        <p className="text-xs font-bold text-[var(--foreground)]">
+          Step {currentIndex + 1} of {steps.length}
+          {current && <span className="ml-1.5 font-medium text-[var(--gray-400)]">&middot; {current.label}</span>}
+        </p>
+        <button
+          type="button"
+          onClick={() => setOpen((o) => !o)}
+          aria-expanded={open}
+          className="flex items-center gap-1.5 rounded-full border border-[var(--gray-100)] bg-[var(--card-bg)] px-3 py-1.5 text-xs font-semibold text-[var(--gray-500)] hover:border-[var(--gray-200)] transition-colors cursor-pointer"
+        >
+          View all steps
+          <svg
+            className={`h-3 w-3 transition-transform ${open ? 'rotate-180' : ''}`}
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth={2.5}
+            strokeLinecap="round"
+          >
+            <path d="M6 9l6 6 6-6" />
+          </svg>
+        </button>
+      </div>
+
+      <div className="flex gap-1">
+        {steps.map((step, index) => {
+          const isDone = index <= currentIndex;
+          return (
+            <div
+              key={step.key}
+              className={`h-1.5 flex-1 rounded-full ${
+                isDone ? 'bg-[var(--primary)]' : step.disabled ? 'bg-[var(--gray-50)]' : 'bg-[var(--gray-100)]'
+              }`}
+            />
+          );
+        })}
+      </div>
+
+      {open && (
+        <div className="absolute left-0 right-0 top-[calc(100%+8px)] z-20 grid grid-cols-2 gap-0.5 rounded-2xl border border-[var(--gray-100)] bg-[var(--card-bg)] p-2.5 shadow-[var(--shadow-lg)]">
+          {steps.map((step, index) => {
+            const isActive = index === currentIndex;
+            const isComplete = index < currentIndex;
+            const isClickable = !!onStepClick && !step.disabled;
+
+            return (
+              <button
+                key={step.key}
+                type="button"
+                disabled={!isClickable}
+                onClick={() => {
+                  if (!isClickable) return;
+                  onStepClick?.(index);
+                  setOpen(false);
+                }}
+                className={`flex items-center gap-2.5 rounded-xl px-2.5 py-2 text-left transition-colors ${
+                  isClickable ? 'cursor-pointer hover:bg-[var(--gray-25)]' : 'cursor-default'
                 }`}
               >
-                {isComplete ? '✓' : index + 1}
-              </span>
-              <span
-                className={`text-[10px] font-bold uppercase tracking-wider text-center whitespace-nowrap ${
-                  isActive ? 'text-[var(--primary)]' : step.disabled ? 'text-[var(--gray-300)]' : 'text-[var(--gray-400)]'
-                }`}
-              >
-                {step.label}
-              </span>
-            </button>
-            {index < steps.length - 1 && (
-              <div
-                className={`flex-1 h-0.5 mx-2 rounded-full ${
-                  index < currentIndex ? 'bg-[var(--primary)]' : 'bg-[var(--gray-100)]'
-                }`}
-              />
-            )}
-          </div>
-        );
-      })}
+                <span
+                  className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[11px] font-bold ${
+                    isActive
+                      ? 'bg-[var(--primary)] text-white'
+                      : isComplete
+                      ? 'bg-[var(--primary)]/10 text-[var(--primary)]'
+                      : step.disabled
+                      ? 'bg-[var(--gray-50)] text-[var(--gray-300)]'
+                      : 'bg-[var(--gray-50)] text-[var(--gray-400)]'
+                  }`}
+                >
+                  {isComplete ? '✓' : index + 1}
+                </span>
+                <span
+                  className={`text-xs font-semibold ${
+                    isActive ? 'text-[var(--foreground)]' : step.disabled ? 'text-[var(--gray-300)]' : 'text-[var(--gray-500)]'
+                  }`}
+                >
+                  {step.label}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }

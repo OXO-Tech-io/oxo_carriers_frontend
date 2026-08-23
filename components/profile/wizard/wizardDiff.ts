@@ -12,13 +12,32 @@ import type { WizardDependent, WizardEmergencyContact, WizardFormValues, WizardN
 const SCALAR_PII_FIELDS: { key: keyof WizardFormValues; field: ScalarPiiField }[] = [
   { key: 'legalName', field: 'full_name_as_nic' },
   { key: 'initialsName', field: 'name_with_initials' },
+  { key: 'callingName', field: 'calling_name' },
   { key: 'dateOfBirth', field: 'date_of_birth' },
   { key: 'birthPlace', field: 'birth_place' },
   { key: 'nationality', field: 'nationality' },
+  { key: 'religion', field: 'religion' },
   { key: 'spouseName', field: 'spouse_name' },
+  { key: 'spouseNic', field: 'spouse_nic' },
+  { key: 'spouseDateOfBirth', field: 'spouse_date_of_birth' },
+  { key: 'spouseContactNumber', field: 'spouse_contact_number' },
+  { key: 'spouseOccupation', field: 'spouse_occupation' },
   { key: 'motherName', field: 'mother_name' },
+  { key: 'motherOccupation', field: 'mother_occupation' },
+  { key: 'motherContactNumber', field: 'mother_contact_number' },
   { key: 'fatherName', field: 'father_name' },
+  { key: 'fatherOccupation', field: 'father_occupation' },
+  { key: 'fatherContactNumber', field: 'father_contact_number' },
+  { key: 'siblingDetails', field: 'sibling_details' },
   { key: 'landlineNumber', field: 'landline_number' },
+  { key: 'secondaryContactNumber', field: 'secondary_contact_number' },
+  { key: 'gramaNiladariDivision', field: 'grama_niladari_division' },
+  { key: 'electorate', field: 'electorate' },
+  { key: 'postalCode', field: 'postal_code' },
+  { key: 'medicalConditions', field: 'medical_conditions' },
+  { key: 'allergies', field: 'allergies' },
+  { key: 'linkedinProfile', field: 'linkedin_profile' },
+  { key: 'additionalNotes', field: 'additional_notes' },
   { key: 'nationalId', field: 'national_id' },
 ];
 
@@ -76,6 +95,7 @@ export function dependentToValue(d: WizardDependent): DependentValue {
     gender: d.gender as DependentValue['gender'],
     relationship: d.relationship as DependentValue['relationship'],
     mobileNumber: nullableStr(d.mobileNumber),
+    school: nullableStr(d.school),
   };
 }
 

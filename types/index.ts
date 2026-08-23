@@ -89,6 +89,7 @@ export interface User {
     | "consultant"
     | "service_provider";
   status?: EmployeeStatus | "active" | "inactive" | "on_hold";
+  employee_category?: "internal" | "client_side" | null;
   department: string;
   position: string;
   hire_date: string;
@@ -171,8 +172,15 @@ export interface LeaveRequest {
   rejection_reason?: string;
   attachment_url?: string;
   created_at: string;
+  /** Required when the requester is an Internal employee (see leaveService.createLeaveRequest on the backend) */
+  coverup_employee_id?: string;
   user?: User;
   leave_type?: LeaveType;
+  coverup_employee?: {
+    first_name: string;
+    last_name: string;
+    employee_id: string;
+  };
 }
 
 export interface SalaryComponent {

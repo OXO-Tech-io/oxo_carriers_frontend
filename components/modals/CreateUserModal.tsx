@@ -18,27 +18,53 @@ import StepWelfare from "@/components/profile/wizard/StepWelfare";
 import StepBasicInfo from "./employee-wizard/StepBasicInfo";
 import StepEmployment from "./employee-wizard/StepEmployment";
 import StepBank from "./employee-wizard/StepBank";
+import StepEducation from "./employee-wizard/StepEducation";
+import StepWorkHistory from "./employee-wizard/StepWorkHistory";
 import StepReview from "./employee-wizard/StepReview";
 import { defaultEmployeeWizardValues, EmployeeWizardValues } from "./employee-wizard/wizardTypes";
-import type { NomineeValue, DependentValue, EmergencyContactRecordValue, BloodType } from "@/types/profile";
+import type {
+  NomineeValue,
+  DependentValue,
+  EmergencyContactRecordValue,
+  BloodType,
+  EducationValue,
+  WorkHistoryValue,
+} from "@/types/profile";
 
 export interface CreateEmployeeProfilePayload {
   statutory: {
     nationalId: string;
     legalName: string;
     initialsName: string;
+    callingName: string | null;
     addressLine1: string;
     addressLine2: string | null;
     city: string;
     district: string;
+    gramaNiladariDivision: string | null;
+    electorate: string | null;
+    postalCode: string | null;
     dateOfBirth: string;
     birthPlace: string;
     sex: string;
     maritalStatus: string;
     nationality: string;
+    religion: string | null;
+    secondaryContactNumber: string | null;
     spouseName: string | null;
+    spouseNic: string | null;
+    spouseDateOfBirth: string | null;
+    spouseContactNumber: string | null;
+    spouseOccupation: string | null;
     motherName: string;
+    motherOccupation: string | null;
+    motherContactNumber: string | null;
     fatherName: string;
+    fatherOccupation: string | null;
+    fatherContactNumber: string | null;
+    siblingDetails: string | null;
+    primarySchoolAttended: string | null;
+    secondarySchoolAttended: string | null;
   };
   nominees: NomineeValue[];
   remittance: {
@@ -56,7 +82,16 @@ export interface CreateEmployeeProfilePayload {
     hobbies: string | null;
     communityActivities: string | null;
     professionalMemberships: string | null;
+    linkedinProfile: string | null;
+    additionalNotes: string | null;
   };
+  health: {
+    medicalConditions: string | null;
+    allergies: string | null;
+  };
+  education: EducationValue[];
+  workHistory: WorkHistoryValue[];
+  declarationAccepted: boolean;
 }
 
 interface CreateUserModalProps {
@@ -68,8 +103,12 @@ interface CreateUserModalProps {
     first_name: string;
     last_name: string;
     role: UserRole;
+    // Omitted for Service Providers (a separate, minimal flow) - required for
+    // every other role, enforced server-side in UsersService.create.
+    employee_category?: "internal" | "client_side";
     department: string;
     position: string;
+    work_location?: "office" | "remote" | "hybrid";
     hire_date: string;
     manager_id: string;
     hourly_rate?: string;
@@ -105,6 +144,8 @@ const EMPLOYEE_STEPS: StepDefinition[] = [
   { key: "dependents", label: "Dependents" },
   { key: "emergency", label: "Emergency Contacts" },
   { key: "welfare", label: "Welfare" },
+  { key: "education", label: "Education" },
+  { key: "workHistory", label: "Work History" },
   { key: "review", label: "Review & Confirm" },
 ];
 
@@ -117,7 +158,7 @@ function stepFieldNames(stepKey: string, role: UserRole): (keyof EmployeeWizardV
     case "basic":
       return isServiceProvider ? ["company_name", "email"] : ["first_name", "last_name", "email"];
     case "employment":
-      return role === UserRole.CONSULTANT ? ["hourly_rate"] : [];
+      return role === UserRole.CONSULTANT ? ["employee_category", "hourly_rate"] : ["employee_category"];
     case "statutory":
       return [
         "nationalId",
@@ -142,6 +183,10 @@ function stepFieldNames(stepKey: string, role: UserRole): (keyof EmployeeWizardV
       return ["dependents"];
     case "emergency":
       return ["emergencyContacts"];
+    case "education":
+      return ["education"];
+    case "workHistory":
+      return ["workHistory"];
     default:
       return [];
   }
@@ -193,12 +238,22 @@ export default function CreateUserModal({
     setStepIndex(Math.max(prevIndex, 0));
   };
 
+  // "View all steps" only lets you jump back to an already-completed step -
+  // stepping forward would skip that step's own required-field validation.
+  const goToStep = (index: number) => {
+    if (index <= stepIndex) setStepIndex(index);
+  };
+
   const handleClose = () => {
     resetWizard();
     onClose();
   };
 
   const handleFinalSubmit = async () => {
+    if (!isServiceProvider) {
+      const valid = await form.trigger(["declarationAccepted"] as any);
+      if (!valid) return;
+    }
     setSubmitting(true);
     try {
       const values = form.getValues();
@@ -228,8 +283,10 @@ export default function CreateUserModal({
             first_name: values.first_name,
             last_name: values.last_name,
             role: values.role,
+            employee_category: values.employee_category as "internal" | "client_side",
             department: values.department,
             position: values.position,
+            work_location: values.work_location || undefined,
             hire_date: values.hire_date,
             manager_id: values.manager_id,
             hourly_rate: values.hourly_rate,
@@ -246,18 +303,35 @@ export default function CreateUserModal({
                 nationalId: values.nationalId,
                 legalName: values.legalName,
                 initialsName: values.initialsName,
+                callingName: values.callingName || null,
                 addressLine1: values.permanentAddressLine1,
                 addressLine2: values.permanentAddressLine2 || null,
                 city: values.permanentCity,
                 district: values.permanentDistrict,
+                gramaNiladariDivision: values.gramaNiladariDivision || null,
+                electorate: values.electorate || null,
+                postalCode: values.postalCode || null,
                 dateOfBirth: values.dateOfBirth,
                 birthPlace: values.birthPlace,
                 sex: values.sex,
                 maritalStatus: values.maritalStatus,
                 nationality: values.nationality,
+                religion: values.religion || null,
+                secondaryContactNumber: values.secondaryContactNumber || null,
                 spouseName: values.spouseName || null,
+                spouseNic: values.spouseNic || null,
+                spouseDateOfBirth: values.spouseDateOfBirth || null,
+                spouseContactNumber: values.spouseContactNumber || null,
+                spouseOccupation: values.spouseOccupation || null,
                 motherName: values.motherName,
+                motherOccupation: values.motherOccupation || null,
+                motherContactNumber: values.motherContactNumber || null,
                 fatherName: values.fatherName,
+                fatherOccupation: values.fatherOccupation || null,
+                fatherContactNumber: values.fatherContactNumber || null,
+                siblingDetails: values.siblingDetails || null,
+                primarySchoolAttended: values.primarySchoolAttended || null,
+                secondarySchoolAttended: values.secondarySchoolAttended || null,
               },
               nominees: values.nominees.map(nomineeToValue),
               remittance: {
@@ -275,7 +349,30 @@ export default function CreateUserModal({
                 hobbies: values.hobbies || null,
                 communityActivities: values.communityActivities || null,
                 professionalMemberships: values.professionalMemberships || null,
+                linkedinProfile: values.linkedinProfile || null,
+                additionalNotes: values.additionalNotes || null,
               },
+              health: {
+                medicalConditions: values.medicalConditions || null,
+                allergies: values.allergies || null,
+              },
+              education: values.education.map((e) => ({
+                qualificationLevel: e.qualificationLevel as EducationValue["qualificationLevel"],
+                qualificationTitle: e.qualificationTitle,
+                awardingInstitution: e.awardingInstitution,
+                dateAwarded: e.isOngoing ? null : e.dateAwarded || null,
+                isOngoing: e.isOngoing,
+                remarks: e.remarks || null,
+              })),
+              workHistory: values.workHistory.map((w) => ({
+                organization: w.organization,
+                positionHeld: w.positionHeld,
+                employmentType: (w.employmentType || "regular") as WorkHistoryValue["employmentType"],
+                startDate: w.startDate,
+                endDate: w.endDate || null,
+                remarks: w.remarks || null,
+              })),
+              declarationAccepted: true,
             },
           };
 
@@ -328,7 +425,7 @@ export default function CreateUserModal({
             </div>
 
             <div className="mb-6">
-              <Stepper steps={steps} currentIndex={stepIndex} />
+              <Stepper steps={steps} currentIndex={stepIndex} onStepClick={goToStep} />
             </div>
 
             <StepPanel stepKey={currentKey}>
@@ -346,6 +443,8 @@ export default function CreateUserModal({
               )}
               {currentKey === "emergency" && <StepEmergencyContacts form={profileForm} />}
               {currentKey === "welfare" && <StepWelfare form={profileForm} />}
+              {currentKey === "education" && <StepEducation form={form} />}
+              {currentKey === "workHistory" && <StepWorkHistory form={form} />}
               {currentKey === "review" && <StepReview form={form} />}
             </StepPanel>
 

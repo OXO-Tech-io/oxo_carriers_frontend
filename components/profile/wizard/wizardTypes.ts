@@ -26,6 +26,7 @@ export interface WizardDependent {
   gender: Sex | '';
   relationship: DependentRelationship | '';
   mobileNumber: string;
+  school: string;
 }
 
 export interface WizardEmergencyContact {
@@ -40,18 +41,33 @@ export interface WizardFormValues {
   nationalId: string;
   legalName: string;
   initialsName: string;
+  callingName: string;
   permanentAddressLine1: string;
   permanentAddressLine2: string;
   permanentCity: string;
   permanentDistrict: string;
+  gramaNiladariDivision: string;
+  electorate: string;
+  postalCode: string;
   dateOfBirth: string;
   birthPlace: string;
   sex: Sex | '';
   maritalStatus: MaritalStatus | '';
   nationality: string;
+  religion: string;
+  secondaryContactNumber: string;
   spouseName: string;
+  spouseNic: string;
+  spouseDateOfBirth: string;
+  spouseContactNumber: string;
+  spouseOccupation: string;
   motherName: string;
+  motherOccupation: string;
+  motherContactNumber: string;
   fatherName: string;
+  fatherOccupation: string;
+  fatherContactNumber: string;
+  siblingDetails: string;
   mobileNumber: string;
   nominees: WizardNominee[];
 
@@ -74,12 +90,16 @@ export interface WizardFormValues {
   // Tab D - Emergency Contacts
   emergencyContacts: WizardEmergencyContact[];
   bloodType: string;
+  medicalConditions: string;
+  allergies: string;
 
   // Tab E - Welfare
   weddingAnniversaryDate: string;
   hobbies: string;
   communityActivities: string;
   professionalMemberships: string;
+  linkedinProfile: string;
+  additionalNotes: string;
 }
 
 export interface WizardSourceData {
@@ -97,18 +117,33 @@ export function buildDefaultValues(source: WizardSourceData): WizardFormValues {
     nationalId: pii?.nationalId ?? '',
     legalName: pii?.legalName ?? '',
     initialsName: pii?.initialsName ?? '',
+    callingName: pii?.callingName ?? '',
     permanentAddressLine1: pii?.addressLine1 ?? '',
     permanentAddressLine2: pii?.addressLine2 ?? '',
     permanentCity: pii?.city ?? '',
     permanentDistrict: pii?.district ?? '',
+    gramaNiladariDivision: pii?.gramaNiladariDivision ?? '',
+    electorate: pii?.electorate ?? '',
+    postalCode: pii?.postalCode ?? '',
     dateOfBirth: pii?.dateOfBirth ?? '',
     birthPlace: pii?.birthPlace ?? '',
     sex: pii?.sex ?? '',
     maritalStatus: pii?.maritalStatus ?? '',
     nationality: pii?.nationality ?? '',
+    religion: pii?.religion ?? '',
+    secondaryContactNumber: pii?.secondaryContactNumber ?? '',
     spouseName: pii?.spouseName ?? '',
+    spouseNic: pii?.spouseNic ?? '',
+    spouseDateOfBirth: pii?.spouseDateOfBirth ?? '',
+    spouseContactNumber: pii?.spouseContactNumber ?? '',
+    spouseOccupation: pii?.spouseOccupation ?? '',
     motherName: pii?.motherName ?? '',
+    motherOccupation: pii?.motherOccupation ?? '',
+    motherContactNumber: pii?.motherContactNumber ?? '',
     fatherName: pii?.fatherName ?? '',
+    fatherOccupation: pii?.fatherOccupation ?? '',
+    fatherContactNumber: pii?.fatherContactNumber ?? '',
+    siblingDetails: pii?.siblingDetails ?? '',
     mobileNumber: user?.contact_number ?? '',
     nominees: (nominees ?? []).map((n) => ({
       id: n.id,
@@ -138,6 +173,7 @@ export function buildDefaultValues(source: WizardSourceData): WizardFormValues {
       gender: d.gender,
       relationship: d.relationship,
       mobileNumber: d.mobileNumber ?? '',
+      school: d.school ?? '',
     })),
 
     emergencyContacts: (emergencyContacts ?? []).map((c) => ({
@@ -147,10 +183,14 @@ export function buildDefaultValues(source: WizardSourceData): WizardFormValues {
       contactNumber: c.contactNumber ?? '',
     })),
     bloodType: pii?.bloodType ?? '',
+    medicalConditions: pii?.medicalConditions ?? '',
+    allergies: pii?.allergies ?? '',
 
     weddingAnniversaryDate: welfareInfo?.weddingAnniversaryDate ?? '',
     hobbies: welfareInfo?.hobbies ?? '',
     communityActivities: welfareInfo?.communityActivities ?? '',
     professionalMemberships: welfareInfo?.professionalMemberships ?? '',
+    linkedinProfile: pii?.linkedinProfile ?? '',
+    additionalNotes: pii?.additionalNotes ?? '',
   };
 }

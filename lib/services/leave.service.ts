@@ -17,9 +17,22 @@ export interface RejectLeaveInput {
   rejectionReason: string;
 }
 
+export interface CoverageCandidate {
+  id: number;
+  employee_id: string;
+  first_name: string;
+  last_name: string;
+  department?: string | null;
+}
+
 export const leaveService = {
   getLeaveTypes: async (): Promise<LeaveType[]> => {
     const res = await api.get<ApiResponse<LeaveType[]>>('/leave-types');
+    return res.data.data;
+  },
+
+  getCoverageCandidates: async (): Promise<CoverageCandidate[]> => {
+    const res = await api.get<ApiResponse<CoverageCandidate[]>>('/leaves/coverage-candidates');
     return res.data.data;
   },
 

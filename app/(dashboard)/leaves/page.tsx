@@ -3,6 +3,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { useLeaveTypesQuery } from '@/hooks/queries/use-leave-types-query';
+import { useLeaveCoverageCandidatesQuery } from '@/hooks/queries/use-leave-coverage-candidates-query';
 import { useLeaveBalanceQuery } from '@/hooks/queries/use-leave-balance-query';
 import { useLeaveRequestsQuery } from '@/hooks/queries/use-leave-requests-query';
 import { useHolidaysQuery } from '@/hooks/queries/use-holidays-query';
@@ -46,6 +47,7 @@ export default function LeavesPage() {
     reason: '',
     is_half_day: false,
     half_day_period: '' as 'morning' | 'evening' | '',
+    coverup_employee_id: '',
   });
   const [attachment, setAttachment] = useState<File | null>(null);
   const [startDatePicker, setStartDatePicker] = useState<Date | null>(null);
@@ -60,7 +62,9 @@ export default function LeavesPage() {
     };
   }, []);
 
+  const isInternal = user?.employee_category === 'internal';
   const leaveTypesQuery = useLeaveTypesQuery();
+  const coverageCandidatesQuery = useLeaveCoverageCandidatesQuery(isInternal);
   const leaveBalanceQuery = useLeaveBalanceQuery(user?.employee_id);
   const leaveRequestsQuery = useLeaveRequestsQuery(
     activeTab === 'approvals' ? { status: 'pending' } : {},
@@ -69,6 +73,7 @@ export default function LeavesPage() {
   const holidaysQuery = useHolidaysQuery(yearStart, yearEnd);
 
   const leaveTypes = leaveTypesQuery.data ?? [];
+  const coverageCandidates = coverageCandidatesQuery.data ?? [];
   const balances = leaveBalanceQuery.data ?? [];
   const requests = leaveRequestsQuery.data ?? [];
   const holidays = holidaysQuery.data ?? [];
@@ -200,6 +205,9 @@ export default function LeavesPage() {
     if (attachment) {
       formDataToSend.append('document', attachment);
     }
+    if (isInternal && formData.coverup_employee_id) {
+      formDataToSend.append('coverup_employee_id', formData.coverup_employee_id);
+    }
 
     try {
       await createLeaveMutation.mutateAsync(formDataToSend);
@@ -211,6 +219,7 @@ export default function LeavesPage() {
         reason: '',
         is_half_day: false,
         half_day_period: '',
+        coverup_employee_id: '',
       });
       setAttachment(null);
       setIsMobileSheetOpen(false);
@@ -444,6 +453,28 @@ export default function LeavesPage() {
             className="block w-full px-3 py-2.5 border border-[var(--gray-100)] rounded-xl text-sm font-semibold text-[var(--foreground)] placeholder:text-[var(--gray-300)] bg-[var(--card-bg)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)]"
           />
         </div>
+
+        {isInternal && (
+          <div>
+            <label className="block text-xs font-bold text-[var(--gray-500)] uppercase tracking-wider mb-2">
+              Coverup Employee *
+            </label>
+            <select
+              required
+              value={formData.coverup_employee_id}
+              onChange={(e) => setFormData({ ...formData, coverup_employee_id: e.target.value })}
+              className="block w-full px-3 py-2.5 border border-[var(--gray-100)] rounded-xl text-sm font-semibold text-[var(--foreground)] bg-[var(--card-bg)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)]"
+            >
+              <option value="">Select the colleague covering your work</option>
+              {coverageCandidates.map((candidate) => (
+                <option key={candidate.employee_id} value={candidate.employee_id}>
+                  {candidate.first_name} {candidate.last_name}
+                  {candidate.department ? ` (${candidate.department})` : ''}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
       </div>
 
       <div className="flex items-center justify-end gap-3 pt-2">
@@ -451,13 +482,14 @@ export default function LeavesPage() {
           type="button"
           variant="outline"
           onClick={() => {
-            setFormData({ 
-              leave_type_id: '', 
-              start_date: '', 
-              end_date: '', 
+            setFormData({
+              leave_type_id: '',
+              start_date: '',
+              end_date: '',
               reason: '',
               is_half_day: false,
-              half_day_period: ''
+              half_day_period: '',
+              coverup_employee_id: ''
             });
             setAttachment(null);
             setIsMobileSheetOpen(false);
@@ -467,7 +499,7 @@ export default function LeavesPage() {
         </Button>
         <Button
           type="submit"
-          disabled={submitting || hasInsufficientBalance || !formData.leave_type_id || !formData.start_date || (!formData.end_date && !formData.is_half_day) || !formData.reason || (formData.is_half_day && !formData.half_day_period)}
+          disabled={submitting || hasInsufficientBalance || !formData.leave_type_id || !formData.start_date || (!formData.end_date && !formData.is_half_day) || !formData.reason || (formData.is_half_day && !formData.half_day_period) || (isInternal && !formData.coverup_employee_id)}
           isLoading={submitting}
         >
           Submit
@@ -618,6 +650,11 @@ export default function LeavesPage() {
                             {request.reason && (
                               <p className="text-xs text-[var(--gray-400)] mt-0.5 max-w-xs truncate">{request.reason}</p>
                             )}
+                            {request.coverup_employee && (
+                              <p className="text-xs text-[var(--gray-400)] mt-0.5">
+                                Covered by: {request.coverup_employee.first_name} {request.coverup_employee.last_name}
+                              </p>
+                            )}
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-[var(--gray-500)]">
                             {format(new Date(request.start_date), 'MMM dd, yyyy')} - {format(new Date(request.end_date), 'MMM dd, yyyy')}
@@ -684,6 +721,14 @@ export default function LeavesPage() {
                             <p className="text-[10px] text-[var(--gray-400)] font-bold uppercase tracking-wider mb-0.5">Requested Days</p>
                             <p className="text-xs font-extrabold text-[var(--primary)]">{request.total_days} days</p>
                           </div>
+                          {request.coverup_employee && (
+                            <div>
+                              <p className="text-[10px] text-[var(--gray-400)] font-bold uppercase tracking-wider mb-0.5">Coverup Employee</p>
+                              <p className="text-xs font-bold text-[var(--foreground)]">
+                                {request.coverup_employee.first_name} {request.coverup_employee.last_name}
+                              </p>
+                            </div>
+                          )}
                         </div>
 
                         {request.reason && (

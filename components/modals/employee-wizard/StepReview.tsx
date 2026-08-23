@@ -6,7 +6,11 @@ interface StepProps {
   form: UseFormReturn<EmployeeWizardValues>;
 }
 
-export default function StepReview({ form }: StepProps) {
+export default function StepReview({ form }: Readonly<StepProps>) {
+  const {
+    register,
+    formState: { errors },
+  } = form;
   const values = form.watch();
   const leaveInfo = calculateLeaveEntitlement(values.hire_date);
   const isServiceProvider = values.role === UserRole.SERVICE_PROVIDER;
@@ -137,6 +141,24 @@ export default function StepReview({ form }: StepProps) {
             <strong>Service Provider:</strong> This user will not receive a login or password
             setup email. They do not need to log in.
           </p>
+        </div>
+      )}
+
+      {!isServiceProvider && (
+        <div>
+          <label className="flex items-start gap-3 bg-[#F9FAFB] border border-[#E4E7EC] rounded-lg p-4 cursor-pointer">
+            <input
+              type="checkbox"
+              {...register("declarationAccepted", { required: "Please confirm the declaration before creating this employee" })}
+              className="mt-0.5 h-4 w-4 rounded"
+            />
+            <span className="text-sm text-[#344054]">
+              I confirm that the information entered in this form is accurate and true to the best of my knowledge.
+            </span>
+          </label>
+          {errors.declarationAccepted && (
+            <p className="text-xs text-red-500 mt-1">{errors.declarationAccepted.message}</p>
+          )}
         </div>
       )}
     </div>

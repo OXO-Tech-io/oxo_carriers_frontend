@@ -71,6 +71,12 @@ export default function StepEmergencyContacts({ form }: StepProps) {
           ))}
         </select>
       </Field>
+      <Field label="Medical Conditions (any conditions to be aware of)">
+        <textarea {...register('medicalConditions')} rows={3} className={inputClass} />
+      </Field>
+      <Field label="Allergies (any known allergies)">
+        <textarea {...register('allergies')} rows={3} className={inputClass} />
+      </Field>
     </div>
   );
 }

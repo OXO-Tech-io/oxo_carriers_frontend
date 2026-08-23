@@ -79,6 +79,14 @@ export const DEPENDENT_RELATIONSHIP_OPTIONS: { value: DependentRelationship; lab
   { value: 'child', label: 'Child' },
 ];
 
+export type WorkLocation = 'office' | 'remote' | 'hybrid';
+
+export const WORK_LOCATION_OPTIONS: { value: WorkLocation; label: string }[] = [
+  { value: 'office', label: 'Office' },
+  { value: 'remote', label: 'Remote' },
+  { value: 'hybrid', label: 'Hybrid' },
+];
+
 export interface EmployeeEducation {
   id: number;
   userId: number;
@@ -121,20 +129,43 @@ export interface EmployeePii {
   // Tab 1 - statutory
   legalName: string | null;
   initialsName: string | null;
+  callingName: string | null;
   dateOfBirth: string | null;
   birthPlace: string | null;
   sex: Sex | null;
   maritalStatus: MaritalStatus | null;
   nationality: string | null;
+  religion: string | null;
   spouseName: string | null;
+  spouseNic: string | null;
+  spouseDateOfBirth: string | null;
+  spouseContactNumber: string | null;
+  spouseOccupation: string | null;
   motherName: string | null;
+  motherOccupation: string | null;
+  motherContactNumber: string | null;
   fatherName: string | null;
+  fatherOccupation: string | null;
+  fatherContactNumber: string | null;
+  siblingDetails: string | null;
   // Tab B - residing address (if different from permanent) + landline
   residingAddressLine1: string | null;
   residingAddressLine2: string | null;
   residingCity: string | null;
   residingDistrict: string | null;
   landlineNumber: string | null;
+  secondaryContactNumber: string | null;
+  gramaNiladariDivision: string | null;
+  electorate: string | null;
+  postalCode: string | null;
+  // Health
+  medicalConditions: string | null;
+  allergies: string | null;
+  // Social & declaration
+  linkedinProfile: string | null;
+  additionalNotes: string | null;
+  declarationAccepted: boolean | null;
+  declarationAcceptedAt: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -159,6 +190,8 @@ export interface EmployeeDependent {
   gender: Sex;
   relationship: DependentRelationship;
   mobileNumber: string | null;
+  // Only meaningful for relationship = 'child'.
+  school: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -220,6 +253,25 @@ export interface DependentValue {
   gender: Sex;
   relationship: DependentRelationship;
   mobileNumber?: string | null;
+  school?: string | null;
+}
+
+export interface EducationValue {
+  qualificationLevel: QualificationLevel;
+  qualificationTitle: string;
+  awardingInstitution: string;
+  dateAwarded?: string | null;
+  isOngoing?: boolean;
+  remarks?: string | null;
+}
+
+export interface WorkHistoryValue {
+  organization: string;
+  positionHeld: string;
+  employmentType?: EmploymentType;
+  startDate: string;
+  endDate?: string | null;
+  remarks?: string | null;
 }
 
 export interface EmergencyContactRecordValue {
@@ -239,13 +291,32 @@ export interface ExperienceSummary {
 export type ScalarPiiField =
   | 'full_name_as_nic'
   | 'name_with_initials'
+  | 'calling_name'
   | 'date_of_birth'
   | 'birth_place'
   | 'nationality'
+  | 'religion'
   | 'spouse_name'
+  | 'spouse_nic'
+  | 'spouse_date_of_birth'
+  | 'spouse_contact_number'
+  | 'spouse_occupation'
   | 'mother_name'
+  | 'mother_occupation'
+  | 'mother_contact_number'
   | 'father_name'
+  | 'father_occupation'
+  | 'father_contact_number'
+  | 'sibling_details'
   | 'landline_number'
+  | 'secondary_contact_number'
+  | 'grama_niladari_division'
+  | 'electorate'
+  | 'postal_code'
+  | 'medical_conditions'
+  | 'allergies'
+  | 'linkedin_profile'
+  | 'additional_notes'
   | 'national_id';
 
 export type ProfileChangeItem =

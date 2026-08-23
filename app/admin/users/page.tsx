@@ -161,8 +161,10 @@ export default function AdminUsersPage() {
     first_name: string;
     last_name: string;
     role: UserRole;
+    employee_category?: "internal" | "client_side";
     department: string;
     position: string;
+    work_location?: "office" | "remote" | "hybrid";
     hire_date: string;
     manager_id: string;
     hourly_rate?: string;
