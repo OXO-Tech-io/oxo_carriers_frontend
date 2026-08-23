@@ -31,8 +31,11 @@ export const leaveService = {
     return res.data.data;
   },
 
-  getCoverageCandidates: async (): Promise<CoverageCandidate[]> => {
-    const res = await api.get<ApiResponse<CoverageCandidate[]>>('/leaves/coverage-candidates');
+  // startDate/endDate (both required together) exclude colleagues who already
+  // have leave scheduled anywhere in that range - omit either to get every
+  // active colleague, unfiltered.
+  getCoverageCandidates: async (params?: { startDate?: string; endDate?: string }): Promise<CoverageCandidate[]> => {
+    const res = await api.get<ApiResponse<CoverageCandidate[]>>('/leaves/coverage-candidates', { params });
     return res.data.data;
   },
 

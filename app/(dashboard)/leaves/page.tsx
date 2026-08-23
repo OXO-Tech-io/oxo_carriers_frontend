@@ -52,6 +52,16 @@ export default function LeavesPage() {
   const [attachment, setAttachment] = useState<File | null>(null);
   const [startDatePicker, setStartDatePicker] = useState<Date | null>(null);
   const [endDatePicker, setEndDatePicker] = useState<Date | null>(null);
+  // Two months side by side only where there's room for it - defaults to
+  // desktop-sized on the server render, corrected on mount to avoid a
+  // hydration mismatch, then kept in sync as the window is resized.
+  const [isDesktopView, setIsDesktopView] = useState(true);
+  useEffect(() => {
+    const checkViewport = () => setIsDesktopView(window.innerWidth >= 1024);
+    checkViewport();
+    window.addEventListener('resize', checkViewport);
+    return () => window.removeEventListener('resize', checkViewport);
+  }, []);
 
   // Server state via React Query
   const { yearStart, yearEnd } = useMemo(() => {
@@ -63,8 +73,9 @@ export default function LeavesPage() {
   }, []);
 
   const isInternal = user?.employee_category === 'internal';
+  const coverageRangeEnd = formData.is_half_day ? formData.start_date : formData.end_date;
   const leaveTypesQuery = useLeaveTypesQuery();
-  const coverageCandidatesQuery = useLeaveCoverageCandidatesQuery(isInternal);
+  const coverageCandidatesQuery = useLeaveCoverageCandidatesQuery(isInternal, formData.start_date, coverageRangeEnd);
   const leaveBalanceQuery = useLeaveBalanceQuery(user?.employee_id);
   const leaveRequestsQuery = useLeaveRequestsQuery(
     activeTab === 'approvals' ? { status: 'pending' } : {},
@@ -149,6 +160,20 @@ export default function LeavesPage() {
     : null;
   const hasInsufficientBalance = selectedBalance && requestedDays > selectedBalance.remaining_days;
   
+  // If the chosen date range changes after a coverup employee was already
+  // selected and they now conflict with someone else's leave over the new
+  // range, drop the now-invalid selection instead of silently submitting it.
+  useEffect(() => {
+    if (
+      formData.coverup_employee_id &&
+      !coverageCandidatesQuery.isLoading &&
+      !coverageCandidates.some((c) => c.employee_id === formData.coverup_employee_id)
+    ) {
+      setFormData((prev) => ({ ...prev, coverup_employee_id: '' }));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [coverageCandidates, coverageCandidatesQuery.isLoading]);
+
   // When half-day is selected, automatically set end_date to start_date
   useEffect(() => {
     if (formData.is_half_day && formData.start_date && formData.end_date !== formData.start_date) {
@@ -345,7 +370,7 @@ export default function LeavesPage() {
           <label className="block text-xs font-bold text-[var(--gray-500)] uppercase tracking-wider mb-2">
             Leave Date Range {formData.is_half_day ? '(Half Day)' : '*'}
           </label>
-          <div className="flex justify-center border border-[var(--gray-100)] rounded-xl p-4 bg-[var(--card-bg)]">
+          <div className="flex justify-center overflow-x-auto">
             <DateRangePicker
               startDate={startDatePicker}
               endDate={formData.is_half_day ? startDatePicker : endDatePicker}
@@ -353,7 +378,7 @@ export default function LeavesPage() {
               minDate={new Date()}
               selectsRange={!formData.is_half_day}
               inline={true}
-              monthsShown={1}
+              monthsShown={formData.is_half_day || !isDesktopView ? 1 : 2}
               showHolidays={true}
             />
           </div>
@@ -473,6 +498,15 @@ export default function LeavesPage() {
                 </option>
               ))}
             </select>
+            {formData.start_date && coverageRangeEnd ? (
+              <p className="mt-1.5 text-[11px] text-[var(--gray-400)] font-medium">
+                Colleagues who already have leave scheduled during these dates aren&apos;t shown.
+              </p>
+            ) : (
+              <p className="mt-1.5 text-[11px] text-[var(--gray-400)] font-medium">
+                Pick your date range first to hide colleagues who are already on leave then.
+              </p>
+            )}
           </div>
         )}
       </div>

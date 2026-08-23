@@ -16,6 +16,29 @@ interface LeaveCalendarEntry {
   year?: number;
 }
 
+function CalendarIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="3" y="4" width="18" height="18" rx="3" />
+      <path d="M16 2v4M8 2v4M3 10h18" />
+    </svg>
+  );
+}
+
+// Short instructional banner above the calendar, matching how a step-by-step
+// range picker guides the user: what to do next, updated as they pick dates.
+function RangeHint({ startDate, endDate }: { startDate: Date | null; endDate: Date | null }) {
+  let text = 'Select a start date, then an end date.';
+  if (startDate && !endDate) text = 'Now choose your end date.';
+  if (startDate && endDate) text = 'Date range selected.';
+  return (
+    <div className="date-range-hint">
+      <CalendarIcon />
+      <span>{text}</span>
+    </div>
+  );
+}
+
 interface DateRangePickerProps {
   startDate: Date | null;
   endDate: Date | null;
@@ -208,6 +231,7 @@ export default function DateRangePicker({
 
   return (
     <div className="w-full">
+      {selectsRange && !disabled && <RangeHint startDate={startDate} endDate={endDate} />}
       <DatePicker {...datePickerProps} />
       {showHolidays && (
         <div className="mt-3 rounded-lg bg-blue-50 p-3">
