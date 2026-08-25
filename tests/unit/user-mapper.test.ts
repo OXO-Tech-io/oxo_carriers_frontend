@@ -59,6 +59,21 @@ describe("mapDbUserToAppUser", () => {
       swift_code: "SWIFT",
       company_name: "Acme",
       undergraduate_degree_completion_date: "2020-01-01",
+      date_of_birth: null,
+      sex: null,
+      marital_status: null,
+      nationality: null,
+      religion: null,
+      spouse_date_of_birth: null,
+      sibling_details: null,
+      primary_school: null,
+      secondary_school: null,
+      grama_niladari_division: null,
+      electorate: null,
+      postal_code: null,
+      linkedin_profile: null,
+      declaration_accepted: null,
+      declaration_accepted_at: null,
     });
   });
 

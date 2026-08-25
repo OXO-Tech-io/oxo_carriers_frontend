@@ -203,17 +203,26 @@ export default function ProfilePage() {
       cell: ({ row }) => {
         const changes = row.original.changes;
         const first = changes[0];
+        const USER_FIELD_LABELS: Record<string, string> = {
+          dateOfBirth: 'Date of Birth',
+          sex: 'Sex',
+          maritalStatus: 'Marital Status',
+          nationality: 'Nationality',
+          religion: 'Religion',
+          spouseDateOfBirth: 'Spouse Date of Birth',
+          siblingDetails: 'Sibling Details',
+          gramaNiladariDivision: 'Grama Niladari Division',
+          electorate: 'Electorate',
+          postalCode: 'Postal Code',
+          linkedinProfile: 'LinkedIn Profile',
+        };
         const PII_LABELS: Record<string, string> = {
           address: 'Permanent Address',
           residing_address: 'Residing Address',
           blood_type: 'Blood Type',
           full_name_as_nic: 'Full Name as in NIC',
           name_with_initials: 'Name with Initials',
-          date_of_birth: 'Date of Birth',
           birth_place: 'Birth Place',
-          sex: 'Sex',
-          marital_status: 'Marital Status',
-          nationality: 'Nationality',
           spouse_name: 'Spouse Name',
           mother_name: 'Mother Name',
           father_name: 'Father Name',
@@ -228,7 +237,7 @@ export default function ProfilePage() {
         };
         let label: string;
         if (first.entityType === 'user_field') {
-          label = first.field === 'bank_account' ? 'Bank Account' : first.field;
+          label = first.field === 'bank_account' ? 'Bank Account' : (USER_FIELD_LABELS[first.field] ?? first.field);
         } else if (first.entityType === 'employee_pii_field') {
           label = PII_LABELS[first.field] ?? first.field;
         } else if (first.entityType === 'welfare_field') {

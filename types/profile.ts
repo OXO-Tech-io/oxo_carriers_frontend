@@ -130,15 +130,9 @@ export interface EmployeePii {
   legalName: string | null;
   initialsName: string | null;
   callingName: string | null;
-  dateOfBirth: string | null;
   birthPlace: string | null;
-  sex: Sex | null;
-  maritalStatus: MaritalStatus | null;
-  nationality: string | null;
-  religion: string | null;
   spouseName: string | null;
   spouseNic: string | null;
-  spouseDateOfBirth: string | null;
   spouseContactNumber: string | null;
   spouseOccupation: string | null;
   motherName: string | null;
@@ -147,7 +141,6 @@ export interface EmployeePii {
   fatherName: string | null;
   fatherOccupation: string | null;
   fatherContactNumber: string | null;
-  siblingDetails: string | null;
   // Tab B - residing address (if different from permanent) + landline
   residingAddressLine1: string | null;
   residingAddressLine2: string | null;
@@ -155,17 +148,11 @@ export interface EmployeePii {
   residingDistrict: string | null;
   landlineNumber: string | null;
   secondaryContactNumber: string | null;
-  gramaNiladariDivision: string | null;
-  electorate: string | null;
-  postalCode: string | null;
   // Health
   medicalConditions: string | null;
   allergies: string | null;
   // Social & declaration
-  linkedinProfile: string | null;
   additionalNotes: string | null;
-  declarationAccepted: boolean | null;
-  declarationAcceptedAt: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -292,13 +279,9 @@ export type ScalarPiiField =
   | 'full_name_as_nic'
   | 'name_with_initials'
   | 'calling_name'
-  | 'date_of_birth'
   | 'birth_place'
-  | 'nationality'
-  | 'religion'
   | 'spouse_name'
   | 'spouse_nic'
-  | 'spouse_date_of_birth'
   | 'spouse_contact_number'
   | 'spouse_occupation'
   | 'mother_name'
@@ -307,17 +290,25 @@ export type ScalarPiiField =
   | 'father_name'
   | 'father_occupation'
   | 'father_contact_number'
-  | 'sibling_details'
   | 'landline_number'
   | 'secondary_contact_number'
-  | 'grama_niladari_division'
-  | 'electorate'
-  | 'postal_code'
   | 'medical_conditions'
   | 'allergies'
-  | 'linkedin_profile'
   | 'additional_notes'
   | 'national_id';
+
+// Non-PII personal/statutory attributes that live on tbl_employee, not
+// tbl_employee_pii - travel as 'user_field' changes (see ProfileChangeItem).
+export type ScalarUserField =
+  | 'dateOfBirth'
+  | 'nationality'
+  | 'religion'
+  | 'spouseDateOfBirth'
+  | 'siblingDetails'
+  | 'gramaNiladariDivision'
+  | 'electorate'
+  | 'postalCode'
+  | 'linkedinProfile';
 
 export type ProfileChangeItem =
   | {
@@ -333,6 +324,27 @@ export type ProfileChangeItem =
       operation: 'update';
       before: BankAccountValue;
       after: BankAccountValue;
+    }
+  | {
+      entityType: 'user_field';
+      field: 'sex';
+      operation: 'update';
+      before: Sex | null;
+      after: Sex;
+    }
+  | {
+      entityType: 'user_field';
+      field: 'maritalStatus';
+      operation: 'update';
+      before: MaritalStatus | null;
+      after: MaritalStatus;
+    }
+  | {
+      entityType: 'user_field';
+      field: ScalarUserField;
+      operation: 'update';
+      before: string | null;
+      after: string | null;
     }
   | {
       entityType: 'employee_pii_field';
@@ -354,20 +366,6 @@ export type ProfileChangeItem =
       operation: 'update';
       before: BloodType | null;
       after: BloodType;
-    }
-  | {
-      entityType: 'employee_pii_field';
-      field: 'sex';
-      operation: 'update';
-      before: Sex | null;
-      after: Sex;
-    }
-  | {
-      entityType: 'employee_pii_field';
-      field: 'marital_status';
-      operation: 'update';
-      before: MaritalStatus | null;
-      after: MaritalStatus;
     }
   | {
       entityType: 'employee_pii_field';

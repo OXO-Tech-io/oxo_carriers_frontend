@@ -6,6 +6,7 @@ import type {
   NomineeValue,
   ProfileChangeItem,
   ScalarPiiField,
+  ScalarUserField,
 } from '@/types/profile';
 import type { WizardDependent, WizardEmergencyContact, WizardFormValues, WizardNominee } from './wizardTypes';
 
@@ -13,13 +14,9 @@ const SCALAR_PII_FIELDS: { key: keyof WizardFormValues; field: ScalarPiiField }[
   { key: 'legalName', field: 'full_name_as_nic' },
   { key: 'initialsName', field: 'name_with_initials' },
   { key: 'callingName', field: 'calling_name' },
-  { key: 'dateOfBirth', field: 'date_of_birth' },
   { key: 'birthPlace', field: 'birth_place' },
-  { key: 'nationality', field: 'nationality' },
-  { key: 'religion', field: 'religion' },
   { key: 'spouseName', field: 'spouse_name' },
   { key: 'spouseNic', field: 'spouse_nic' },
-  { key: 'spouseDateOfBirth', field: 'spouse_date_of_birth' },
   { key: 'spouseContactNumber', field: 'spouse_contact_number' },
   { key: 'spouseOccupation', field: 'spouse_occupation' },
   { key: 'motherName', field: 'mother_name' },
@@ -28,17 +25,27 @@ const SCALAR_PII_FIELDS: { key: keyof WizardFormValues; field: ScalarPiiField }[
   { key: 'fatherName', field: 'father_name' },
   { key: 'fatherOccupation', field: 'father_occupation' },
   { key: 'fatherContactNumber', field: 'father_contact_number' },
-  { key: 'siblingDetails', field: 'sibling_details' },
   { key: 'landlineNumber', field: 'landline_number' },
   { key: 'secondaryContactNumber', field: 'secondary_contact_number' },
-  { key: 'gramaNiladariDivision', field: 'grama_niladari_division' },
-  { key: 'electorate', field: 'electorate' },
-  { key: 'postalCode', field: 'postal_code' },
   { key: 'medicalConditions', field: 'medical_conditions' },
   { key: 'allergies', field: 'allergies' },
-  { key: 'linkedinProfile', field: 'linkedin_profile' },
   { key: 'additionalNotes', field: 'additional_notes' },
   { key: 'nationalId', field: 'national_id' },
+];
+
+// Non-PII personal/statutory attributes - live on tbl_employee, so they
+// travel as 'user_field' changes even though they're edited on the same
+// statutory/welfare wizard steps as the PII fields above.
+const SCALAR_USER_FIELDS: { key: keyof WizardFormValues; field: ScalarUserField }[] = [
+  { key: 'dateOfBirth', field: 'dateOfBirth' },
+  { key: 'nationality', field: 'nationality' },
+  { key: 'religion', field: 'religion' },
+  { key: 'spouseDateOfBirth', field: 'spouseDateOfBirth' },
+  { key: 'siblingDetails', field: 'siblingDetails' },
+  { key: 'gramaNiladariDivision', field: 'gramaNiladariDivision' },
+  { key: 'electorate', field: 'electorate' },
+  { key: 'postalCode', field: 'postalCode' },
+  { key: 'linkedinProfile', field: 'linkedinProfile' },
 ];
 
 const WELFARE_FIELDS: { key: keyof WizardFormValues; field: 'anniversary_date' | 'hobbies' | 'community_activities' | 'professional_memberships' }[] = [
@@ -155,9 +162,17 @@ export function buildWizardChanges(original: WizardFormValues, current: WizardFo
     }
   }
 
+  for (const { key, field } of SCALAR_USER_FIELDS) {
+    const before = nullableStr(original[key] as string);
+    const after = nullableStr(current[key] as string);
+    if (before !== after) {
+      changes.push({ entityType: 'user_field', field, operation: 'update', before, after });
+    }
+  }
+
   if (original.sex !== current.sex && current.sex) {
     changes.push({
-      entityType: 'employee_pii_field',
+      entityType: 'user_field',
       field: 'sex',
       operation: 'update',
       before: original.sex || null,
@@ -167,8 +182,8 @@ export function buildWizardChanges(original: WizardFormValues, current: WizardFo
 
   if (original.maritalStatus !== current.maritalStatus && current.maritalStatus) {
     changes.push({
-      entityType: 'employee_pii_field',
-      field: 'marital_status',
+      entityType: 'user_field',
+      field: 'maritalStatus',
       operation: 'update',
       before: original.maritalStatus || null,
       after: current.maritalStatus,

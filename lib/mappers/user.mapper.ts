@@ -31,6 +31,21 @@ export interface DbUserResponse {
   contactNumber?: string | null;
   undergraduateDegreeCompletionDate?: string | null;
   createdAt?: string | null;
+  dateOfBirth?: string | null;
+  sex?: 'male' | 'female' | null;
+  maritalStatus?: 'married' | 'single' | null;
+  nationality?: string | null;
+  religion?: string | null;
+  spouseDateOfBirth?: string | null;
+  siblingDetails?: string | null;
+  primarySchool?: string | null;
+  secondarySchool?: string | null;
+  gramaNiladariDivision?: string | null;
+  electorate?: string | null;
+  postalCode?: string | null;
+  linkedinProfile?: string | null;
+  declarationAccepted?: boolean | null;
+  declarationAcceptedAt?: string | null;
 }
 
 export function mapDbUserToAppUser(raw: DbUserResponse | null | undefined): User | null {
@@ -61,5 +76,20 @@ export function mapDbUserToAppUser(raw: DbUserResponse | null | undefined): User
     swift_code: raw.swiftCode ?? null,
     company_name: raw.companyName ?? null,
     undergraduate_degree_completion_date: raw.undergraduateDegreeCompletionDate ?? null,
+    date_of_birth: raw.dateOfBirth ?? null,
+    sex: raw.sex ?? null,
+    marital_status: raw.maritalStatus ?? null,
+    nationality: raw.nationality ?? null,
+    religion: raw.religion ?? null,
+    spouse_date_of_birth: raw.spouseDateOfBirth ?? null,
+    sibling_details: raw.siblingDetails ?? null,
+    primary_school: raw.primarySchool ?? null,
+    secondary_school: raw.secondarySchool ?? null,
+    grama_niladari_division: raw.gramaNiladariDivision ?? null,
+    electorate: raw.electorate ?? null,
+    postal_code: raw.postalCode ?? null,
+    linkedin_profile: raw.linkedinProfile ?? null,
+    declaration_accepted: raw.declarationAccepted ?? null,
+    declaration_accepted_at: raw.declarationAcceptedAt ?? null,
   };
 }

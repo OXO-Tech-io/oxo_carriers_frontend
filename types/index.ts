@@ -106,6 +106,23 @@ export interface User {
   swift_code?: string | null;
   company_name?: string | null;
   undergraduate_degree_completion_date?: string | null;
+  // Non-PII personal/statutory attributes - moved off tbl_employee_pii since
+  // they were always stored plain there (see backend employee.schema.ts).
+  date_of_birth?: string | null;
+  sex?: "male" | "female" | null;
+  marital_status?: "married" | "single" | null;
+  nationality?: string | null;
+  religion?: string | null;
+  spouse_date_of_birth?: string | null;
+  sibling_details?: string | null;
+  primary_school?: string | null;
+  secondary_school?: string | null;
+  grama_niladari_division?: string | null;
+  electorate?: string | null;
+  postal_code?: string | null;
+  linkedin_profile?: string | null;
+  declaration_accepted?: boolean | null;
+  declaration_accepted_at?: string | null;
 }
 
 export type ConsultantSubmissionStatus = "pending" | "approved" | "rejected";
