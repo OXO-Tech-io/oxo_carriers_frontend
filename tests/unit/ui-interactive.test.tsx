@@ -61,8 +61,15 @@ describe("Stepper", () => {
     { key: "c", label: "Step C", disabled: true },
   ];
 
-  it("marks the current step active and prior steps complete", () => {
+  it("shows the current step position and label without opening the panel", () => {
     render(<Stepper steps={steps} currentIndex={1} />);
+    const caption = screen.getByText("Step 2 of 3", { exact: false, selector: "p" });
+    expect(caption.textContent).toContain("Step B");
+  });
+
+  it("marks prior steps complete once the step list is opened", () => {
+    render(<Stepper steps={steps} currentIndex={1} />);
+    fireEvent.click(screen.getByText("View all steps"));
     expect(screen.getByText("✓")).toBeInTheDocument(); // step A complete
     expect(screen.getByText("2")).toBeInTheDocument(); // step B (current) shows its number
   });
@@ -70,15 +77,18 @@ describe("Stepper", () => {
   it("calls onStepClick only for enabled, clickable steps", () => {
     const onStepClick = vi.fn();
     render(<Stepper steps={steps} currentIndex={1} onStepClick={onStepClick} />);
+    fireEvent.click(screen.getByText("View all steps"));
     fireEvent.click(screen.getByText("Step A"));
     expect(onStepClick).toHaveBeenCalledWith(0);
 
+    fireEvent.click(screen.getByText("View all steps"));
     fireEvent.click(screen.getByText("Step C"));
     expect(onStepClick).not.toHaveBeenCalledWith(2);
   });
 
   it("does not attach click behavior when onStepClick is omitted", () => {
     render(<Stepper steps={steps} currentIndex={0} />);
+    fireEvent.click(screen.getByText("View all steps"));
     const button = screen.getByText("Step B").closest("button");
     expect(button).toBeDisabled();
   });

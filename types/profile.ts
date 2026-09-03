@@ -79,6 +79,14 @@ export const DEPENDENT_RELATIONSHIP_OPTIONS: { value: DependentRelationship; lab
   { value: 'child', label: 'Child' },
 ];
 
+export type WorkLocation = 'office' | 'remote' | 'hybrid';
+
+export const WORK_LOCATION_OPTIONS: { value: WorkLocation; label: string }[] = [
+  { value: 'office', label: 'Office' },
+  { value: 'remote', label: 'Remote' },
+  { value: 'hybrid', label: 'Hybrid' },
+];
+
 export interface EmployeeEducation {
   id: number;
   userId: number;
@@ -121,20 +129,30 @@ export interface EmployeePii {
   // Tab 1 - statutory
   legalName: string | null;
   initialsName: string | null;
-  dateOfBirth: string | null;
+  callingName: string | null;
   birthPlace: string | null;
-  sex: Sex | null;
-  maritalStatus: MaritalStatus | null;
-  nationality: string | null;
   spouseName: string | null;
+  spouseNic: string | null;
+  spouseContactNumber: string | null;
+  spouseOccupation: string | null;
   motherName: string | null;
+  motherOccupation: string | null;
+  motherContactNumber: string | null;
   fatherName: string | null;
+  fatherOccupation: string | null;
+  fatherContactNumber: string | null;
   // Tab B - residing address (if different from permanent) + landline
   residingAddressLine1: string | null;
   residingAddressLine2: string | null;
   residingCity: string | null;
   residingDistrict: string | null;
   landlineNumber: string | null;
+  secondaryContactNumber: string | null;
+  // Health
+  medicalConditions: string | null;
+  allergies: string | null;
+  // Social & declaration
+  additionalNotes: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -159,6 +177,8 @@ export interface EmployeeDependent {
   gender: Sex;
   relationship: DependentRelationship;
   mobileNumber: string | null;
+  // Only meaningful for relationship = 'child'.
+  school: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -220,6 +240,25 @@ export interface DependentValue {
   gender: Sex;
   relationship: DependentRelationship;
   mobileNumber?: string | null;
+  school?: string | null;
+}
+
+export interface EducationValue {
+  qualificationLevel: QualificationLevel;
+  qualificationTitle: string;
+  awardingInstitution: string;
+  dateAwarded?: string | null;
+  isOngoing?: boolean;
+  remarks?: string | null;
+}
+
+export interface WorkHistoryValue {
+  organization: string;
+  positionHeld: string;
+  employmentType?: EmploymentType;
+  startDate: string;
+  endDate?: string | null;
+  remarks?: string | null;
 }
 
 export interface EmergencyContactRecordValue {
@@ -239,14 +278,37 @@ export interface ExperienceSummary {
 export type ScalarPiiField =
   | 'full_name_as_nic'
   | 'name_with_initials'
-  | 'date_of_birth'
+  | 'calling_name'
   | 'birth_place'
-  | 'nationality'
   | 'spouse_name'
+  | 'spouse_nic'
+  | 'spouse_contact_number'
+  | 'spouse_occupation'
   | 'mother_name'
+  | 'mother_occupation'
+  | 'mother_contact_number'
   | 'father_name'
+  | 'father_occupation'
+  | 'father_contact_number'
   | 'landline_number'
+  | 'secondary_contact_number'
+  | 'medical_conditions'
+  | 'allergies'
+  | 'additional_notes'
   | 'national_id';
+
+// Non-PII personal/statutory attributes that live on tbl_employee, not
+// tbl_employee_pii - travel as 'user_field' changes (see ProfileChangeItem).
+export type ScalarUserField =
+  | 'dateOfBirth'
+  | 'nationality'
+  | 'religion'
+  | 'spouseDateOfBirth'
+  | 'siblingDetails'
+  | 'gramaNiladariDivision'
+  | 'electorate'
+  | 'postalCode'
+  | 'linkedinProfile';
 
 export type ProfileChangeItem =
   | {
@@ -262,6 +324,27 @@ export type ProfileChangeItem =
       operation: 'update';
       before: BankAccountValue;
       after: BankAccountValue;
+    }
+  | {
+      entityType: 'user_field';
+      field: 'sex';
+      operation: 'update';
+      before: Sex | null;
+      after: Sex;
+    }
+  | {
+      entityType: 'user_field';
+      field: 'maritalStatus';
+      operation: 'update';
+      before: MaritalStatus | null;
+      after: MaritalStatus;
+    }
+  | {
+      entityType: 'user_field';
+      field: ScalarUserField;
+      operation: 'update';
+      before: string | null;
+      after: string | null;
     }
   | {
       entityType: 'employee_pii_field';
@@ -283,20 +366,6 @@ export type ProfileChangeItem =
       operation: 'update';
       before: BloodType | null;
       after: BloodType;
-    }
-  | {
-      entityType: 'employee_pii_field';
-      field: 'sex';
-      operation: 'update';
-      before: Sex | null;
-      after: Sex;
-    }
-  | {
-      entityType: 'employee_pii_field';
-      field: 'marital_status';
-      operation: 'update';
-      before: MaritalStatus | null;
-      after: MaritalStatus;
     }
   | {
       entityType: 'employee_pii_field';

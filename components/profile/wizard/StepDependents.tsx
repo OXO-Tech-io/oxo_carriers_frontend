@@ -15,9 +15,11 @@ export default function StepDependents({ form, isMarried }: StepProps) {
   const {
     register,
     control,
+    watch,
     formState: { errors },
   } = form;
   const { fields, append, remove } = useFieldArray({ control, name: 'dependents' });
+  const dependentValues = watch('dependents');
 
   if (!isMarried) {
     return (
@@ -41,7 +43,16 @@ export default function StepDependents({ form, isMarried }: StepProps) {
           variant="outline"
           size="sm"
           onClick={() =>
-            append({ id: null, fullName: '', nic: '', dateOfBirth: '', gender: '', relationship: '', mobileNumber: '' })
+            append({
+              id: null,
+              fullName: '',
+              nic: '',
+              dateOfBirth: '',
+              gender: '',
+              relationship: '',
+              mobileNumber: '',
+              school: '',
+            })
           }
         >
           Add Family Member
@@ -90,6 +101,11 @@ export default function StepDependents({ form, isMarried }: StepProps) {
             <Field label="Mobile Number (if available)">
               <input {...register(`dependents.${index}.mobileNumber`)} className={inputClass} />
             </Field>
+            {dependentValues?.[index]?.relationship === 'child' && (
+              <Field label="School">
+                <input {...register(`dependents.${index}.school`)} className={inputClass} />
+              </Field>
+            )}
           </div>
         </RepeatableCard>
       ))}

@@ -17,9 +17,25 @@ export interface RejectLeaveInput {
   rejectionReason: string;
 }
 
+export interface CoverageCandidate {
+  id: number;
+  employee_id: string;
+  first_name: string;
+  last_name: string;
+  department?: string | null;
+}
+
 export const leaveService = {
   getLeaveTypes: async (): Promise<LeaveType[]> => {
     const res = await api.get<ApiResponse<LeaveType[]>>('/leave-types');
+    return res.data.data;
+  },
+
+  // startDate/endDate (both required together) exclude colleagues who already
+  // have leave scheduled anywhere in that range - omit either to get every
+  // active colleague, unfiltered.
+  getCoverageCandidates: async (params?: { startDate?: string; endDate?: string }): Promise<CoverageCandidate[]> => {
+    const res = await api.get<ApiResponse<CoverageCandidate[]>>('/leaves/coverage-candidates', { params });
     return res.data.data;
   },
 

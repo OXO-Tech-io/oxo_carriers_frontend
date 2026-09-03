@@ -210,82 +210,117 @@ body {
 
 /* ── React DatePicker Holiday Styles ── */
 .holiday-calendar { width: 100%; }
+
+/* Instructional banner above the calendar (DateRangePicker's range-hint). */
+.date-range-hint {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--primary-light);
+  color: var(--primary-hover);
+  border-radius: 14px;
+  padding: 12px 16px;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  margin-bottom: 14px;
+}
+.date-range-hint svg { flex-shrink: 0; }
+
 .holiday-calendar .react-datepicker {
   border: 1px solid var(--gray-100);
-  border-radius: 12px;
+  border-radius: var(--radius-2xl);
   font-family: inherit;
   box-shadow: var(--shadow-lg);
+  background: var(--card-bg);
+  padding: 22px 16px;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+.holiday-calendar .react-datepicker__month-container {
+  padding: 0 20px;
+}
+.holiday-calendar .react-datepicker__month-container:first-child {
+  border-right: 1px solid var(--gray-100);
+  padding-left: 8px;
+}
+.holiday-calendar .react-datepicker__month-container:last-child {
+  padding-right: 8px;
 }
 .holiday-calendar .react-datepicker__header {
-  background: var(--gray-50);
-  border-bottom: 1px solid var(--gray-100);
-  border-radius: 12px 12px 0 0;
-  padding-top: 0.75rem;
+  background: transparent;
+  border-bottom: none;
+  padding: 0 0 14px;
 }
 .holiday-calendar .react-datepicker__current-month {
-  font-weight: 700;
-  color: var(--gray-700);
-  font-size: 0.875rem;
+  font-weight: 800;
+  color: var(--foreground);
+  font-size: 1.0625rem;
+  margin-bottom: 4px;
 }
 .holiday-calendar .react-datepicker__day-name {
-  color: var(--primary);
-  font-weight: 600;
-  font-size: 0.75rem;
-  width: 2.5rem;
-  line-height: 2.5rem;
+  color: var(--gray-400);
+  font-weight: 700;
+  font-size: 0.6875rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  width: 2.75rem;
+  line-height: 2rem;
 }
 .holiday-calendar .react-datepicker__day {
-  width: 2.5rem;
-  height: 2.5rem;
-  line-height: 2.5rem;
-  margin: 0.125rem;
-  border-radius: 8px;
+  width: 2.75rem;
+  height: 2.75rem;
+  line-height: 2.75rem;
+  margin: 0.0625rem 0;
+  border-radius: 9999px;
   color: var(--gray-700);
   font-size: 0.875rem;
-  transition: all 150ms ease;
+  font-weight: 500;
+  transition: all 120ms ease;
 }
 .holiday-calendar .react-datepicker__day:hover:not(.react-datepicker__day--disabled) {
   background-color: var(--primary-light);
   color: var(--primary);
-  border-radius: 8px;
+  border-radius: 9999px;
 }
 .holiday-calendar .react-datepicker__day--disabled {
-  background-color: var(--gray-50);
-  color: var(--gray-400);
+  background-color: transparent;
+  color: var(--gray-300);
   cursor: not-allowed;
-  opacity: 0.6;
-  text-decoration: line-through;
+  opacity: 0.7;
 }
-.holiday-calendar .react-datepicker__day--disabled:hover { background-color: var(--gray-50); cursor: not-allowed; }
+.holiday-calendar .react-datepicker__day--disabled:hover { background-color: transparent; cursor: not-allowed; }
 .holiday-calendar .react-datepicker__day--selected,
 .holiday-calendar .react-datepicker__day--keyboard-selected {
   background-color: var(--primary);
   color: white;
-  border-radius: 8px;
+  border-radius: 9999px;
+  font-weight: 700;
   box-shadow: var(--shadow-indigo);
 }
 .holiday-calendar .react-datepicker__day--today {
-  font-weight: 700;
-  border: 2px solid var(--primary);
-  border-radius: 8px;
+  font-weight: 800;
+  border: 1.5px solid var(--primary);
+  border-radius: 9999px;
+  line-height: calc(2.75rem - 3px);
 }
 .holiday-calendar .react-datepicker__day--weekend {
-  background-color: var(--error-light);
+  background-color: transparent;
   color: var(--error-text);
   font-weight: 600;
 }
-.holiday-calendar .react-datepicker__day--weekend:hover { background-color: #F1E2E2; }
+.holiday-calendar .react-datepicker__day--weekend:hover { background-color: var(--error-light); }
 .holiday-calendar .react-datepicker__day--weekend.react-datepicker__day--selected {
   background-color: var(--error-text);
   color: white;
 }
 .holiday-calendar .holiday-day {
-  background-color: var(--warning-light);
+  background-color: transparent;
   color: var(--warning-text);
   font-weight: 600;
   position: relative;
 }
-.holiday-calendar .holiday-day:hover { background-color: #F4E9D6; }
+.holiday-calendar .holiday-day:hover { background-color: var(--warning-light); }
 .holiday-calendar .holiday-day.react-datepicker__day--selected {
   background-color: var(--warning-text);
   color: white;
@@ -299,14 +334,15 @@ body {
 }
 .holiday-indicator {
   position: absolute;
-  top: 2px;
-  right: 2px;
+  bottom: 4px;
   font-size: 6px;
   color: var(--warning);
 }
 .holiday-calendar .react-datepicker__day--weekend .holiday-indicator { color: var(--error); }
-.holiday-calendar .react-datepicker__navigation { top: 0.75rem; }
-.holiday-calendar .react-datepicker__navigation-icon::before { border-color: var(--primary); }
+.holiday-calendar .react-datepicker__navigation { top: 26px; }
+.holiday-calendar .react-datepicker__navigation--previous { left: 16px; }
+.holiday-calendar .react-datepicker__navigation--next { right: 16px; }
+.holiday-calendar .react-datepicker__navigation-icon::before { border-color: var(--gray-400); }
 .holiday-calendar .react-datepicker__navigation:hover *::before { border-color: var(--primary-hover); }
 .holiday-calendar .react-datepicker__month-dropdown,
 .holiday-calendar .react-datepicker__year-dropdown {
@@ -330,23 +366,23 @@ body {
 }
 .holiday-calendar .react-datepicker__day--in-range {
   background-color: var(--primary-light);
-  color: var(--primary);
+  color: var(--primary-hover);
   border-radius: 0;
 }
-.holiday-calendar .react-datepicker__day--in-range:hover { background-color: var(--brand-100); }
+.holiday-calendar .react-datepicker__day--in-range:hover { background-color: var(--primary-light); }
 .holiday-calendar .react-datepicker__day--range-start {
   background-color: var(--primary);
   color: white;
-  border-radius: 8px 0 0 8px;
-  font-weight: 600;
+  border-radius: 9999px 0 0 9999px;
+  font-weight: 700;
 }
 .holiday-calendar .react-datepicker__day--range-end {
   background-color: var(--primary);
   color: white;
-  border-radius: 0 8px 8px 0;
-  font-weight: 600;
+  border-radius: 0 9999px 9999px 0;
+  font-weight: 700;
 }
-.holiday-calendar .react-datepicker__day--range-start.react-datepicker__day--range-end { border-radius: 8px; }
+.holiday-calendar .react-datepicker__day--range-start.react-datepicker__day--range-end { border-radius: 9999px; }
 .holiday-calendar .react-datepicker__day--in-range.react-datepicker__day--weekend {
   background-color: var(--error-light);
   color: var(--error-text);

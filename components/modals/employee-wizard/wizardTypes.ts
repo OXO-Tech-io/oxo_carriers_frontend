@@ -1,5 +1,6 @@
 import { UserRole } from "@/types";
 import { buildDefaultValues, type WizardFormValues } from "@/components/profile/wizard/wizardTypes";
+import type { EmploymentType, QualificationLevel } from "@/types/profile";
 
 // Extends the profile wizard's own form shape (statutory info, nominees,
 // remittance, dependents, emergency contacts, welfare) so the same Step*
@@ -11,8 +12,12 @@ export interface EmployeeWizardValues extends WizardFormValues {
   first_name: string;
   last_name: string;
   role: UserRole;
+  employee_category: "" | "internal" | "client_side";
   department: string;
   position: string;
+  work_location: "" | "office" | "remote" | "hybrid";
+  primarySchoolAttended: string;
+  secondarySchoolAttended: string;
   hire_date: string;
   manager_id: string;
   hourly_rate: string;
@@ -26,6 +31,31 @@ export interface EmployeeWizardValues extends WizardFormValues {
   bank_branch: string;
   company_name: string;
   contact_number: string;
+  // Admin-only additions (StepEducation.tsx/StepWorkHistory.tsx) - written
+  // directly at creation time, unlike the employee's own self-service
+  // education/work-history change requests (see EducationChangeModal.tsx).
+  education: WizardEducation[];
+  workHistory: WizardWorkHistory[];
+  // Gates the "Create Employee" button on StepReview.tsx.
+  declarationAccepted: boolean;
+}
+
+export interface WizardEducation {
+  qualificationLevel: QualificationLevel | "";
+  qualificationTitle: string;
+  awardingInstitution: string;
+  dateAwarded: string;
+  isOngoing: boolean;
+  remarks: string;
+}
+
+export interface WizardWorkHistory {
+  organization: string;
+  positionHeld: string;
+  employmentType: EmploymentType | "";
+  startDate: string;
+  endDate: string;
+  remarks: string;
 }
 
 export const defaultEmployeeWizardValues: EmployeeWizardValues = {
@@ -42,8 +72,12 @@ export const defaultEmployeeWizardValues: EmployeeWizardValues = {
   first_name: "",
   last_name: "",
   role: UserRole.EMPLOYEE,
+  employee_category: "",
   department: "",
   position: "",
+  work_location: "",
+  primarySchoolAttended: "",
+  secondarySchoolAttended: "",
   hire_date: "",
   manager_id: "",
   hourly_rate: "",
@@ -53,6 +87,9 @@ export const defaultEmployeeWizardValues: EmployeeWizardValues = {
   bank_branch: "",
   company_name: "",
   contact_number: "",
+  education: [],
+  workHistory: [],
+  declarationAccepted: false,
 };
 
 // 0.5 days per remaining month in the hire year, then a flat quarter-based

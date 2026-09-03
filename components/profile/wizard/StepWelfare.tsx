@@ -25,6 +25,12 @@ export default function StepWelfare({ form }: StepProps) {
       <Field label="Any Professional Bodies That You Have Membership In">
         <textarea {...register('professionalMemberships')} rows={3} className={inputClass} />
       </Field>
+      <Field label="LinkedIn Profile">
+        <input type="url" {...register('linkedinProfile')} placeholder="https://www.linkedin.com/in/..." className={inputClass} />
+      </Field>
+      <Field label="Additional Notes">
+        <textarea {...register('additionalNotes')} rows={3} className={inputClass} />
+      </Field>
     </div>
   );
 }

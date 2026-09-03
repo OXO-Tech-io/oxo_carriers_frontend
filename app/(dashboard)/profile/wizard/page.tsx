@@ -132,6 +132,12 @@ function ProfileWizardForm({
     setStepIndex(Math.max(prevIndex, 0));
   };
 
+  // "View all steps" only lets you jump back to an already-completed step -
+  // stepping forward would skip that step's own required-field validation.
+  const goToStep = (index: number) => {
+    if (index <= stepIndex) setStepIndex(index);
+  };
+
   const handleFinalSubmit = async () => {
     const changes = buildWizardChanges(defaultValues, form.getValues());
     if (changes.length === 0) {
@@ -160,7 +166,7 @@ function ProfileWizardForm({
       </div>
 
       <Card padding="lg">
-        <Stepper steps={steps} currentIndex={stepIndex} />
+        <Stepper steps={steps} currentIndex={stepIndex} onStepClick={goToStep} />
       </Card>
 
       <Card padding="lg">

@@ -14,13 +14,27 @@ interface StepProps {
 
 const MAX_NOMINEES = 2;
 
+function calculateAge(dateOfBirth: string): number | null {
+  if (!dateOfBirth) return null;
+  const dob = new Date(dateOfBirth);
+  if (Number.isNaN(dob.getTime())) return null;
+  const today = new Date();
+  let age = today.getFullYear() - dob.getFullYear();
+  const monthDiff = today.getMonth() - dob.getMonth();
+  if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < dob.getDate())) age -= 1;
+  return age;
+}
+
 export default function StepStatutory({ form, email, designation }: StepProps) {
   const {
     register,
     control,
+    watch,
     formState: { errors },
   } = form;
   const { fields, append, remove } = useFieldArray({ control, name: 'nominees' });
+  const isMarried = watch('maritalStatus') === 'married';
+  const age = calculateAge(watch('dateOfBirth'));
 
   return (
     <div className="space-y-6">
@@ -33,6 +47,9 @@ export default function StepStatutory({ form, email, designation }: StepProps) {
         </Field>
         <Field label="Name with Initials" error={errors.initialsName?.message}>
           <input {...register('initialsName', { required: 'Name with initials is required' })} className={inputClass} />
+        </Field>
+        <Field label="Calling Name">
+          <input {...register('callingName')} placeholder="e.g. Amila Perera" className={inputClass} />
         </Field>
         <Field label="Designation">
           <input value={designation} disabled className={inputClass} />
@@ -54,12 +71,24 @@ export default function StepStatutory({ form, email, designation }: StepProps) {
           <Field label="District" error={errors.permanentDistrict?.message}>
             <input {...register('permanentDistrict', { required: 'District is required' })} className={inputClass} />
           </Field>
+          <Field label="Grama Niladari Division">
+            <input {...register('gramaNiladariDivision')} className={inputClass} />
+          </Field>
+          <Field label="Electorate">
+            <input {...register('electorate')} className={inputClass} />
+          </Field>
+          <Field label="Postal Code">
+            <input {...register('postalCode')} className={inputClass} />
+          </Field>
         </div>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <Field label="Date of Birth" error={errors.dateOfBirth?.message}>
           <input type="date" {...register('dateOfBirth', { required: 'Date of birth is required' })} className={inputClass} />
+        </Field>
+        <Field label="Age">
+          <input value={age === null ? '' : `${age} years`} disabled className={inputClass} />
         </Field>
         <Field label="Birth Place" error={errors.birthPlace?.message}>
           <input {...register('birthPlace', { required: 'Birth place is required' })} className={inputClass} />
@@ -87,20 +116,65 @@ export default function StepStatutory({ form, email, designation }: StepProps) {
         <Field label="Nationality" error={errors.nationality?.message}>
           <input {...register('nationality', { required: 'Nationality is required' })} className={inputClass} />
         </Field>
+        <Field label="Religion">
+          <input {...register('religion')} className={inputClass} />
+        </Field>
         <Field label="Mobile Number" error={errors.mobileNumber?.message}>
           <input {...register('mobileNumber', { required: 'Mobile number is required' })} className={inputClass} />
+        </Field>
+        <Field label="Secondary Contact Number">
+          <input {...register('secondaryContactNumber')} className={inputClass} />
         </Field>
         <Field label="Email">
           <input value={email} disabled className={inputClass} />
         </Field>
-        <Field label="Name of the Spouse (with initials)">
-          <input {...register('spouseName')} className={inputClass} />
-        </Field>
-        <Field label="Name of the Mother (with initials)" error={errors.motherName?.message}>
-          <input {...register('motherName', { required: "Mother's name is required" })} className={inputClass} />
-        </Field>
-        <Field label="Name of the Father (with initials)" error={errors.fatherName?.message}>
-          <input {...register('fatherName', { required: "Father's name is required" })} className={inputClass} />
+      </div>
+
+      <div className="space-y-3">
+        <SectionTitle>Spouse Details {isMarried ? '' : '(only applicable if married)'}</SectionTitle>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <Field label="Name of the Spouse (with initials)">
+            <input {...register('spouseName')} className={inputClass} />
+          </Field>
+          <Field label="Spouse NIC">
+            <input {...register('spouseNic')} className={inputClass} />
+          </Field>
+          <Field label="Spouse Date of Birth">
+            <input type="date" {...register('spouseDateOfBirth')} className={inputClass} />
+          </Field>
+          <Field label="Spouse Contact Number">
+            <input {...register('spouseContactNumber')} className={inputClass} />
+          </Field>
+          <Field label="Spouse Occupation & Workplace" className="sm:col-span-2">
+            <input {...register('spouseOccupation')} className={inputClass} />
+          </Field>
+        </div>
+      </div>
+
+      <div className="space-y-3">
+        <SectionTitle>Parents & Siblings</SectionTitle>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <Field label="Name of the Mother (with initials)" error={errors.motherName?.message}>
+            <input {...register('motherName', { required: "Mother's name is required" })} className={inputClass} />
+          </Field>
+          <Field label="Mother's Occupation & Workplace">
+            <input {...register('motherOccupation')} className={inputClass} />
+          </Field>
+          <Field label="Mother's Contact Number">
+            <input {...register('motherContactNumber')} className={inputClass} />
+          </Field>
+          <Field label="Name of the Father (with initials)" error={errors.fatherName?.message}>
+            <input {...register('fatherName', { required: "Father's name is required" })} className={inputClass} />
+          </Field>
+          <Field label="Father's Occupation & Workplace">
+            <input {...register('fatherOccupation')} className={inputClass} />
+          </Field>
+          <Field label="Father's Contact Number">
+            <input {...register('fatherContactNumber')} className={inputClass} />
+          </Field>
+        </div>
+        <Field label="Sibling Details (Name, Age, Gender, Occupation, Contact)">
+          <textarea {...register('siblingDetails')} rows={3} className={inputClass} />
         </Field>
       </div>
 
