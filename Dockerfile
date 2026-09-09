@@ -17,7 +17,7 @@ ENV NODE_ENV=production
 
 RUN npm install -g pnpm
 WORKDIR /app
-COPY package.json pnpm-lock.yaml* ./
+COPY package.json pnpm-lock.yaml* pnpm-workspace.yaml* ./
 RUN pnpm install --frozen-lockfile
 COPY . .
 # Run next build directly (skip the build:show post-step which is for local CI display)
