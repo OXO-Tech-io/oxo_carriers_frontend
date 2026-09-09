@@ -8,9 +8,11 @@ import { SidebarProvider, useSidebar } from '@/contexts/SidebarContext';
 function DashboardContent({ children }: { children: React.ReactNode }) {
   const { collapsed } = useSidebar();
   return (
-    <div className={`flex-1 flex flex-col min-w-0 transition-[padding-left] duration-200}`}>
+    <div
+      className={`flex-1 flex flex-col min-w-0 min-h-0 transition-[padding-left] duration-200`}
+    >
       <Header />
-      <main className="flex-1 overflow-y-auto pt-6 pb-24 px-4 lg:pt-8 lg:pb-8 lg:px-8">
+      <main className="flex-1 min-h-0 overflow-y-auto pt-6 pb-24 px-4 lg:pt-8 lg:pb-8 lg:px-8">
         <div className="max-w-full mx-auto">
           {children}
         </div>
@@ -29,7 +31,7 @@ export default function DashboardLayout({
   return (
     <ProtectedRoute>
       <SidebarProvider>
-        <div className="flex min-h-screen bg-[var(--background)]">
+        <div className="flex h-screen overflow-hidden bg-[var(--background)]">
           <Sidebar />
           <DashboardContent>{children}</DashboardContent>
           <BottomNavigation />
