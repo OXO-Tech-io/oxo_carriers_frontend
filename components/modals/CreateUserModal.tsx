@@ -120,6 +120,7 @@ interface CreateUserModalProps {
     swift_code?: string;
     company_name?: string;
     contact_number?: string;
+    device_id?: string;
     profile?: CreateEmployeeProfilePayload;
   }) => Promise<void>;
   currentUserRole?: UserRole;
@@ -298,6 +299,7 @@ export default function CreateUserModal({
             swift_code: values.swiftCode,
             company_name: values.company_name,
             contact_number: values.mobileNumber,
+            device_id: values.device_id || undefined,
             profile: {
               statutory: {
                 nationalId: values.nationalId,

@@ -30,3 +30,25 @@ export const useClockOutMutation = () => {
     },
   });
 };
+
+export const useStartBreakMutation = () => {
+  const queryClient = useQueryClient();
+  const { user } = useAuth();
+  return useMutation({
+    mutationFn: () => attendanceService.startBreak(requireEmployeeId(user?.employee_id)),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['attendance'] });
+    },
+  });
+};
+
+export const useEndBreakMutation = () => {
+  const queryClient = useQueryClient();
+  const { user } = useAuth();
+  return useMutation({
+    mutationFn: () => attendanceService.endBreak(requireEmployeeId(user?.employee_id)),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['attendance'] });
+    },
+  });
+};

@@ -3,11 +3,16 @@
 import { useEffect, useMemo, useState } from 'react';
 import { format, subDays } from 'date-fns';
 import { motion } from 'framer-motion';
-import { LogIn, LogOut, Loader2 } from 'lucide-react';
+import { LogIn, LogOut, Loader2, Coffee, Play } from 'lucide-react';
 import { Card } from '@/components/ui/Card';
 import { useToast } from '@/contexts/ToastContext';
 import { useAttendanceHistoryQuery } from '@/hooks/queries/use-attendance-query';
-import { useClockInMutation, useClockOutMutation } from '@/hooks/mutations/use-attendance-mutations';
+import {
+  useClockInMutation,
+  useClockOutMutation,
+  useStartBreakMutation,
+  useEndBreakMutation,
+} from '@/hooks/mutations/use-attendance-mutations';
 import type { AttendanceHistoryDay } from '@/types/attendance';
 
 const HISTORY_DAYS = 5;
@@ -53,11 +58,15 @@ export function AttendanceCard() {
   const historyQuery = useAttendanceHistoryQuery({ from: historyStartIso, to: todayIso });
   const clockInMutation = useClockInMutation();
   const clockOutMutation = useClockOutMutation();
+  const startBreakMutation = useStartBreakMutation();
+  const endBreakMutation = useEndBreakMutation();
 
   const today = historyQuery.data?.[0];
   const activeSession = today?.sessions.find((s) => s.status === 'active');
   const isActive = Boolean(activeSession);
+  const isOnBreak = Boolean(today?.openBreakStartedAt);
   const isPending = clockInMutation.isPending || clockOutMutation.isPending;
+  const isBreakPending = startBreakMutation.isPending || endBreakMutation.isPending;
 
   // Live-ticking seconds worked today, so the reader watches the number move
   // instead of needing to refresh. Closed sessions contribute their stored
@@ -93,6 +102,20 @@ export function AttendanceCard() {
       }
     } catch (err) {
       toast.error(isActive ? 'Could not clock out' : 'Could not clock in', errorMessage(err, 'Please try again'));
+    }
+  };
+
+  const handleBreakToggle = async () => {
+    try {
+      if (isOnBreak) {
+        await endBreakMutation.mutateAsync();
+        toast.success('Break ended', 'Back to work!');
+      } else {
+        await startBreakMutation.mutateAsync();
+        toast.success('Break started', 'Enjoy your break!');
+      }
+    } catch (err) {
+      toast.error(isOnBreak ? 'Could not end break' : 'Could not start break', errorMessage(err, 'Please try again'));
     }
   };
 
@@ -172,6 +195,27 @@ export function AttendanceCard() {
                   {isActive ? '--:--' : formatTime(today.lastLogoutAt)}
                 </span>
               </div>
+            )}
+            {isActive && (
+              <button
+                type="button"
+                onClick={handleBreakToggle}
+                disabled={isBreakPending}
+                className={`mt-3 inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-bold transition-colors disabled:cursor-not-allowed disabled:opacity-70 ${
+                  isOnBreak
+                    ? 'bg-[var(--warning-light,#fef3c7)] text-[var(--warning,#b45309)]'
+                    : 'bg-[var(--gray-100)] text-[var(--gray-400)] hover:text-[var(--foreground)]'
+                }`}
+              >
+                {isBreakPending ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                ) : isOnBreak ? (
+                  <Play className="h-3.5 w-3.5" />
+                ) : (
+                  <Coffee className="h-3.5 w-3.5" />
+                )}
+                {isOnBreak ? `On break since ${formatTime(today?.openBreakStartedAt ?? null)} — End` : 'Start break'}
+              </button>
             )}
           </div>
         </div>

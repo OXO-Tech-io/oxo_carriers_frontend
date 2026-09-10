@@ -176,6 +176,7 @@ export default function AdminUsersPage() {
     swift_code?: string;
     company_name?: string;
     contact_number?: string;
+    device_id?: string;
     profile?: CreateEmployeeProfilePayload;
   }) => {
     let createdUser: any = null;

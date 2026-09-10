@@ -1,7 +1,7 @@
 import api from '@/lib/api';
 import { extractData } from '@/lib/services/http';
 import type { ApiResponse } from '@/types/api';
-import type { AttendanceHistoryDay, AttendanceHistoryDayForEmployee, AttendanceSession } from '@/types/attendance';
+import type { AttendanceHistoryDay, AttendanceHistoryDayForEmployee, AttendanceSession, BreakLog } from '@/types/attendance';
 import { SessionAction } from '@/types/attendance';
 
 export interface GetAttendanceParams {
@@ -22,6 +22,22 @@ export const attendanceService = {
     const res = await api.post<ApiResponse<AttendanceSession>>(
       `/employees/${employeeId}/attendances`,
       { action: SessionAction.CLOCK_OUT },
+    );
+    return extractData(res);
+  },
+
+  startBreak: async (employeeId: string): Promise<BreakLog> => {
+    const res = await api.post<ApiResponse<BreakLog>>(
+      `/employees/${employeeId}/attendances`,
+      { action: SessionAction.BREAK_START },
+    );
+    return extractData(res);
+  },
+
+  endBreak: async (employeeId: string): Promise<BreakLog> => {
+    const res = await api.post<ApiResponse<BreakLog>>(
+      `/employees/${employeeId}/attendances`,
+      { action: SessionAction.BREAK_END },
     );
     return extractData(res);
   },

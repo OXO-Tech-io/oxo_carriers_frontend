@@ -51,6 +51,12 @@ export default function StepEmployment({ form }: StepProps) {
       <Field label="Hire Date">
         <input type="date" {...register("hire_date")} className={inputClass} />
       </Field>
+      <Field
+        label="Device ID"
+        hint="Identifies this employee's local PC agent for real-time in/out/break sync. Leave blank if not assigned yet."
+      >
+        <input type="text" {...register("device_id")} placeholder="e.g. WKS-0042" className={inputClass} />
+      </Field>
       {isConsultant && (
         <Field
           label="Hourly Rate"
