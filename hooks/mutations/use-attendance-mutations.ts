@@ -18,7 +18,7 @@ export const useClockInMutation = () => {
     mutationFn: () => attendanceService.clockIn(requireEmployeeId(user?.employee_id)),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['attendance'] });
-      activityAgentService.notify(SessionAction.CLOCK_IN, user?.employee_id);
+      activityAgentService.notify(SessionAction.CLOCK_IN);
     },
   });
 };
@@ -30,7 +30,7 @@ export const useClockOutMutation = () => {
     mutationFn: () => attendanceService.clockOut(requireEmployeeId(user?.employee_id)),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['attendance'] });
-      activityAgentService.notify(SessionAction.CLOCK_OUT, user?.employee_id);
+      activityAgentService.notify(SessionAction.CLOCK_OUT);
     },
   });
 };
@@ -42,7 +42,7 @@ export const useStartBreakMutation = () => {
     mutationFn: () => attendanceService.startBreak(requireEmployeeId(user?.employee_id)),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['attendance'] });
-      activityAgentService.notify(SessionAction.BREAK_START, user?.employee_id);
+      activityAgentService.notify(SessionAction.BREAK_START);
     },
   });
 };
@@ -54,7 +54,7 @@ export const useEndBreakMutation = () => {
     mutationFn: () => attendanceService.endBreak(requireEmployeeId(user?.employee_id)),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['attendance'] });
-      activityAgentService.notify(SessionAction.BREAK_END, user?.employee_id);
+      activityAgentService.notify(SessionAction.BREAK_END);
     },
   });
 };

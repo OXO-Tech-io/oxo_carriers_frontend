@@ -11,7 +11,7 @@ const SEND_TIMEOUT_MS = 2000;
 
 export const activityAgentService = {
   /** Fire-and-forget notification to the local agent; never throws. */
-  notify(action: SessionAction, employeeId?: string): void {
+  notify(action: SessionAction): void {
     try {
       const socket = new WebSocket(AGENT_WS_URL);
 
@@ -19,7 +19,8 @@ export const activityAgentService = {
 
       socket.onopen = () => {
         clearTimeout(timeoutId);
-        socket.send(JSON.stringify({ event: action, employeeId, timestamp: new Date().toISOString() }));
+        // No PII (e.g. employeeId) is sent here - only the event type and timestamp.
+        socket.send(JSON.stringify({ event: action, timestamp: new Date().toISOString() }));
         socket.close();
       };
 
