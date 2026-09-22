@@ -9,16 +9,26 @@ export const labelClass = 'block text-[10px] font-bold text-[var(--gray-400)] up
 
 interface FieldProps {
   label: string;
+  required?: boolean;
+  hint?: string;
   error?: string;
   className?: string;
   children: ReactNode;
 }
 
-export function Field({ label, error, className = '', children }: FieldProps) {
+// OCD-411/OCD-416/OCD-420/OCD-429: `required` renders a consistent asterisk
+// marker, `hint` renders persistent format guidance below the field (e.g.
+// accepted NIC/mobile formats) - suppressed once an error takes its place so
+// the two don't stack.
+export function Field({ label, required, hint, error, className = '', children }: FieldProps) {
   return (
     <div className={className}>
-      <label className={labelClass}>{label}</label>
+      <label className={labelClass}>
+        {label}
+        {required && <span className="text-red-500 ml-0.5">*</span>}
+      </label>
       {children}
+      {hint && !error && <p className="mt-1 text-[11px] text-[var(--gray-400)]">{hint}</p>}
       {error && <p className="mt-1 text-xs text-red-500">{error}</p>}
     </div>
   );

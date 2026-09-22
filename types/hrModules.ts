@@ -30,6 +30,12 @@ export interface EmployeeNote {
   id: number;
   employeeUserId: number;
   authorUserId: number | null;
+  // OCD-479: resolved server-side (null if the author's account was later
+  // removed) so the note history can show who added each note.
+  authorName?: string | null;
+  // OCD-480: the author's role at resolution time - lets the Edit button's
+  // visibility mirror the server's "author or more senior role" rule.
+  authorRole?: string | null;
   content: string;
   createdAt: string;
   updatedAt: string;

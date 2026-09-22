@@ -22,6 +22,7 @@ import { API_FILE_BASE_URL as API_BASE } from '@/lib/constants';
 
 type ClaimType = 'IN' | 'OPD';
 type ClaimStatus = 'pending' | 'approved' | 'rejected';
+type PaymentStatus = 'not_paid' | 'partially_paid' | 'paid';
 
 interface MedicalClaim {
   id: number;
@@ -33,6 +34,9 @@ interface MedicalClaim {
   relevant_document_url?: string | null;
   admin_comment?: string | null;
   resubmission_of?: number | null;
+  payment_status: PaymentStatus;
+  paid_amount?: number | null;
+  payment_date?: string | null;
   created_at: string;
 }
 
@@ -173,6 +177,18 @@ export default function MedicalInsurancePage() {
         return <Clock className="h-4 w-4 text-[var(--warning-text)]" />;
     }
   };
+
+  const getPaymentStatusBadge = (status: PaymentStatus) => {
+    const styles: Record<PaymentStatus, string> = {
+      not_paid: 'bg-[var(--gray-100)] text-[var(--gray-500)]',
+      partially_paid: 'bg-[var(--warning-light)] text-[var(--warning-text)]',
+      paid: 'bg-[var(--success-light)] text-[var(--success-text)]',
+    };
+    return styles[status] || styles.not_paid;
+  };
+
+  const getPaymentStatusLabel = (status: PaymentStatus) =>
+    ({ not_paid: 'Payment: Not Paid', partially_paid: 'Payment: Partly Paid', paid: 'Payment: Paid' }[status] || status);
 
   const containerVariants = {
     hidden: { opacity: 0, y: 15 },
@@ -476,10 +492,17 @@ export default function MedicalInsurancePage() {
                                   LKR {formatCurrency(claim.amount)}
                                 </td>
                                 <td className="px-6 py-4 whitespace-nowrap">
-                                  <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${getStatusBadge(claim.status)}`}>
-                                    {getStatusIcon(claim.status)}
-                                    {claim.status}
-                                  </span>
+                                  <div className="flex flex-col items-start gap-1.5">
+                                    <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${getStatusBadge(claim.status)}`}>
+                                      {getStatusIcon(claim.status)}
+                                      {claim.status}
+                                    </span>
+                                    {claim.status === 'approved' && (
+                                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${getPaymentStatusBadge(claim.payment_status)}`}>
+                                        {getPaymentStatusLabel(claim.payment_status)}
+                                      </span>
+                                    )}
+                                  </div>
                                 </td>
                                 <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-[var(--gray-400)]">
                                   {format(new Date(claim.created_at), 'MMM dd, yyyy')}
@@ -559,10 +582,17 @@ export default function MedicalInsurancePage() {
                               Quarter: {claim.quarter}
                             </span>
                           </div>
-                          <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[9px] font-extrabold uppercase tracking-wider ${getStatusBadge(claim.status)}`}>
-                            {getStatusIcon(claim.status)}
-                            {claim.status}
-                          </span>
+                          <div className="flex flex-col items-end gap-1">
+                            <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[9px] font-extrabold uppercase tracking-wider ${getStatusBadge(claim.status)}`}>
+                              {getStatusIcon(claim.status)}
+                              {claim.status}
+                            </span>
+                            {claim.status === 'approved' && (
+                              <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[9px] font-extrabold uppercase tracking-wider ${getPaymentStatusBadge(claim.payment_status)}`}>
+                                {getPaymentStatusLabel(claim.payment_status)}
+                              </span>
+                            )}
+                          </div>
                         </div>
 
                         {/* Amount & Date Grid */}

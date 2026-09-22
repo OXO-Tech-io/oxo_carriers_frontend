@@ -52,3 +52,25 @@ export const useRejectMedicalInsuranceClaimMutation = () => {
     },
   });
 };
+
+export const useRecordMedicalInsuranceClaimPaymentMutation = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({
+      id,
+      payment,
+    }: {
+      id: number;
+      payment: {
+        payment_status: string;
+        paid_amount?: string;
+        payment_date?: string;
+        payment_reference?: string;
+      };
+    }) => medicalInsuranceService.recordPayment(id, payment),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["medical-insurance"] });
+    },
+  });
+};

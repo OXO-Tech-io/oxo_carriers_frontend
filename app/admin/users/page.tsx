@@ -13,6 +13,7 @@ import {
   FunnelIcon,
   DocumentTextIcon,
   FolderIcon,
+  PencilSquareIcon,
 } from "@heroicons/react/24/outline";
 import { UserRole, EmployeeStatus, Vendor } from "@/types";
 import CreateUserModal, {
@@ -24,6 +25,8 @@ import CreateServiceProviderModal, {
 import ResetPasswordModal from "@/components/modals/ResetPasswordModal";
 import { EmployeeNotesModal } from "@/components/modals/EmployeeNotesModal";
 import { DocumentVaultModal } from "@/components/modals/DocumentVaultModal";
+import EditEmployeeModal from "@/components/modals/EditEmployeeModal";
+import { ConfirmationDialog } from "@/components/ui/ConfirmationDialog";
 import { mapDbUserToAppUser } from "@/lib/mappers/user.mapper";
 
 // GET /users is driven by the local employee table, cross-referenced against
@@ -83,16 +86,23 @@ export default function AdminUsersPage() {
   const [showResetModal, setShowResetModal] = useState(false);
   const [showNotesModal, setShowNotesModal] = useState(false);
   const [showDocumentVaultModal, setShowDocumentVaultModal] = useState(false);
+  const [showEditEmployeeModal, setShowEditEmployeeModal] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<User | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const canManageNotes =
     currentUser?.role === UserRole.HR_EXECUTIVE ||
     currentUser?.role === UserRole.HR_MANAGER ||
     isSuperAdmin;
   const canManageDocumentVault = canManageNotes;
-  const canManageStatus =
-    currentUser?.role === UserRole.HR_EXECUTIVE ||
-    currentUser?.role === UserRole.HR_MANAGER ||
-    isSuperAdmin;
+  // OCD-490: Account Status changes are restricted to Administrator only -
+  // HR Manager/HR Executive can no longer change a user's Active/Inactive/On
+  // Hold status from this page (server also rejects it - see
+  // UsersService.updateStatus).
+  const canManageStatus = isSuperAdmin;
+  // OCD-476: HR Manager, HR Executive and Administrator get full profile
+  // visibility and can edit organizational/employment fields.
+  const canViewEditProfile = isHR || isSuperAdmin;
   const [searchTerm, setSearchTerm] = useState("");
   const [filterRole, setFilterRole] = useState<string>("");
   const [filterDepartment, setFilterDepartment] = useState<string>("");
@@ -257,26 +267,29 @@ export default function AdminUsersPage() {
     }
   };
 
-  const handleDeleteUser = async (userId: number) => {
-    if (
-      !confirm(
-        "Are you sure you want to delete this user? Their personal data and Keycloak login will be removed and the account deactivated, but other records (leave, salary, attendance, etc.) will be kept. This action cannot be undone.",
-      )
-    ) {
-      return;
-    }
+  // OCD-437: browser-native confirm() replaced with the app-styled
+  // ConfirmationDialog below. OCD-453: deletion now archives the employee's
+  // full profile (snapshot + who/when) rather than permanently discarding
+  // it, so the dialog's wording reflects "move to Archive" rather than
+  // "permanently delete".
+  const handleDeleteUser = async () => {
+    if (!deleteTarget) return;
+    setIsDeleting(true);
     try {
-      await api.delete(`/users/${userId}`);
+      await api.delete(`/users/${deleteTarget.id}`);
       toast.success(
         "User deleted",
-        "Personal data and Keycloak access have been removed; the account is now inactive",
+        "The employee has been moved to the Archive; their personal data and Keycloak access have been removed and the account is now inactive.",
       );
+      setDeleteTarget(null);
       fetchUsers();
     } catch (err: any) {
       toast.error(
         "Failed to delete user",
         err.response?.data?.message || "Could not delete the user",
       );
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -567,6 +580,18 @@ export default function AdminUsersPage() {
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                           <div className="flex items-center justify-end space-x-2">
+                            {canViewEditProfile && !isVendor(item) && (
+                              <button
+                                onClick={() => {
+                                  setSelectedUser(item);
+                                  setShowEditEmployeeModal(true);
+                                }}
+                                className="p-2 text-[#465FFF] hover:bg-[#ECF3FF] rounded-lg transition-colors"
+                                title="View / Edit Profile"
+                              >
+                                <PencilSquareIcon className="h-5 w-5" />
+                              </button>
+                            )}
                             {canManageNotes && (
                               <button
                                 onClick={() => {
@@ -603,7 +628,7 @@ export default function AdminUsersPage() {
                             </button>
                             {(currentUser?.role === UserRole.HR_MANAGER || isSuperAdmin) && (
                               <button
-                                onClick={() => handleDeleteUser(item.id)}
+                                onClick={() => setDeleteTarget(item)}
                                 className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
                                 title="Delete User"
                               >
@@ -673,6 +698,38 @@ export default function AdminUsersPage() {
           employeeName={`${selectedUser.first_name} ${selectedUser.last_name}`}
         />
       )}
+
+      {/* View / Edit Employee Modal (OCD-476: full profile visibility for
+          HR Manager/HR Executive/Administrator, plus edit access to
+          organizational/employment fields) */}
+      <EditEmployeeModal
+        isOpen={showEditEmployeeModal}
+        onClose={() => {
+          setShowEditEmployeeModal(false);
+          setSelectedUser(null);
+        }}
+        employeeUserId={selectedUser && !isVendor(selectedUser) ? selectedUser.id : null}
+        canEdit={canViewEditProfile}
+        onSaved={fetchUsers}
+      />
+
+      {/* OCD-437 / OCD-453: custom app-styled delete confirmation, worded
+          around the Archive behaviour rather than permanent deletion. */}
+      <ConfirmationDialog
+        isOpen={!!deleteTarget}
+        onClose={() => setDeleteTarget(null)}
+        onConfirm={handleDeleteUser}
+        title="Delete Employee"
+        message={
+          deleteTarget
+            ? `This will move ${deleteTarget.first_name} ${deleteTarget.last_name} (${deleteTarget.employee_id}) to the Archive. Their personal data and Keycloak login will be removed and the account deactivated - other records (leave, salary, attendance, etc.) will be kept, and the full profile as it exists now will remain viewable in the Archive. This action cannot be undone.`
+            : ''
+        }
+        confirmLabel="Delete"
+        cancelLabel="Cancel"
+        variant="danger"
+        isLoading={isDeleting}
+      />
     </div>
   );
 }

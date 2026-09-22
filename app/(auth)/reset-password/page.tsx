@@ -1,10 +1,64 @@
 'use client';
 
-import { useState, Suspense } from 'react';
+import { useState, useMemo, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import api from '@/lib/api';
 import Image from 'next/image';
 import Link from 'next/link';
+import {
+  evaluatePasswordPolicy,
+  getPasswordStrength,
+} from '@/lib/validation/passwordPolicy';
+
+// OCD-447: real-time ✔/✖ checklist for the password policy, updating on
+// every keystroke. Purely presentational - `policy` is computed by the
+// caller from the shared passwordPolicy module so the rules shown here can
+// never drift from what's actually enforced.
+function PasswordRequirementsChecklist({
+  rules,
+}: {
+  rules: { id: string; label: string; passed: boolean }[];
+}) {
+  return (
+    <ul className="mt-3 space-y-1.5">
+      {rules.map((rule) => (
+        <li
+          key={rule.id}
+          className={`flex items-center text-sm transition-colors ${
+            rule.passed ? 'text-emerald-600' : 'text-gray-500'
+          }`}
+        >
+          <span className={`mr-2 font-semibold ${rule.passed ? 'text-emerald-600' : 'text-red-500'}`}>
+            {rule.passed ? '✔' : '✖'}
+          </span>
+          {rule.label}
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+const STRENGTH_STYLES = {
+  weak: { label: 'Weak', barClass: 'bg-red-500', widthClass: 'w-1/3' },
+  medium: { label: 'Medium', barClass: 'bg-amber-500', widthClass: 'w-2/3' },
+  strong: { label: 'Strong', barClass: 'bg-emerald-500', widthClass: 'w-full' },
+} as const;
+
+function PasswordStrengthMeter({ password }: { password: string }) {
+  if (!password) return null;
+  const strength = getPasswordStrength(password);
+  const { label, barClass, widthClass } = STRENGTH_STYLES[strength];
+  return (
+    <div className="mt-2">
+      <div className="h-1.5 w-full rounded-full bg-gray-200 overflow-hidden">
+        <div className={`h-full rounded-full transition-all ${barClass} ${widthClass}`} />
+      </div>
+      <p className={`mt-1 text-xs font-medium ${barClass.replace('bg-', 'text-')}`}>
+        Password strength: {label}
+      </p>
+    </div>
+  );
+}
 
 function ResetPasswordForm() {
   const router = useRouter();
@@ -17,6 +71,10 @@ function ResetPasswordForm() {
   const [success, setSuccess] = useState('');
   const [loading, setLoading] = useState(false);
 
+  const policy = useMemo(() => evaluatePasswordPolicy(newPassword), [newPassword]);
+  const passwordsMatch = newPassword.length > 0 && newPassword === confirmPassword;
+  const canSubmit = policy.isValid && passwordsMatch;
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
@@ -27,13 +85,13 @@ function ResetPasswordForm() {
       return;
     }
 
-    if (newPassword !== confirmPassword) {
-      setError('Passwords do not match');
+    if (!policy.isValid) {
+      setError(`Password does not meet the requirements: ${policy.failedMessages.join('; ')}`);
       return;
     }
 
-    if (newPassword.length < 8) {
-      setError('Password must be at least 8 characters long');
+    if (newPassword !== confirmPassword) {
+      setError('Passwords do not match');
       return;
     }
 
@@ -109,6 +167,8 @@ function ResetPasswordForm() {
                 placeholder="Enter new password"
               />
             </div>
+            <PasswordStrengthMeter password={newPassword} />
+            <PasswordRequirementsChecklist rules={policy.rules} />
           </div>
           <div>
             <label htmlFor="confirm-password" className="block text-sm font-semibold text-gray-700 mb-2">
@@ -126,13 +186,16 @@ function ResetPasswordForm() {
                 placeholder="Confirm new password"
               />
             </div>
+            {confirmPassword.length > 0 && !passwordsMatch && (
+              <p className="mt-1.5 text-sm text-red-500">Passwords do not match</p>
+            )}
           </div>
         </div>
 
         <div>
           <button
             type="submit"
-            disabled={loading || !!success}
+            disabled={loading || !!success || !canSubmit}
             className="group relative w-full flex justify-center items-center py-3.5 px-4 border border-transparent text-base font-semibold rounded-xl text-white bg-[var(--primary)] hover:bg-[var(--primary-hover)] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[var(--primary)] disabled:opacity-50 disabled:cursor-not-allowed shadow-sm hover:shadow transition-colors duration-200"
           >
             {loading ? (

@@ -302,6 +302,13 @@ describe("frontend services", () => {
     apiMock.put.mockResolvedValueOnce(asResponse({ data: { id: 1 } }));
     await medicalInsuranceService.rejectClaim(1, "missing docs");
 
+    apiMock.put.mockResolvedValueOnce(asResponse({ data: { id: 1 } }));
+    await medicalInsuranceService.recordPayment(1, {
+      payment_status: "paid",
+      paid_amount: "100",
+      payment_date: "2026-09-20",
+    });
+
     expect(apiMock.get).toHaveBeenCalledWith("/medical-insurance-claims", {
       params: { page: 1 },
     });
@@ -323,6 +330,10 @@ describe("frontend services", () => {
     expect(apiMock.put).toHaveBeenCalledWith(
       "/medical-insurance-claims/1/decisions",
       { action: "reject", admin_comment: "missing docs" },
+    );
+    expect(apiMock.put).toHaveBeenCalledWith(
+      "/medical-insurance-claims/1/payments",
+      { payment_status: "paid", paid_amount: "100", payment_date: "2026-09-20" },
     );
   });
 

@@ -88,7 +88,12 @@ function changeSummary(request: ProfileChangeRequest): string {
 }
 
 export default function ProfileApprovalsPage() {
-  const { isHR, isSuperAdmin } = useAuth();
+  // OCD-473: Profile Approvals is restricted to Administrator/HR Manager -
+  // HR Executive should not see or use this page (menu is already hidden via
+  // the profile_change_requests permission key; this is the direct-URL
+  // fallback, matching the backend's HR_ROLES guard in
+  // profileChangeRequest.service.ts).
+  const { isHRManager, isSuperAdmin } = useAuth();
   const toast = useToast();
   const [statusFilter, setStatusFilter] = useState<ProfileChangeRequestStatus | 'all'>('pending_approval');
   const [selected, setSelected] = useState<ProfileChangeRequest | null>(null);
@@ -102,7 +107,7 @@ export default function ProfileApprovalsPage() {
   const rejectMutation = useRejectProfileChangeMutation();
   const returnMutation = useReturnProfileChangeMutation();
 
-  if (!isHR && !isSuperAdmin) {
+  if (!isHRManager && !isSuperAdmin) {
     return (
       <div className="flex items-center justify-center min-h-64">
         <div className="text-center">

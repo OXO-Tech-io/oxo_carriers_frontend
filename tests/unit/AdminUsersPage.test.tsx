@@ -90,20 +90,24 @@ describe("AdminUsersPage", () => {
     expect(screen.getByText("jane@oxo.test")).toBeInTheDocument();
   });
 
+  // OCD-437: the browser-native confirm() is gone - deleting now opens the
+  // app-styled ConfirmationDialog (title "Delete Employee", Delete/Cancel
+  // actions), which the OCD-453 archive wording is layered onto.
   it("deletes only PII/Keycloak data and deactivates the account, leaving other records untouched", async () => {
     mockAuth(UserRole.HR_MANAGER);
-    vi.spyOn(window, "confirm").mockReturnValue(true);
     apiMock.delete.mockResolvedValue({});
     render(<AdminUsersPage />);
 
     await screen.findByText("Jane Doe");
     fireEvent.click(screen.getByTitle("Delete User"));
 
-    expect(window.confirm).toHaveBeenCalled();
+    expect(screen.getByText("Delete Employee")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Delete" }));
+
     await waitFor(() => expect(apiMock.delete).toHaveBeenCalledWith("/users/10"));
     expect(toastMock.success).toHaveBeenCalledWith(
       "User deleted",
-      "Personal data and Keycloak access have been removed; the account is now inactive",
+      "The employee has been moved to the Archive; their personal data and Keycloak access have been removed and the account is now inactive.",
     );
     // fetchUsers (GET /users?...) runs again after a successful delete, on
     // top of the initial load and the one-off departments fetch
@@ -114,23 +118,23 @@ describe("AdminUsersPage", () => {
 
   it("does not call delete when the confirmation is dismissed", async () => {
     mockAuth(UserRole.HR_MANAGER);
-    vi.spyOn(window, "confirm").mockReturnValue(false);
     render(<AdminUsersPage />);
 
     await screen.findByText("Jane Doe");
     fireEvent.click(screen.getByTitle("Delete User"));
+    fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
 
     expect(apiMock.delete).not.toHaveBeenCalled();
   });
 
   it("surfaces a failure toast without crashing when the delete request fails", async () => {
     mockAuth(UserRole.HR_MANAGER);
-    vi.spyOn(window, "confirm").mockReturnValue(true);
     apiMock.delete.mockRejectedValue({ response: { data: { message: "boom" } } });
     render(<AdminUsersPage />);
 
     await screen.findByText("Jane Doe");
     fireEvent.click(screen.getByTitle("Delete User"));
+    fireEvent.click(screen.getByRole("button", { name: "Delete" }));
 
     await waitFor(() =>
       expect(toastMock.error).toHaveBeenCalledWith("Failed to delete user", "boom"),
@@ -144,8 +148,8 @@ describe("AdminUsersPage", () => {
     expect(screen.queryByTitle("Delete User")).not.toBeInTheDocument();
   });
 
-  it("changing the status dropdown patches the new status and shows a toast", async () => {
-    mockAuth(UserRole.HR_MANAGER);
+  it("changing the status dropdown patches the new status and shows a toast (Super Admin only)", async () => {
+    mockAuth(UserRole.SUPER_ADMIN);
     apiMock.patch.mockResolvedValue({});
     render(<AdminUsersPage />);
 
@@ -161,5 +165,14 @@ describe("AdminUsersPage", () => {
       "Status updated",
       "The employee's account status has been changed",
     );
+  });
+
+  it("shows Account Status as a read-only badge (no dropdown) for HR Manager and HR Executive", async () => {
+    mockAuth(UserRole.HR_MANAGER);
+    render(<AdminUsersPage />);
+
+    await screen.findByText("Jane Doe");
+    const row = screen.getByText("Jane Doe").closest("tr")!;
+    expect(within(row).queryByRole("combobox")).not.toBeInTheDocument();
   });
 });

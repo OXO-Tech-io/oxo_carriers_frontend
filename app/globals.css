@@ -166,6 +166,33 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
+/* OCD-414: native date/time picker icons (WebKit/Chromium's calendar/clock
+   glyph) are painted by the OS using the input's `color-scheme`, not by
+   ordinary CSS `color` - so on a dark field background the icon stayed
+   near-black-on-dark and was effectively invisible. Applied once here,
+   globally, and driven by the same `.dark` class the app's manual theme
+   toggle already sets on <html> (see contexts/ThemeContext.tsx), so it
+   stays in sync with the toggle rather than the OS `prefers-color-scheme`
+   (which Tailwind's own `dark:` variant would use here, since this project
+   has no `@custom-variant dark` override - see components/layout/Header.tsx
+   for the one pre-existing, OS-driven `dark:` usage). This covers every
+   date/time field across the app (wizard steps included) without needing
+   a per-field className. */
+input[type="date"],
+input[type="time"],
+input[type="datetime-local"],
+input[type="month"],
+input[type="week"] {
+  color-scheme: light;
+}
+.dark input[type="date"],
+.dark input[type="time"],
+.dark input[type="datetime-local"],
+.dark input[type="month"],
+.dark input[type="week"] {
+  color-scheme: dark;
+}
+
 /* ── Utility ── */
 .transition-smooth { transition: all var(--transition); }
 

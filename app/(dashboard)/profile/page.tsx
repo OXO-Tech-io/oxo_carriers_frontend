@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/hooks/useAuth';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -23,16 +23,13 @@ import {
   GraduationCap,
   History,
   ClipboardList,
-  Plus,
-  Pencil,
-  Trash2,
   Landmark,
+  PenSquare,
 } from 'lucide-react';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { DataTable } from '@/components/ui/DataTable';
 import { EmptyState } from '@/components/ui/EmptyState';
-import { ConfirmationDialog } from '@/components/ui/ConfirmationDialog';
 import { format } from 'date-fns';
 import { useProfileQuery } from '@/hooks/queries/use-profile-query';
 import { useEmployeeEducationQuery } from '@/hooks/queries/use-employee-education-query';
@@ -40,17 +37,12 @@ import { useEmployeeWorkHistoryQuery } from '@/hooks/queries/use-employee-work-h
 import { useEmployeePersonalDetailsQuery } from '@/hooks/queries/use-employee-personal-details-query';
 import { useMyChangeRequestsQuery } from '@/hooks/queries/use-my-change-requests-query';
 import { useMyDocumentsQuery } from '@/hooks/queries/use-documents-query';
-import { useSubmitProfileChangeMutation } from '@/hooks/mutations/use-submit-profile-change-mutation';
-import ProfileChangeRequestModal from '@/components/modals/ProfileChangeRequestModal';
-import ContactDetailsChangeModal from '@/components/modals/ContactDetailsChangeModal';
-import DegreeDateChangeModal from '@/components/modals/DegreeDateChangeModal';
-import EducationChangeModal from '@/components/modals/EducationChangeModal';
-import WorkHistoryChangeModal from '@/components/modals/WorkHistoryChangeModal';
+import { useUploadProfilePictureMutation } from '@/hooks/mutations/use-upload-profile-picture-mutation';
 import ProfileChangeDiffModal from '@/components/modals/ProfileChangeDiffModal';
 import { WorkHistoryTimeline } from '@/components/profile/WorkHistoryTimeline';
 import { ExperienceSummaryCard } from '@/components/profile/ExperienceSummaryCard';
 import { useToast } from '@/contexts/ToastContext';
-import { QUALIFICATION_LEVEL_OPTIONS, TITLE_OPTIONS, type EmployeeEducation, type EmployeeWorkHistory, type ProfileChangeRequest } from '@/types/profile';
+import { QUALIFICATION_LEVEL_OPTIONS, TITLE_OPTIONS, type ProfileChangeRequest } from '@/types/profile';
 import { resolveFileUrl } from '@/lib/constants';
 import type { ColumnDef } from '@tanstack/react-table';
 
@@ -77,6 +69,8 @@ export default function ProfilePage() {
   const { user } = useAuth();
   const toast = useToast();
   const [activeTab, setActiveTab] = useState<ProfileTab>('personal');
+  const profilePictureInputRef = useRef<HTMLInputElement>(null);
+  const uploadProfilePicture = useUploadProfilePictureMutation();
 
   const [settings, setSettings] = useState({
     emailNotifications: true,
@@ -94,28 +88,11 @@ export default function ProfilePage() {
   const { data: workHistory = [], isLoading: workHistoryLoading } = useEmployeeWorkHistoryQuery();
   const { data: pii } = useEmployeePersonalDetailsQuery(displayUser?.id);
   const { data: changeRequests = [], isLoading: changeRequestsLoading } = useMyChangeRequestsQuery();
-  const submitChange = useSubmitProfileChangeMutation();
   const documentsQuery = useMyDocumentsQuery();
   // Document Vault shows only documents targeted at this employee individually -
   // company-wide ('all') documents live on the separate Documents page/sidebar item instead.
   const myDocuments = (documentsQuery.data ?? []).filter((doc) => doc.targetType === 'individual');
 
-  const [showChangeRequestModal, setShowChangeRequestModal] = useState(false);
-  const [showContactsModal, setShowContactsModal] = useState(false);
-  const [showDegreeDateModal, setShowDegreeDateModal] = useState(false);
-  const [educationModal, setEducationModal] = useState<{ open: boolean; record: EmployeeEducation | null }>({
-    open: false,
-    record: null,
-  });
-  const [workHistoryModal, setWorkHistoryModal] = useState<{ open: boolean; record: EmployeeWorkHistory | null }>({
-    open: false,
-    record: null,
-  });
-  const [deleteConfirm, setDeleteConfirm] = useState<
-    | { open: false }
-    | { open: true; kind: 'education'; record: EmployeeEducation }
-    | { open: true; kind: 'work_history'; record: EmployeeWorkHistory }
-  >({ open: false });
   const [selectedRequest, setSelectedRequest] = useState<ProfileChangeRequest | null>(null);
 
   const getInitials = () => {
@@ -141,59 +118,31 @@ export default function ProfilePage() {
     }
   };
 
+  // OCD-454: camera icon -> hidden file input -> upload -> refresh avatar.
+  const handleProfilePictureSelected = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) return;
+    if (!file.type.startsWith('image/')) {
+      toast.error('Invalid file', 'Please choose an image file (JPG, PNG, GIF or WebP).');
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error('File too large', 'Profile pictures must be 5MB or smaller.');
+      return;
+    }
+    try {
+      await uploadProfilePicture.mutateAsync(file);
+      toast.success('Profile picture updated', 'Your new picture is now visible across the app.');
+    } catch (err: any) {
+      toast.error('Failed to update profile picture', err.response?.data?.message || 'Please try again.');
+    }
+  };
+
   const handleToggleSetting = (key: keyof typeof settings) => {
     setSettings(prev => ({ ...prev, [key]: !prev[key] }));
     setSettingsMessage('Preferences updated.');
     setTimeout(() => setSettingsMessage(''), 2500);
-  };
-
-  const confirmDelete = async () => {
-    if (!deleteConfirm.open) return;
-    try {
-      if (deleteConfirm.kind === 'education') {
-        const rec = deleteConfirm.record;
-        await submitChange.mutateAsync({
-          changes: [
-            {
-              entityType: 'education',
-              operation: 'delete',
-              recordId: rec.id,
-              before: {
-                qualificationLevel: rec.qualificationLevel,
-                qualificationTitle: rec.qualificationTitle,
-                awardingInstitution: rec.awardingInstitution,
-                dateAwarded: rec.dateAwarded,
-                isOngoing: rec.isOngoing,
-                remarks: rec.remarks,
-              },
-            },
-          ],
-        });
-      } else {
-        const rec = deleteConfirm.record;
-        await submitChange.mutateAsync({
-          changes: [
-            {
-              entityType: 'work_history',
-              operation: 'delete',
-              recordId: rec.id,
-              before: {
-                organization: rec.organization,
-                positionHeld: rec.positionHeld,
-                employmentType: rec.employmentType,
-                startDate: rec.startDate,
-                endDate: rec.endDate,
-                remarks: rec.remarks,
-              },
-            },
-          ],
-        });
-      }
-      toast.success('Removal request submitted', 'This record will be removed once HR approves.');
-      setDeleteConfirm({ open: false });
-    } catch {
-      toast.error('Failed to submit request', 'Please try again.');
-    }
   };
 
   const pendingChangeColumns: ColumnDef<ProfileChangeRequest, any>[] = [
@@ -215,6 +164,9 @@ export default function ProfilePage() {
           electorate: 'Electorate',
           postalCode: 'Postal Code',
           linkedinProfile: 'LinkedIn Profile',
+          primarySchool: 'Primary School Attended',
+          secondarySchool: 'Secondary School Attended',
+          undergraduateDegreeCompletionDate: 'Undergraduate Degree Completion Date',
         };
         const PII_LABELS: Record<string, string> = {
           address: 'Permanent Address',
@@ -323,10 +275,31 @@ export default function ProfilePage() {
 
             <div className="relative pt-6 flex flex-col items-center">
               <div className="relative group">
-                <div className="h-24 w-24 rounded-full bg-gradient-to-br from-[var(--primary)] to-[var(--secondary)] text-white text-3xl font-extrabold flex items-center justify-center border-4 border-[var(--card-bg)] shadow-[var(--shadow-md)]">
-                  {getInitials()}
-                </div>
-                <button className="absolute bottom-0 right-0 p-2 rounded-full bg-[var(--primary)] text-white border-2 border-[var(--card-bg)] shadow hover:bg-[var(--primary-hover)] transition-colors cursor-pointer">
+                {displayUser?.profile_picture_url ? (
+                  <img
+                    src={resolveFileUrl(displayUser.profile_picture_url)}
+                    alt={`${displayUser?.first_name ?? ''} ${displayUser?.last_name ?? ''}`.trim()}
+                    className="h-24 w-24 rounded-full object-cover border-4 border-[var(--card-bg)] shadow-[var(--shadow-md)]"
+                  />
+                ) : (
+                  <div className="h-24 w-24 rounded-full bg-gradient-to-br from-[var(--primary)] to-[var(--secondary)] text-white text-3xl font-extrabold flex items-center justify-center border-4 border-[var(--card-bg)] shadow-[var(--shadow-md)]">
+                    {getInitials()}
+                  </div>
+                )}
+                <input
+                  ref={profilePictureInputRef}
+                  type="file"
+                  accept="image/jpeg,image/png,image/gif,image/webp"
+                  className="hidden"
+                  onChange={handleProfilePictureSelected}
+                />
+                <button
+                  type="button"
+                  onClick={() => profilePictureInputRef.current?.click()}
+                  disabled={uploadProfilePicture.isPending}
+                  aria-label="Change profile picture"
+                  className="absolute bottom-0 right-0 p-2 rounded-full bg-[var(--primary)] text-white border-2 border-[var(--card-bg)] shadow hover:bg-[var(--primary-hover)] transition-colors cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
+                >
                   <Camera className="h-3.5 w-3.5" />
                 </button>
               </div>
@@ -402,9 +375,7 @@ export default function ProfilePage() {
                 <Card className="shadow-sm border-[var(--gray-100)] p-6">
                   <div className="flex items-center justify-between mb-6">
                     <h3 className="text-base font-bold text-[var(--foreground)]">Contact & Personal details</h3>
-                    <Button size="sm" onClick={() => setShowChangeRequestModal(true)}>
-                      Request Change
-                    </Button>
+                    <EditInWizardLink />
                   </div>
 
                   <div className="space-y-6">
@@ -460,7 +431,7 @@ export default function ProfilePage() {
                     <div className="p-4 bg-[var(--gray-25)] border border-[var(--gray-100)] rounded-2xl flex gap-3.5 items-start">
                       <Lock className="h-5 w-5 text-[var(--gray-400)] mt-0.5 shrink-0" />
                       <p className="text-xs text-[var(--gray-400)] font-medium leading-relaxed">
-                        These fields require HR approval to change. Use "Request Change" above - your current values stay in effect until an HR Manager approves your request.
+                        These fields require HR approval to change. Use "Edit Profile" above - your current values stay in effect until an HR Manager approves your request.
                       </p>
                     </div>
                   </div>
@@ -473,9 +444,7 @@ export default function ProfilePage() {
                 <Card className="shadow-sm border-[var(--gray-100)] p-6">
                   <div className="flex items-center justify-between mb-6">
                     <h3 className="text-base font-bold text-[var(--foreground)]">Emergency Contact & Medical Info</h3>
-                    <Button size="sm" onClick={() => setShowContactsModal(true)}>
-                      Request Change
-                    </Button>
+                    <EditInWizardLink />
                   </div>
 
                   <div className="space-y-6">
@@ -489,7 +458,7 @@ export default function ProfilePage() {
                     <div className="p-4 bg-[var(--gray-25)] border border-[var(--gray-100)] rounded-2xl flex gap-3.5 items-start">
                       <Lock className="h-5 w-5 text-[var(--gray-400)] mt-0.5 shrink-0" />
                       <p className="text-xs text-[var(--gray-400)] font-medium leading-relaxed">
-                        These fields require HR approval to change. Use "Request Change" above - your current values stay in effect until an HR Manager approves your request.
+                        These fields require HR approval to change. Use "Edit Profile" above - your current values stay in effect until an HR Manager approves your request.
                       </p>
                     </div>
                   </div>
@@ -502,9 +471,7 @@ export default function ProfilePage() {
                 <Card className="shadow-sm border-[var(--gray-100)] p-6">
                   <div className="flex items-center justify-between mb-6">
                     <h3 className="text-base font-bold text-[var(--foreground)]">Undergraduate Degree Completion Date</h3>
-                    <Button size="sm" variant="outline" onClick={() => setShowDegreeDateModal(true)}>
-                      Request Change
-                    </Button>
+                    <EditInWizardLink />
                   </div>
                   <ReadOnlyField icon={GraduationCap} label="Completion Date" value={formattedDegreeDate()} />
                 </Card>
@@ -512,9 +479,7 @@ export default function ProfilePage() {
                 <Card className="shadow-sm border-[var(--gray-100)] p-6">
                   <div className="flex items-center justify-between mb-6">
                     <h3 className="text-base font-bold text-[var(--foreground)]">Educational Background</h3>
-                    <Button size="sm" leftIcon={<Plus className="h-3.5 w-3.5" />} onClick={() => setEducationModal({ open: true, record: null })}>
-                      Add Record
-                    </Button>
+                    <EditInWizardLink label="Add / Edit Records" />
                   </div>
 
                   {educationLoading ? (
@@ -523,7 +488,7 @@ export default function ProfilePage() {
                     <EmptyState
                       icon={GraduationCap}
                       title="No education records yet"
-                      description="Add your qualifications - each addition is sent to HR for approval."
+                      description="Add your qualifications via Edit Profile - each addition is sent to HR for approval."
                     />
                   ) : (
                     <div className="space-y-3">
@@ -555,30 +520,12 @@ export default function ProfilePage() {
                             )}
                             {rec.remarks && <p className="text-xs text-[var(--gray-500)] mt-2">{rec.remarks}</p>}
                           </div>
-                          <div className="flex items-center gap-1 shrink-0">
-                            <button
-                              type="button"
-                              onClick={() => setEducationModal({ open: true, record: rec })}
-                              className="p-1.5 rounded-lg text-[var(--gray-400)] hover:text-[var(--primary)] hover:bg-white transition-colors"
-                              aria-label="Edit"
-                            >
-                              <Pencil className="h-3.5 w-3.5" />
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => setDeleteConfirm({ open: true, kind: 'education', record: rec })}
-                              className="p-1.5 rounded-lg text-[var(--gray-400)] hover:text-red-500 hover:bg-white transition-colors"
-                              aria-label="Remove"
-                            >
-                              <Trash2 className="h-3.5 w-3.5" />
-                            </button>
-                          </div>
                         </div>
                       ))}
                     </div>
                   )}
                   <p className="text-[11px] text-[var(--gray-400)] font-medium mt-4">
-                    Newly added or edited records appear under "Pending Changes" until HR approves them.
+                    This section is view-only here - add, edit or remove qualifications via "Edit Profile". Changes appear under "Pending Changes" until HR approves them.
                   </p>
                 </Card>
               </motion.div>
@@ -590,9 +537,7 @@ export default function ProfilePage() {
                 <Card className="shadow-sm border-[var(--gray-100)] p-6">
                   <div className="flex items-center justify-between mb-6">
                     <h3 className="text-base font-bold text-[var(--foreground)]">Work History</h3>
-                    <Button size="sm" leftIcon={<Plus className="h-3.5 w-3.5" />} onClick={() => setWorkHistoryModal({ open: true, record: null })}>
-                      Add Entry
-                    </Button>
+                    <EditInWizardLink label="Add / Edit Entries" />
                   </div>
 
                   {workHistoryLoading ? (
@@ -601,17 +546,13 @@ export default function ProfilePage() {
                     <EmptyState
                       icon={History}
                       title="No work history yet"
-                      description="Add your previous roles - each addition is sent to HR for approval."
+                      description="Add your previous roles via Edit Profile - each addition is sent to HR for approval."
                     />
                   ) : (
-                    <WorkHistoryTimeline
-                      entries={workHistory}
-                      onEdit={(rec) => setWorkHistoryModal({ open: true, record: rec })}
-                      onDelete={(rec) => setDeleteConfirm({ open: true, kind: 'work_history', record: rec })}
-                    />
+                    <WorkHistoryTimeline entries={workHistory} />
                   )}
                   <p className="text-[11px] text-[var(--gray-400)] font-medium mt-4">
-                    Newly added or edited entries appear under "Pending Changes" until HR approves them.
+                    This section is view-only here - add, edit or remove entries via "Edit Profile". Changes appear under "Pending Changes" until HR approves them.
                   </p>
                 </Card>
               </motion.div>
@@ -856,48 +797,6 @@ export default function ProfilePage() {
         </div>
       </div>
 
-      <ProfileChangeRequestModal
-        isOpen={showChangeRequestModal}
-        onClose={() => setShowChangeRequestModal(false)}
-        user={displayUser}
-        pii={pii}
-      />
-
-      <ContactDetailsChangeModal
-        isOpen={showContactsModal}
-        onClose={() => setShowContactsModal(false)}
-        pii={pii}
-      />
-
-      <DegreeDateChangeModal
-        isOpen={showDegreeDateModal}
-        onClose={() => setShowDegreeDateModal(false)}
-        currentDate={displayUser?.undergraduate_degree_completion_date}
-      />
-
-      <EducationChangeModal
-        isOpen={educationModal.open}
-        onClose={() => setEducationModal({ open: false, record: null })}
-        initialData={educationModal.record}
-      />
-
-      <WorkHistoryChangeModal
-        isOpen={workHistoryModal.open}
-        onClose={() => setWorkHistoryModal({ open: false, record: null })}
-        initialData={workHistoryModal.record}
-      />
-
-      <ConfirmationDialog
-        isOpen={deleteConfirm.open}
-        onClose={() => setDeleteConfirm({ open: false })}
-        onConfirm={confirmDelete}
-        title="Remove Record"
-        message="This will submit a change request to remove this record. It stays visible until HR approves the removal."
-        confirmLabel="Submit Request"
-        variant="danger"
-        isLoading={submitChange.isPending}
-      />
-
       <ProfileChangeDiffModal
         isOpen={!!selectedRequest}
         onClose={() => setSelectedRequest(null)}
@@ -905,6 +804,19 @@ export default function ProfilePage() {
         canDecide={false}
       />
     </div>
+  );
+}
+
+// OCD-456: replaces every per-tab "Request Change"/"Add Record"/"Add Entry"
+// affordance - editing now goes exclusively through the unified Edit
+// Profile wizard (/profile/wizard), these tabs are view-only.
+function EditInWizardLink({ label = 'Edit in Wizard' }: { label?: string }) {
+  return (
+    <Link href="/profile/wizard">
+      <Button size="sm" variant="outline" leftIcon={<PenSquare className="h-3.5 w-3.5" />}>
+        {label}
+      </Button>
+    </Link>
   );
 }
 

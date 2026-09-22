@@ -2,13 +2,22 @@ import type {
   AddressValue,
   BankAccountValue,
   DependentValue,
+  EducationValue,
   EmergencyContactRecordValue,
   NomineeValue,
   ProfileChangeItem,
   ScalarPiiField,
   ScalarUserField,
+  WorkHistoryValue,
 } from '@/types/profile';
-import type { WizardDependent, WizardEmergencyContact, WizardFormValues, WizardNominee } from './wizardTypes';
+import type {
+  WizardDependent,
+  WizardEducation,
+  WizardEmergencyContact,
+  WizardFormValues,
+  WizardNominee,
+  WizardWorkHistory,
+} from './wizardTypes';
 
 const SCALAR_PII_FIELDS: { key: keyof WizardFormValues; field: ScalarPiiField }[] = [
   { key: 'legalName', field: 'full_name_as_nic' },
@@ -46,6 +55,12 @@ const SCALAR_USER_FIELDS: { key: keyof WizardFormValues; field: ScalarUserField 
   { key: 'electorate', field: 'electorate' },
   { key: 'postalCode', field: 'postalCode' },
   { key: 'linkedinProfile', field: 'linkedinProfile' },
+  // OCD-456: Education step scalars - field names differ from the RHF key
+  // because the underlying tbl_employee columns are primary_school /
+  // secondary_school (see employee.schema.ts on the backend), not
+  // primarySchoolAttended/secondarySchoolAttended.
+  { key: 'primarySchoolAttended', field: 'primarySchool' },
+  { key: 'secondarySchoolAttended', field: 'secondarySchool' },
 ];
 
 const WELFARE_FIELDS: { key: keyof WizardFormValues; field: 'anniversary_date' | 'hobbies' | 'community_activities' | 'professional_memberships' }[] = [
@@ -110,28 +125,60 @@ export function emergencyContactToValue(c: WizardEmergencyContact): EmergencyCon
   return { name: c.name, relationship: c.relationship, contactNumber: c.contactNumber };
 }
 
-function diffRecords<TRow extends { id: number | null }, TValue>(
+// OCD-456: mirrors CreateUserModal.tsx's own inline education/workHistory
+// mapping (handleFinalSubmit) - exported here so the self-service wizard's
+// diffing below can reuse the exact same wire-shape conversion.
+export function educationToValue(e: WizardEducation): EducationValue {
+  return {
+    qualificationLevel: e.qualificationLevel as EducationValue['qualificationLevel'],
+    qualificationTitle: e.qualificationTitle,
+    awardingInstitution: e.awardingInstitution,
+    dateAwarded: e.isOngoing ? null : e.dateAwarded || null,
+    isOngoing: e.isOngoing,
+    remarks: e.remarks || null,
+  };
+}
+
+export function workHistoryToValue(w: WizardWorkHistory): WorkHistoryValue {
+  return {
+    organization: w.organization,
+    positionHeld: w.positionHeld,
+    employmentType: (w.employmentType || 'regular') as WorkHistoryValue['employmentType'],
+    startDate: w.startDate,
+    endDate: w.endDate || null,
+    remarks: w.remarks || null,
+  };
+}
+
+// `id` is optional on the row type (rather than the stricter `number | null`
+// used everywhere else) solely to accommodate WizardEducation/WizardWorkHistory,
+// whose `id` is optional for structural compatibility with the admin-only
+// Create Employee wizard's identically-shaped types (see wizardTypes.ts).
+// The profile wizard itself always sets `id` explicitly (never leaves it
+// `undefined`), so the `row.id !== null` checks below still behave correctly.
+function diffRecords<TRow extends { id?: number | null }, TValue>(
   original: TRow[],
   current: TRow[],
   toValue: (row: TRow) => TValue,
-  entityType: 'nominee' | 'dependent' | 'emergency_contact_record'
+  entityType: 'nominee' | 'dependent' | 'emergency_contact_record' | 'education' | 'work_history'
 ): ProfileChangeItem[] {
   const items: ProfileChangeItem[] = [];
   const originalById = new Map(original.filter((r) => r.id !== null).map((r) => [r.id as number, r]));
   const currentIds = new Set(current.filter((r) => r.id !== null).map((r) => r.id as number));
 
   for (const row of current) {
-    if (row.id === null) {
+    const rowId = row.id ?? null;
+    if (rowId === null) {
       items.push({ entityType, operation: 'create', recordId: null, after: toValue(row) as any });
       continue;
     }
-    const originalRow = originalById.get(row.id);
+    const originalRow = originalById.get(rowId);
     if (!originalRow) continue;
     if (JSON.stringify(toValue(originalRow)) !== JSON.stringify(toValue(row))) {
       items.push({
         entityType,
         operation: 'update',
-        recordId: row.id,
+        recordId: rowId,
         before: toValue(originalRow) as any,
         after: toValue(row) as any,
       });
@@ -139,8 +186,9 @@ function diffRecords<TRow extends { id: number | null }, TValue>(
   }
 
   for (const row of original) {
-    if (row.id !== null && !currentIds.has(row.id)) {
-      items.push({ entityType, operation: 'delete', recordId: row.id, before: toValue(row) as any });
+    const rowId = row.id ?? null;
+    if (rowId !== null && !currentIds.has(rowId)) {
+      items.push({ entityType, operation: 'delete', recordId: rowId, before: toValue(row) as any });
     }
   }
 
@@ -232,9 +280,26 @@ export function buildWizardChanges(original: WizardFormValues, current: WizardFo
     });
   }
 
+  // OCD-456: Education step's "Undergraduate Degree Completion Date" - a
+  // distinct literal on the `user_field` union (not part of ScalarUserField)
+  // since DegreeDateChangeModal.tsx already used this exact shape.
+  const degreeDateBefore = nullableStr(original.undergraduateDegreeCompletionDate);
+  const degreeDateAfter = nullableStr(current.undergraduateDegreeCompletionDate);
+  if (degreeDateBefore !== degreeDateAfter) {
+    changes.push({
+      entityType: 'user_field',
+      field: 'undergraduateDegreeCompletionDate',
+      operation: 'update',
+      before: degreeDateBefore,
+      after: degreeDateAfter,
+    });
+  }
+
   changes.push(...diffRecords(original.nominees, current.nominees, nomineeToValue, 'nominee'));
   changes.push(...diffRecords(original.dependents, current.dependents, dependentToValue, 'dependent'));
   changes.push(...diffRecords(original.emergencyContacts, current.emergencyContacts, emergencyContactToValue, 'emergency_contact_record'));
+  changes.push(...diffRecords(original.education, current.education, educationToValue, 'education'));
+  changes.push(...diffRecords(original.workHistory, current.workHistory, workHistoryToValue, 'work_history'));
 
   return changes;
 }

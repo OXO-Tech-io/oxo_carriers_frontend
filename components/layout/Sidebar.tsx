@@ -35,6 +35,7 @@ import {
   ChevronsLeft,
   Clock,
   FolderOpen,
+  Archive,
 } from "lucide-react";
 
 type AccessLevel = "read" | "write";
@@ -270,6 +271,13 @@ const adminNavigation: MenuItem[] = [
     href: "/admin/attendance",
     icon: Clock,
     permissionKeys: ["attendance"],
+    requiredLevel: "read",
+  },
+  {
+    name: "Archive",
+    href: "/admin/archive",
+    icon: Archive,
+    permissionKeys: ["archive"],
     requiredLevel: "read",
   },
 ];

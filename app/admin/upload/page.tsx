@@ -20,6 +20,22 @@ export default function AdminUploadPage() {
   const currentMonth = currentDate.getMonth() + 1;
   const currentYear = currentDate.getFullYear();
 
+  const handleDownloadTemplate = async () => {
+    try {
+      const response = await api.get('/salaries/bulk-uploads/template', { responseType: 'blob' });
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', 'salary-bulk-upload-template.xlsx');
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (err: any) {
+      setError('Failed to download template');
+    }
+  };
+
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const selectedFile = e.target.files[0];
@@ -114,6 +130,13 @@ export default function AdminUploadPage() {
           <h1 className="text-3xl font-bold text-[#101828]">Upload Salary Excel</h1>
           <p className="text-sm text-[#475467] mt-1">Upload Excel file to create salary slips for employees</p>
         </div>
+        <button
+          type="button"
+          onClick={handleDownloadTemplate}
+          className="px-4 py-2.5 text-sm font-semibold text-[#344054] bg-white border border-[#D0D5DD] rounded-lg hover:bg-[#F9FAFB] transition-colors"
+        >
+          Download Template
+        </button>
       </div>
 
       <div className="bg-white rounded-2xl shadow-sm border border-[#E4E7EC] p-6 lg:p-8">

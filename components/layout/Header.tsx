@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { useTheme } from '@/contexts/ThemeContext';
 import { NotificationBell } from './NotificationBell';
+import { resolveFileUrl } from '@/lib/constants';
 
 export default function Header() {
   const { user, logout } = useAuth();
@@ -92,12 +93,20 @@ export default function Header() {
               onClick={() => setShowDropdown(!showDropdown)}
               className="flex items-center gap-2 lg:gap-3 rounded-xl p-1.5 pr-2.5 hover:bg-[var(--gray-50)] transition-colors duration-200"
             >
-              <div
-                className="flex h-9 w-9 items-center justify-center rounded-xl text-sm font-bold text-white shadow-sm bg-[var(--primary)] shrink-0"
-              >
-                {user.first_name?.[0]}
-                {user.last_name?.[0]}
-              </div>
+              {user.profile_picture_url ? (
+                <img
+                  src={resolveFileUrl(user.profile_picture_url)}
+                  alt={`${user.first_name} ${user.last_name}`}
+                  className="h-9 w-9 rounded-xl object-cover shadow-sm shrink-0"
+                />
+              ) : (
+                <div
+                  className="flex h-9 w-9 items-center justify-center rounded-xl text-sm font-bold text-white shadow-sm bg-[var(--primary)] shrink-0"
+                >
+                  {user.first_name?.[0]}
+                  {user.last_name?.[0]}
+                </div>
+              )}
               <div className="hidden text-left md:block">
                 <p className="text-sm font-bold text-[var(--foreground)] leading-tight">
                   {user.first_name} {user.last_name}

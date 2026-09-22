@@ -5,7 +5,7 @@ const baseRaw: DbUserResponse = {
   id: 1,
   employeeId: "E1",
   email: "a@a.com",
-  title: "Mr",
+  title: "mr",
   firstName: "John",
   lastName: "Doe",
   role: "employee",
@@ -39,7 +39,7 @@ describe("mapDbUserToAppUser", () => {
       id: 1,
       employee_id: "E1",
       email: "a@a.com",
-      title: "Mr",
+      title: "mr",
       first_name: "John",
       last_name: "Doe",
       role: "employee",
@@ -74,6 +74,7 @@ describe("mapDbUserToAppUser", () => {
       linkedin_profile: null,
       declaration_accepted: null,
       declaration_accepted_at: null,
+      profile_picture_url: null,
     });
   });
 

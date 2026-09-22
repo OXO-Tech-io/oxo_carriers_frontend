@@ -75,6 +75,8 @@ export interface User {
   id: number;
   employee_id: string;
   email: string;
+  // OCD-449: personal contact email, distinct from the account/login email above.
+  personal_email?: string | null;
   title?: UserTitle | null;
   first_name: string;
   last_name: string;
@@ -123,6 +125,9 @@ export interface User {
   linkedin_profile?: string | null;
   declaration_accepted?: boolean | null;
   declaration_accepted_at?: string | null;
+  // OCD-454: relative /uploads/... path to the uploaded "My Profile" picture,
+  // resolved to a full URL via resolveFileUrl() before rendering.
+  profile_picture_url?: string | null;
 }
 
 export type ConsultantSubmissionStatus = "pending" | "approved" | "rejected";

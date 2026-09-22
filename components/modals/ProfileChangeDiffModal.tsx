@@ -14,6 +14,8 @@ import type {
 } from '@/types/profile';
 import { QUALIFICATION_LEVEL_OPTIONS } from '@/types/profile';
 import { format } from 'date-fns';
+import { resolveFileUrl } from '@/lib/constants';
+import { Paperclip } from 'lucide-react';
 
 const FIELD_LABELS: Record<string, string> = {
   contactNumber: 'Telephone Number',
@@ -31,6 +33,8 @@ const FIELD_LABELS: Record<string, string> = {
   electorate: 'Electorate',
   postalCode: 'Postal Code',
   linkedinProfile: 'LinkedIn Profile',
+  primarySchool: 'Primary School Attended',
+  secondarySchool: 'Secondary School Attended',
   address: 'Permanent Address',
   residing_address: 'Residing Address',
   blood_type: 'Blood Type',
@@ -314,6 +318,29 @@ export default function ProfileChangeDiffModal({
             {statusStyle.label}
           </span>
         </div>
+
+        {request.attachments && request.attachments.length > 0 && (
+          <div className="rounded-2xl border border-[var(--gray-100)] bg-[var(--gray-25)] p-4">
+            <p className="text-[10px] font-bold text-[var(--gray-400)] uppercase tracking-wider mb-2">
+              Supporting Documents
+            </p>
+            <ul className="space-y-1.5">
+              {request.attachments.map((a) => (
+                <li key={a.id} className="flex items-center gap-2">
+                  <Paperclip className="h-3.5 w-3.5 text-[var(--gray-400)] shrink-0" />
+                  <a
+                    href={resolveFileUrl(a.fileUrl)}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-xs font-semibold text-[var(--primary)] hover:underline truncate"
+                  >
+                    {a.fileName}
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
 
         <div className="space-y-3">
           {request.changes.map((item, idx) => (

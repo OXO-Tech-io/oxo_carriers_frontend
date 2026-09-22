@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import api from '@/lib/api';
+import { useAuth } from '@/hooks/useAuth';
 import { API_FILE_BASE_URL as API_BASE } from '@/lib/constants';
 import {
   DocumentTextIcon,
@@ -9,10 +10,12 @@ import {
   CheckCircleIcon,
   XCircleIcon,
   DocumentArrowUpIcon,
+  BanknotesIcon,
 } from '@heroicons/react/24/outline';
 
 type ClaimType = 'IN' | 'OPD';
 type ClaimStatus = 'pending' | 'approved' | 'rejected';
+type PaymentStatus = 'not_paid' | 'partially_paid' | 'paid';
 
 interface MedicalClaim {
   id: number;
@@ -25,6 +28,10 @@ interface MedicalClaim {
   relevant_document_url?: string | null;
   admin_comment?: string | null;
   resubmission_of?: number | null;
+  payment_status: PaymentStatus;
+  paid_amount?: number | null;
+  payment_date?: string | null;
+  payment_reference?: string | null;
   created_at: string;
   user?: {
     id: number;
@@ -35,7 +42,27 @@ interface MedicalClaim {
   };
 }
 
+const PAYMENT_STATUS_OPTIONS: { value: PaymentStatus; label: string }[] = [
+  { value: 'not_paid', label: 'Not Paid' },
+  { value: 'partially_paid', label: 'Partly Paid' },
+  { value: 'paid', label: 'Paid' },
+];
+
+const getPaymentStatusBadge = (status: PaymentStatus) => {
+  const styles: Record<PaymentStatus, string> = {
+    not_paid: 'bg-gray-100 text-gray-600',
+    partially_paid: 'bg-amber-100 text-amber-700',
+    paid: 'bg-emerald-100 text-emerald-700',
+  };
+  return styles[status] || styles.not_paid;
+};
+
+const getPaymentStatusLabel = (status: PaymentStatus) =>
+  PAYMENT_STATUS_OPTIONS.find((o) => o.value === status)?.label || status;
+
 export default function AdminMedicalInsurancePage() {
+  const { isHR, isFinance, isSuperAdmin } = useAuth();
+  const canAccess = isHR || isFinance || isSuperAdmin;
   const [claims, setClaims] = useState<MedicalClaim[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -44,6 +71,14 @@ export default function AdminMedicalInsurancePage() {
   const [filterType, setFilterType] = useState<ClaimType | ''>('');
   const [rejectingId, setRejectingId] = useState<number | null>(null);
   const [rejectComment, setRejectComment] = useState('');
+  const [payingId, setPayingId] = useState<number | null>(null);
+  const [paymentForm, setPaymentForm] = useState<{
+    payment_status: PaymentStatus;
+    paid_amount: string;
+    payment_date: string;
+    payment_reference: string;
+  }>({ payment_status: 'paid', paid_amount: '', payment_date: '', payment_reference: '' });
+  const [savingPayment, setSavingPayment] = useState(false);
 
   useEffect(() => {
     fetchClaims();
@@ -94,6 +129,37 @@ export default function AdminMedicalInsurancePage() {
     }
   };
 
+  const openPaymentForm = (claim: MedicalClaim) => {
+    setError('');
+    setPayingId(claim.id);
+    setPaymentForm({
+      payment_status: claim.payment_status === 'not_paid' ? 'paid' : claim.payment_status,
+      paid_amount: claim.paid_amount != null ? String(claim.paid_amount) : '',
+      payment_date: claim.payment_date ? claim.payment_date.slice(0, 10) : '',
+      payment_reference: claim.payment_reference || '',
+    });
+  };
+
+  const handleRecordPayment = async (id: number) => {
+    try {
+      setSavingPayment(true);
+      setError('');
+      await api.put(`/medical-insurance-claims/${id}/payments`, {
+        payment_status: paymentForm.payment_status,
+        paid_amount: paymentForm.paid_amount || undefined,
+        payment_date: paymentForm.payment_date || undefined,
+        payment_reference: paymentForm.payment_reference || undefined,
+      });
+      setSuccess('Payment details saved.');
+      setPayingId(null);
+      fetchClaims();
+    } catch (err: any) {
+      setError(err.response?.data?.message || 'Failed to save payment details');
+    } finally {
+      setSavingPayment(false);
+    }
+  };
+
   const getStatusBadge = (status: ClaimStatus) => {
     const styles = {
       pending: 'bg-amber-100 text-amber-700',
@@ -103,11 +169,22 @@ export default function AdminMedicalInsurancePage() {
     return styles[status] || styles.pending;
   };
 
+  if (!canAccess) {
+    return (
+      <div className="space-y-6">
+        <h1 className="text-3xl font-bold text-[#101828]">Medical Insurance Claims</h1>
+        <div className="bg-white rounded-2xl shadow-sm border border-[#E4E7EC] p-12 text-center">
+          <p className="text-sm text-[#475467]">You don't have permission to access this page.</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6 animate-fade-in">
       <div>
         <h1 className="text-3xl font-bold text-[#101828]">Medical Insurance Claims</h1>
-        <p className="mt-2 text-[#475467]">Verify documents and approve or reject claims</p>
+        <p className="mt-2 text-[#475467]">Verify documents, approve or reject claims, and process payments for approved claims</p>
       </div>
 
       {error && (
@@ -197,7 +274,33 @@ export default function AdminMedicalInsurancePage() {
                         {claim.status}
                       </span>
                     </div>
+                    {claim.status === 'approved' && (
+                      <div>
+                        <p className="text-xs text-[#98A2B3] mb-1">Payment</p>
+                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold ${getPaymentStatusBadge(claim.payment_status)}`}>
+                          {getPaymentStatusLabel(claim.payment_status)}
+                        </span>
+                      </div>
+                    )}
                   </div>
+                  {claim.status === 'approved' && claim.payment_status !== 'not_paid' && (
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4 p-3 bg-[#F9FAFB] rounded-lg">
+                      <div>
+                        <p className="text-xs text-[#98A2B3] mb-1">Amount Paid</p>
+                        <p className="text-sm font-semibold text-[#344054]">
+                          {claim.paid_amount != null ? Number(claim.paid_amount).toLocaleString() : '-'}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-[#98A2B3] mb-1">Payment Date</p>
+                        <p className="text-sm font-semibold text-[#344054]">{claim.payment_date || '-'}</p>
+                      </div>
+                      <div className="col-span-2">
+                        <p className="text-xs text-[#98A2B3] mb-1">Reference</p>
+                        <p className="text-sm font-semibold text-[#344054]">{claim.payment_reference || '-'}</p>
+                      </div>
+                    </div>
+                  )}
                   <div className="flex flex-wrap gap-3 mb-2">
                     <a
                       href={`${API_BASE}${claim.supportive_document_url}`}
@@ -251,6 +354,74 @@ export default function AdminMedicalInsurancePage() {
                       </div>
                     </div>
                   )}
+                  {payingId === claim.id && (
+                    <div className="mt-4 p-4 bg-[#ECF3FF] border border-[#B8CEFF] rounded-lg">
+                      <p className="text-sm font-semibold text-[#101828] mb-3">Record payment</p>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div>
+                          <label className="block text-xs font-medium text-[#667085] mb-1">Payment Status</label>
+                          <select
+                            value={paymentForm.payment_status}
+                            onChange={(e) => setPaymentForm((f) => ({ ...f, payment_status: e.target.value as PaymentStatus }))}
+                            className="block w-full px-3 py-2 border border-[#D0D5DD] rounded-lg text-sm bg-white focus:ring-2 focus:ring-[#465FFF] focus:border-transparent"
+                          >
+                            {PAYMENT_STATUS_OPTIONS.map((o) => (
+                              <option key={o.value} value={o.value}>{o.label}</option>
+                            ))}
+                          </select>
+                        </div>
+                        <div>
+                          <label className="block text-xs font-medium text-[#667085] mb-1">
+                            Amount Paid{paymentForm.payment_status !== 'not_paid' ? ' *' : ''}
+                          </label>
+                          <input
+                            type="number"
+                            min={0}
+                            step="0.01"
+                            value={paymentForm.paid_amount}
+                            onChange={(e) => setPaymentForm((f) => ({ ...f, paid_amount: e.target.value }))}
+                            className="block w-full px-3 py-2 border border-[#D0D5DD] rounded-lg text-sm focus:ring-2 focus:ring-[#465FFF] focus:border-transparent"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-medium text-[#667085] mb-1">
+                            Payment Date{paymentForm.payment_status !== 'not_paid' ? ' *' : ''}
+                          </label>
+                          <input
+                            type="date"
+                            value={paymentForm.payment_date}
+                            onChange={(e) => setPaymentForm((f) => ({ ...f, payment_date: e.target.value }))}
+                            className="block w-full px-3 py-2 border border-[#D0D5DD] rounded-lg text-sm focus:ring-2 focus:ring-[#465FFF] focus:border-transparent"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-medium text-[#667085] mb-1">Reference / Notes</label>
+                          <input
+                            type="text"
+                            value={paymentForm.payment_reference}
+                            onChange={(e) => setPaymentForm((f) => ({ ...f, payment_reference: e.target.value }))}
+                            placeholder="Bank ref, cheque no, notes..."
+                            className="block w-full px-3 py-2 border border-[#D0D5DD] rounded-lg text-sm focus:ring-2 focus:ring-[#465FFF] focus:border-transparent"
+                          />
+                        </div>
+                      </div>
+                      <div className="flex gap-2 mt-3">
+                        <button
+                          onClick={() => handleRecordPayment(claim.id)}
+                          disabled={savingPayment}
+                          className="px-4 py-2 text-sm font-semibold text-white bg-[#465FFF] rounded-lg hover:bg-[#3641F5] disabled:opacity-50"
+                        >
+                          {savingPayment ? 'Saving...' : 'Save Payment'}
+                        </button>
+                        <button
+                          onClick={() => setPayingId(null)}
+                          className="px-4 py-2 text-sm font-semibold text-[#344054] border border-[#D0D5DD] rounded-lg hover:bg-[#F9FAFB]"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </div>
+                  )}
                 </div>
                 {claim.status === 'pending' && (
                   <div className="flex flex-col gap-2 shrink-0">
@@ -268,6 +439,17 @@ export default function AdminMedicalInsurancePage() {
                         <XCircleIcon className="h-5 w-5 mr-2" /> Reject
                       </button>
                     ) : null}
+                  </div>
+                )}
+                {claim.status === 'approved' && payingId !== claim.id && (
+                  <div className="flex flex-col gap-2 shrink-0">
+                    <button
+                      onClick={() => openPaymentForm(claim)}
+                      className="inline-flex items-center justify-center px-4 py-2 text-sm font-semibold text-white bg-[#465FFF] rounded-lg hover:bg-[#3641F5]"
+                    >
+                      <BanknotesIcon className="h-5 w-5 mr-2" />
+                      {claim.payment_status === 'not_paid' ? 'Record Payment' : 'Update Payment'}
+                    </button>
                   </div>
                 )}
               </div>
