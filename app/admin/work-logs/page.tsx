@@ -60,14 +60,17 @@ function StatCard({
 
 export default function AdminWorkLogsPage() {
   const { isHRManager, isSuperAdmin } = useAuth();
-  // Defaults to today - HR picks an earlier date to check past submissions.
-  const [date, setDate] = useState(todayIso());
+  // Defaults to today - HR picks an earlier range to check past submissions.
+  const [range, setRange] = useState({ from: todayIso(), to: todayIso() });
   const [isExporting, setIsExporting] = useState(false);
   const [breakdown, setBreakdown] = useState<{ userId: number; employeeName: string } | null>(null);
 
-  const params = { from: date, to: date };
+  const params = range;
   const summaryQuery = useWorkLogSummaryQuery(params);
-  const dailyStatusQuery = useWorkLogDailyStatusQuery(date);
+  const dailyStatusQuery = useWorkLogDailyStatusQuery(params);
+
+  const setFrom = (from: string) => setRange((prev) => ({ from, to: prev.to < from ? from : prev.to }));
+  const setTo = (to: string) => setRange((prev) => ({ from: prev.from, to }));
 
   const deadlineQuery = useWorkLogDeadlineQuery();
   const updateDeadline = useUpdateWorkLogDeadlineMutation();
@@ -104,7 +107,7 @@ export default function AdminWorkLogsPage() {
     setIsExporting(true);
     try {
       const blob = await workLogService.downloadSummaryReport(params);
-      downloadBlob(blob, `work-logs-summary-${date}.xlsx`);
+      downloadBlob(blob, `work-logs-summary-${range.from}-to-${range.to}.xlsx`);
     } finally {
       setIsExporting(false);
     }
@@ -116,7 +119,7 @@ export default function AdminWorkLogsPage() {
       header: 'Employee Name',
       cell: ({ row }) => `${row.original.firstName} ${row.original.lastName}`,
     },
-    { accessorKey: 'totalHours', header: 'Total Hours' },
+    { accessorKey: 'totalMinutes', header: 'Total Minutes' },
     { accessorKey: 'entryCount', header: 'Entries' },
     {
       accessorKey: 'lateCount',
@@ -215,18 +218,31 @@ export default function AdminWorkLogsPage() {
         )}
       </div>
 
-      <div>
-        <label className="text-xs font-semibold text-[var(--gray-400)]">Date</label>
-        <input
-          type="date"
-          value={date}
-          max={todayIso()}
-          onChange={(e) => setDate(e.target.value)}
-          className="mt-1 block rounded-lg border border-[var(--gray-200)] bg-[var(--card-bg)] p-2 text-sm text-[var(--foreground)]"
-        />
+      <div className="flex flex-wrap items-end gap-4">
+        <div>
+          <label className="text-xs font-semibold text-[var(--gray-400)]">From</label>
+          <input
+            type="date"
+            value={range.from}
+            max={todayIso()}
+            onChange={(e) => setFrom(e.target.value)}
+            className="mt-1 block rounded-lg border border-[var(--gray-200)] bg-[var(--card-bg)] p-2 text-sm text-[var(--foreground)]"
+          />
+        </div>
+        <div>
+          <label className="text-xs font-semibold text-[var(--gray-400)]">To</label>
+          <input
+            type="date"
+            value={range.to}
+            min={range.from}
+            max={todayIso()}
+            onChange={(e) => setTo(e.target.value)}
+            className="mt-1 block rounded-lg border border-[var(--gray-200)] bg-[var(--card-bg)] p-2 text-sm text-[var(--foreground)]"
+          />
+        </div>
       </div>
 
-      {/* Attendance-style snapshot for the selected day. */}
+      {/* Attendance-style snapshot for the selected date range. */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard label="Submitted" value={dailyStatusQuery.data?.submittedCount ?? 0} icon={Users} accentColor="var(--primary)" />
         <StatCard label="On Time" value={dailyStatusQuery.data?.onTimeCount ?? 0} icon={CheckCircle2} accentColor="#16a34a" />
@@ -248,7 +264,8 @@ export default function AdminWorkLogsPage() {
         onClose={() => setBreakdown(null)}
         userId={breakdown?.userId ?? null}
         employeeName={breakdown?.employeeName ?? ''}
-        date={date}
+        from={range.from}
+        to={range.to}
       />
     </div>
   );

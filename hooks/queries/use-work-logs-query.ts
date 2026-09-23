@@ -20,10 +20,10 @@ export const useWorkLogSummaryQuery = (params: ListWorkLogsParams = {}) =>
     queryFn: () => workLogService.getSummary(params),
   });
 
-export const useWorkLogDailyStatusQuery = (date: string) =>
+export const useWorkLogDailyStatusQuery = (params: { date?: string; from?: string; to?: string }) =>
   useQuery({
-    queryKey: ['work-logs', 'daily-status', date],
-    queryFn: () => workLogService.getDailyStatus(date),
+    queryKey: ['work-logs', 'daily-status', params],
+    queryFn: () => workLogService.getDailyStatus(params),
   });
 
 export const workLogDeadlineQueryKey = (workDate?: string) =>
