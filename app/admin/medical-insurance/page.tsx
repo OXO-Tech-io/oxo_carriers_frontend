@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import api from '@/lib/api';
 import { useAuth } from '@/hooks/useAuth';
 import { API_FILE_BASE_URL as API_BASE } from '@/lib/constants';
+import { ConfirmationDialog } from '@/components/ui';
 import {
   DocumentTextIcon,
   UserIcon,
@@ -14,7 +15,7 @@ import {
 } from '@heroicons/react/24/outline';
 
 type ClaimType = 'IN' | 'OPD';
-type ClaimStatus = 'pending' | 'approved' | 'rejected';
+type ClaimStatus = 'pending' | 'approved' | 'rejected' | 'cancelled';
 type PaymentStatus = 'not_paid' | 'partially_paid' | 'paid';
 
 interface MedicalClaim {
@@ -71,6 +72,8 @@ export default function AdminMedicalInsurancePage() {
   const [filterType, setFilterType] = useState<ClaimType | ''>('');
   const [rejectingId, setRejectingId] = useState<number | null>(null);
   const [rejectComment, setRejectComment] = useState('');
+  const [approvingId, setApprovingId] = useState<number | null>(null);
+  const [approving, setApproving] = useState(false);
   const [payingId, setPayingId] = useState<number | null>(null);
   const [paymentForm, setPaymentForm] = useState<{
     payment_status: PaymentStatus;
@@ -103,12 +106,16 @@ export default function AdminMedicalInsurancePage() {
 
   const handleApprove = async (id: number) => {
     try {
+      setApproving(true);
       setError('');
       await api.put(`/medical-insurance-claims/${id}/decisions`, { action: 'approve' });
       setSuccess('Claim approved.');
+      setApprovingId(null);
       fetchClaims();
     } catch (err: any) {
       setError(err.response?.data?.message || 'Failed to approve');
+    } finally {
+      setApproving(false);
     }
   };
 
@@ -165,6 +172,7 @@ export default function AdminMedicalInsurancePage() {
       pending: 'bg-amber-100 text-amber-700',
       approved: 'bg-emerald-100 text-emerald-700',
       rejected: 'bg-red-100 text-red-700',
+      cancelled: 'bg-gray-100 text-gray-600',
     };
     return styles[status] || styles.pending;
   };
@@ -210,6 +218,7 @@ export default function AdminMedicalInsurancePage() {
             <option value="pending">Pending</option>
             <option value="approved">Approved</option>
             <option value="rejected">Rejected</option>
+            <option value="cancelled">Cancelled</option>
           </select>
         </div>
         <div>
@@ -324,6 +333,12 @@ export default function AdminMedicalInsurancePage() {
                   {claim.resubmission_of && (
                     <p className="text-xs text-[#667085]">Resubmission of claim #{claim.resubmission_of}</p>
                   )}
+                  {/* OCD-491: rejection comment was captured but never shown to HR/Finance/Admin after the fact. */}
+                  {claim.status === 'rejected' && claim.admin_comment && (
+                    <div className="mt-3 p-3 bg-red-50 border border-red-200 rounded-lg">
+                      <p className="text-xs font-semibold text-red-700">Rejection reason: <span className="font-normal">{claim.admin_comment}</span></p>
+                    </div>
+                  )}
                   {rejectingId === claim.id && (
                     <div className="mt-4 p-4 bg-[#FEF3C7] border border-[#FCD34D] rounded-lg">
                       <label className="block text-sm font-semibold text-[#92400E] mb-2">Rejection comment (required)</label>
@@ -426,7 +441,7 @@ export default function AdminMedicalInsurancePage() {
                 {claim.status === 'pending' && (
                   <div className="flex flex-col gap-2 shrink-0">
                     <button
-                      onClick={() => handleApprove(claim.id)}
+                      onClick={() => setApprovingId(claim.id)}
                       className="inline-flex items-center justify-center px-4 py-2 text-sm font-semibold text-white bg-[#10B981] rounded-lg hover:bg-[#059669]"
                     >
                       <CheckCircleIcon className="h-5 w-5 mr-2" /> Approve
@@ -457,6 +472,17 @@ export default function AdminMedicalInsurancePage() {
           ))}
         </div>
       )}
+
+      {/* OCD-492: confirm before approving - it's an impactful, irreversible decision. */}
+      <ConfirmationDialog
+        isOpen={approvingId !== null}
+        onClose={() => setApprovingId(null)}
+        onConfirm={() => approvingId !== null && handleApprove(approvingId)}
+        title="Approve Claim"
+        message="Approve this medical insurance claim? This action cannot be undone."
+        confirmLabel="Approve"
+        isLoading={approving}
+      />
     </div>
   );
 }

@@ -17,11 +17,12 @@ import {
 } from 'lucide-react';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
+import { ConfirmationDialog } from '@/components/ui';
 import { format } from 'date-fns';
 import { API_FILE_BASE_URL as API_BASE } from '@/lib/constants';
 
 type ClaimType = 'IN' | 'OPD';
-type ClaimStatus = 'pending' | 'approved' | 'rejected';
+type ClaimStatus = 'pending' | 'approved' | 'rejected' | 'cancelled';
 type PaymentStatus = 'not_paid' | 'partially_paid' | 'paid';
 
 interface MedicalClaim {
@@ -45,6 +46,13 @@ interface Limits {
   OPD: { maxPerQuarter: number; yearlyTotal: number };
 }
 
+interface OpdBalance {
+  quarter: string;
+  limit: number;
+  used: number;
+  remaining: number;
+}
+
 const formatCurrency = (value: number | string | undefined): string => {
   const numValue = typeof value === 'string' ? parseFloat(value) : (value || 0);
   return numValue.toLocaleString('en-US', {
@@ -57,9 +65,12 @@ export default function MedicalInsurancePage() {
   const [activeTab, setActiveTab] = useState<'apply' | 'claims'>('claims');
   const [claims, setClaims] = useState<MedicalClaim[]>([]);
   const [limits, setLimits] = useState<{ limits: Limits; currentQuarter: string } | null>(null);
+  const [opdBalance, setOpdBalance] = useState<OpdBalance | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [cancelTargetId, setCancelTargetId] = useState<number | null>(null);
+  const [cancelling, setCancelling] = useState(false);
 
   const [formData, setFormData] = useState({
     type: '' as ClaimType | '',
@@ -80,12 +91,18 @@ export default function MedicalInsurancePage() {
     try {
       setLoading(true);
       setError('');
-      const [claimsRes, limitsRes] = await Promise.all([
-        api.get('/medical-insurance-claims'),
+      // OCD-488: this is the personal "My Claims" page - always request only
+      // the logged-in user's own claims, regardless of role (HR/Finance/Super
+      // Admin get everyone's claims on the separate /admin/medical-insurance
+      // review page instead).
+      const [claimsRes, limitsRes, opdBalanceRes] = await Promise.all([
+        api.get('/medical-insurance-claims', { params: { mine: true } }),
         api.get('/medical-insurance-claims/limits'),
+        api.get('/medical-insurance-claims/opd-balance'),
       ]);
       setClaims(claimsRes.data.claims || []);
       setLimits(limitsRes.data);
+      setOpdBalance(opdBalanceRes.data);
       if (limitsRes.data?.currentQuarter && !formData.quarter) {
         setFormData((prev) => ({ ...prev, quarter: limitsRes.data.currentQuarter }));
       }
@@ -96,7 +113,27 @@ export default function MedicalInsurancePage() {
     }
   };
 
-  const maxAmount = formData.type === 'IN' ? 300000 : formData.type === 'OPD' ? 6000 : 0;
+  const handleCancelClaim = async () => {
+    if (cancelTargetId == null) return;
+    try {
+      setCancelling(true);
+      setError('');
+      await api.put(`/medical-insurance-claims/${cancelTargetId}/cancel`);
+      setSuccess('Claim cancelled.');
+      setCancelTargetId(null);
+      fetchData();
+    } catch (err: any) {
+      setError(err.response?.data?.message || 'Failed to cancel claim');
+    } finally {
+      setCancelling(false);
+    }
+  };
+
+  // OCD-487: OPD claims are additionally capped by whatever's left of the
+  // employee's quarterly balance (Pending + Approved claims already count
+  // against it on the backend) - not just the flat per-quarter limit.
+  const maxAmount =
+    formData.type === 'IN' ? 300000 : formData.type === 'OPD' ? Math.min(6000, opdBalance?.remaining ?? 6000) : 0;
   const isAmountValid = formData.amount ? parseFloat(formData.amount) <= maxAmount && parseFloat(formData.amount) > 0 : false;
 
   const handleFormSubmit = async (e: React.FormEvent) => {
@@ -163,6 +200,7 @@ export default function MedicalInsurancePage() {
       pending: 'bg-[var(--warning-light)] text-[var(--warning-text)] border border-[var(--warning-text)]/10',
       approved: 'bg-[var(--success-light)] text-[var(--success-text)] border border-[var(--success-text)]/10',
       rejected: 'bg-[var(--error-light)] text-[var(--error-text)] border border-[var(--error-text)]/10',
+      cancelled: 'bg-[var(--gray-100)] text-[var(--gray-500)] border border-[var(--gray-200)]',
     };
     return styles[status] || styles.pending;
   };
@@ -173,6 +211,8 @@ export default function MedicalInsurancePage() {
         return <CheckCircle2 className="h-4 w-4 text-[var(--success-text)]" />;
       case 'rejected':
         return <XCircle className="h-4 w-4 text-[var(--error-text)]" />;
+      case 'cancelled':
+        return <XCircle className="h-4 w-4 text-[var(--gray-400)]" />;
       default:
         return <Clock className="h-4 w-4 text-[var(--warning-text)]" />;
     }
@@ -330,6 +370,21 @@ export default function MedicalInsurancePage() {
                   </div>
                 )}
 
+                {/* OCD-487: employee's remaining OPD balance for the current quarter (Pending + Approved claims already used) */}
+                {formData.type === 'OPD' && opdBalance && (
+                  <div className="mb-6 p-4.5 bg-amber-500/5 dark:bg-amber-500/10 border border-amber-500/20 rounded-2xl text-xs text-[var(--foreground)] flex gap-3.5">
+                    <Info className="h-5 w-5 text-amber-500 shrink-0 mt-0.5" />
+                    <div className="space-y-1 w-full">
+                      <p className="font-bold text-amber-600 uppercase tracking-wider text-[10px]">Your OPD Balance ({opdBalance.quarter})</p>
+                      <div className="grid grid-cols-3 gap-2 text-[var(--gray-500)] font-medium">
+                        <span>Limit: <strong className="text-[var(--foreground)]">LKR {formatCurrency(opdBalance.limit)}</strong></span>
+                        <span>Used: <strong className="text-[var(--foreground)]">LKR {formatCurrency(opdBalance.used)}</strong></span>
+                        <span>Available: <strong className="text-[var(--foreground)]">LKR {formatCurrency(opdBalance.remaining)}</strong></span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
                 <form onSubmit={handleFormSubmit} className="space-y-6">
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                     <div>
@@ -379,6 +434,11 @@ export default function MedicalInsurancePage() {
                     {formData.type && (
                       <p className="mt-1.5 text-[10px] font-bold text-[var(--primary)]">
                         Maximum Allowed: LKR {formatCurrency(maxAmount)} {formData.type === 'OPD' ? 'per quarter' : 'per claim'}
+                      </p>
+                    )}
+                    {formData.type === 'OPD' && formData.amount && parseFloat(formData.amount) > maxAmount && (
+                      <p className="mt-1.5 text-[10px] font-bold text-[var(--error-text)]">
+                        Entered amount exceeds your remaining quarterly OPD claim balance of LKR {formatCurrency(maxAmount)}. Please enter an amount within the available limit.
                       </p>
                     )}
                   </div>
@@ -558,6 +618,16 @@ export default function MedicalInsurancePage() {
                                         )}
                                       </div>
                                     )}
+                                    {claim.status === 'pending' && (
+                                      <button
+                                        type="button"
+                                        onClick={() => setCancelTargetId(claim.id)}
+                                        className="inline-flex items-center gap-1 text-xs font-bold text-[var(--error-text)] hover:underline cursor-pointer"
+                                      >
+                                        <XCircle className="h-3.5 w-3.5" />
+                                        <span>Cancel Claim</span>
+                                      </button>
+                                    )}
                                   </div>
                                 </td>
                               </tr>
@@ -662,6 +732,18 @@ export default function MedicalInsurancePage() {
                               Resubmit Claim
                             </Button>
                           )}
+
+                          {claim.status === 'pending' && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="w-full text-xs mt-1 py-2 cursor-pointer text-[var(--error-text)]"
+                              leftIcon={<XCircle className="h-3.5 w-3.5" />}
+                              onClick={() => setCancelTargetId(claim.id)}
+                            >
+                              Cancel Claim
+                            </Button>
+                          )}
                         </div>
                       </Card>
                     ))}
@@ -672,6 +754,18 @@ export default function MedicalInsurancePage() {
           )}
         </div>
       )}
+
+      {/* OCD-486: confirm before withdrawing a pending claim. */}
+      <ConfirmationDialog
+        isOpen={cancelTargetId !== null}
+        onClose={() => setCancelTargetId(null)}
+        onConfirm={handleCancelClaim}
+        title="Cancel Claim"
+        message="Cancel this claim request? This cannot be undone."
+        confirmLabel="Cancel Claim"
+        variant="danger"
+        isLoading={cancelling}
+      />
     </motion.div>
   );
 }
