@@ -8,7 +8,7 @@ const { captured, createMock, ensureFreshTokenMock, syncFromKeycloakMock, logout
       responseRejected?: (error: any) => any;
     } = {};
 
-    const createMock = vi.fn(() => ({
+    const createMock = vi.fn((_config?: any) => ({
       interceptors: {
         request: {
           use: vi.fn((fn: any) => {
@@ -56,13 +56,25 @@ describe("lib/api", () => {
     await import("@/lib/api");
   });
 
-  it("creates an axios instance with credentials enabled", () => {
+  // A default Content-Type: application/json header breaks every
+  // FormData/file upload in the app - axios serializes a FormData body to a
+  // JSON string (losing the file) whenever the effective Content-Type is
+  // application/json, instead of leaving it for the browser to send as real
+  // multipart/form-data with the correct boundary. axios already sets
+  // application/json on its own for plain object payloads, so no default is
+  // needed for JSON requests to keep working. (Checked in the same test as
+  // the instance creation, not a separate one - @/lib/api is only actually
+  // re-imported/re-executed on the very first import in this file; later
+  // `await import(...)` calls hit the module cache and createMock's call
+  // history gets wiped by the next beforeEach's clearAllMocks().)
+  it("creates an axios instance with credentials enabled and no default Content-Type", () => {
     expect(createMock).toHaveBeenCalledWith(
       expect.objectContaining({
-        headers: { "Content-Type": "application/json" },
         withCredentials: true,
       }),
     );
+    const config = createMock.mock.calls[0][0];
+    expect(config.headers?.["Content-Type"]).toBeUndefined();
   });
 
   it("request interceptor attaches a bearer token and re-syncs the store when one is available", async () => {

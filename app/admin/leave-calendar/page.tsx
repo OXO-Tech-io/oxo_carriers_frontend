@@ -10,6 +10,7 @@ import {
   TrashIcon,
 } from '@heroicons/react/24/outline';
 import LeaveCalendarModal from '@/components/modals/LeaveCalendarModal';
+import { ConfirmationDialog } from '@/components/ui/ConfirmationDialog';
 
 interface LeaveCalendarEntry {
   id: number;
@@ -30,6 +31,8 @@ export default function LeaveCalendarPage() {
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [showModal, setShowModal] = useState(false);
   const [editingEntry, setEditingEntry] = useState<LeaveCalendarEntry | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<LeaveCalendarEntry | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [formData, setFormData] = useState({
     date: '',
     name: '',
@@ -105,18 +108,20 @@ export default function LeaveCalendarPage() {
     setShowModal(true);
   };
 
-  const handleDelete = async (id: number) => {
-    if (!confirm('Are you sure you want to delete this calendar entry?')) {
-      return;
-    }
+  const handleDelete = async () => {
+    if (!deleteTarget) return;
 
+    setIsDeleting(true);
     try {
-      await api.delete(`/leave-calendars/${id}`);
+      await api.delete(`/leave-calendars/${deleteTarget.id}`);
       setSuccess('Calendar entry deleted successfully');
+      setDeleteTarget(null);
       fetchEntries();
       setTimeout(() => setSuccess(''), 3000);
     } catch (err: any) {
       setError(err.response?.data?.message || 'Failed to delete calendar entry');
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -260,7 +265,7 @@ export default function LeaveCalendarPage() {
                         <PencilIcon className="h-5 w-5" />
                       </button>
                       <button
-                        onClick={() => handleDelete(entry.id)}
+                        onClick={() => setDeleteTarget(entry)}
                         className="text-red-600 hover:text-red-800"
                       >
                         <TrashIcon className="h-5 w-5" />
@@ -283,6 +288,16 @@ export default function LeaveCalendarPage() {
         formData={formData}
         setFormData={setFormData}
         error={error}
+      />
+
+      <ConfirmationDialog
+        isOpen={!!deleteTarget}
+        onClose={() => setDeleteTarget(null)}
+        onConfirm={handleDelete}
+        variant="danger"
+        isLoading={isDeleting}
+        title="Delete Calendar Entry"
+        message={`Are you sure you want to delete "${deleteTarget?.name}"? This cannot be undone.`}
       />
     </div>
   );

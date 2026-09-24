@@ -47,8 +47,10 @@ describe("AdminMedicalInsurancePage", () => {
     apiMock.get.mockResolvedValue({ data: { claims: [claimRow()] } });
     render(<AdminMedicalInsurancePage />);
 
-    await screen.findByText("Jane Doe");
-    fireEvent.click(screen.getByRole("button", { name: /Approve/i }));
+    // The first claim in the list is auto-selected into the detail panel.
+    const detail = await screen.findByTestId("claim-detail");
+    await within(detail).findByText("Jane Doe");
+    fireEvent.click(within(detail).getByRole("button", { name: /Approve/i }));
 
     // Approving is not called until the confirmation dialog is confirmed.
     expect(apiMock.put).not.toHaveBeenCalled();
@@ -69,8 +71,9 @@ describe("AdminMedicalInsurancePage", () => {
     });
     render(<AdminMedicalInsurancePage />);
 
-    await screen.findByText("Jane Doe");
-    expect(screen.getByText(/Rejection reason:/)).toBeInTheDocument();
-    expect(screen.getByText("Missing itemized bill")).toBeInTheDocument();
+    const detail = await screen.findByTestId("claim-detail");
+    await within(detail).findByText("Jane Doe");
+    expect(within(detail).getByText("Rejection Reason")).toBeInTheDocument();
+    expect(within(detail).getByText("Missing itemized bill")).toBeInTheDocument();
   });
 });

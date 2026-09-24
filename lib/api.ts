@@ -8,9 +8,15 @@ const API_URL =
     ? 'https://backend.oxocareers.com/api/v1'
     : 'http://localhost:5000/api/v1');
 
+// No default Content-Type here - axios already sets 'application/json' on its
+// own for plain object payloads (see transformRequest in axios' defaults).
+// Forcing it as a default instead breaks every FormData/file upload in the
+// app: axios treats a FormData body as JSON whenever the effective
+// Content-Type is 'application/json', silently serializing it (and losing
+// the file) instead of sending real multipart/form-data - the browser needs
+// to set that header itself, with the correct multipart boundary.
 const api = axios.create({
   baseURL: API_URL,
-  headers: { 'Content-Type': 'application/json' },
   withCredentials: true,
 });
 

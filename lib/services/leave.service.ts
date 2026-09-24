@@ -6,6 +6,10 @@ export interface ListLeaveRequestsParams {
   status?: string;
   department?: string;
   year?: number;
+  /** Forces the result to the caller's own requests, even for a role that
+   * can otherwise browse everyone's (Administrator/HR Manager) - used by
+   * the personal "My Requests" view, as opposed to org-wide Leave Management. */
+  mine?: boolean;
 }
 
 export interface ApproveLeaveInput {
