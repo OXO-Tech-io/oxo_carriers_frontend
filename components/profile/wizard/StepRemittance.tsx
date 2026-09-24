@@ -50,7 +50,7 @@ export default function StepRemittance({ form, currentEmployeeId }: StepProps) {
     const timer = setTimeout(async () => {
       setCheckingAccount(true);
       try {
-        const response = await api.get('/users/check-bank-account', {
+        const response = await api.get('/users/bank-account-availability', {
           params: { accountNumber: value, excludeEmployeeId: currentEmployeeId },
         });
         if (watch('accountNumber') !== value) return;

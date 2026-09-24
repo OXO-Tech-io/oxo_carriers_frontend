@@ -46,7 +46,7 @@ export default function StepBasicInfo({ form, currentUserRole }: StepProps) {
     const timer = setTimeout(async () => {
       setCheckingEmail(true);
       try {
-        const response = await api.get("/users/check-email", { params: { email: value } });
+        const response = await api.get("/users/email-availability", { params: { email: value } });
         // Bail if the field changed while the request was in flight.
         if (watch("email") !== value) return;
         lastCheckedRef.current = value;

@@ -7,12 +7,12 @@ import type { ArchivedEmployee } from '@/types/archive';
 // server-side on the `archive` key (Administrator/HR Manager by default).
 export const archiveService = {
   listAll: async (): Promise<ArchivedEmployee[]> => {
-    const res = await api.get<ApiResponse<ArchivedEmployee[]>>('/archive');
+    const res = await api.get<ApiResponse<ArchivedEmployee[]>>('/archives');
     return extractData(res);
   },
 
   getById: async (id: number): Promise<ArchivedEmployee> => {
-    const res = await api.get<ApiResponse<ArchivedEmployee>>(`/archive/${id}`);
+    const res = await api.get<ApiResponse<ArchivedEmployee>>(`/archives/${id}`);
     return extractData(res);
   },
 };

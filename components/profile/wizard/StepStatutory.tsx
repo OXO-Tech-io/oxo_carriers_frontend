@@ -108,7 +108,7 @@ export default function StepStatutory({ form, email, designation, currentEmploye
     const timer = setTimeout(async () => {
       setCheckingNic(true);
       try {
-        const response = await api.get('/users/check-nic', {
+        const response = await api.get('/users/nic-availability', {
           params: { nationalId: value, excludeEmployeeId: currentEmployeeId },
         });
         if (watch('nationalId') !== value) return;

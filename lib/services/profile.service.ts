@@ -129,12 +129,14 @@ export const profileService = {
 
   // OCD-454: uploads the "My Profile" camera-icon picture and returns the
   // updated user row (with the new profilePictureUrl already set).
-  uploadProfilePicture: async (file: File): Promise<User> => {
+  uploadProfilePicture: async (userId: number, file: File): Promise<User> => {
     const formData = new FormData();
     formData.append('profilePicture', file);
-    const res = await api.post<{ success: boolean; user: DbUserResponse }>('/users/me/profile-picture', formData, {
-      headers: { 'Content-Type': 'multipart/form-data' },
-    });
+    const res = await api.post<{ success: boolean; user: DbUserResponse }>(
+      `/users/${userId}/profile-pictures`,
+      formData,
+      { headers: { 'Content-Type': 'multipart/form-data' } },
+    );
     return mapDbUserToAppUser(res.data.user) as User;
   },
 
