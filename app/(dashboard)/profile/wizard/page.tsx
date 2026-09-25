@@ -31,19 +31,24 @@ import StepWorkHistory from '@/components/modals/employee-wizard/StepWorkHistory
 import type { EmployeeWizardValues } from '@/components/modals/employee-wizard/wizardTypes';
 import { buildDefaultValues, type WizardFormValues } from '@/components/profile/wizard/wizardTypes';
 import { buildWizardChanges } from '@/components/profile/wizard/wizardDiff';
+import {
+  PROFILE_WIZARD_STEP_KEYS as STEP,
+  SUPPORTING_DOCUMENT_ACCEPT,
+  SUPPORTING_DOCUMENT_MAX_SIZE_MB,
+} from '@/lib/constants';
 
 // OCD-456: unified with Create Employee's own step order (EMPLOYEE_STEPS in
 // CreateUserModal.tsx), minus the admin-only Basic Info/Employment
 // Details/Review & Confirm steps the ticket explicitly excludes from
 // self-service editing.
 const STEPS: StepDefinition[] = [
-  { key: 'statutory', label: 'Statutory Info' },
-  { key: 'remittance', label: 'Remittance' },
-  { key: 'dependents', label: 'Medical & Welfare' },
-  { key: 'emergency', label: 'Emergency Contacts' },
-  { key: 'welfare', label: 'Welfare' },
-  { key: 'education', label: 'Education' },
-  { key: 'workHistory', label: 'Work History' },
+  { key: STEP.STATUTORY, label: 'Statutory Info' },
+  { key: STEP.REMITTANCE, label: 'Remittance' },
+  { key: STEP.DEPENDENTS, label: 'Medical & Welfare' },
+  { key: STEP.EMERGENCY, label: 'Emergency Contacts' },
+  { key: STEP.WELFARE, label: 'Welfare' },
+  { key: STEP.EDUCATION, label: 'Education' },
+  { key: STEP.WORK_HISTORY, label: 'Work History' },
 ];
 
 // Fields validated (via RHF trigger) before "Next"/final submit advances
@@ -204,8 +209,8 @@ function ProfileWizardForm({
   const maritalStatus = form.watch('maritalStatus');
   const isMarried = maritalStatus === 'married';
 
-  const steps = STEPS.map((s) => (s.key === 'dependents' ? { ...s, disabled: !isMarried } : s));
-  const dependentsIndex = STEPS.findIndex((s) => s.key === 'dependents');
+  const steps = STEPS.map((s) => (s.key === STEP.DEPENDENTS ? { ...s, disabled: !isMarried } : s));
+  const dependentsIndex = STEPS.findIndex((s) => s.key === STEP.DEPENDENTS);
 
   const goNext = async () => {
     const fieldNames = STEP_FIELD_NAMES[stepIndex];
@@ -273,15 +278,15 @@ function ProfileWizardForm({
 
       <Card padding="lg">
         <StepPanel stepKey={currentKey}>
-          {currentKey === 'statutory' && (
+          {currentKey === STEP.STATUTORY && (
             <StepStatutory form={form} email={email} designation={designation} currentEmployeeId={currentEmployeeId} />
           )}
-          {currentKey === 'remittance' && <StepRemittance form={form} currentEmployeeId={currentEmployeeId} />}
-          {currentKey === 'dependents' && <StepDependents form={form} isMarried={isMarried} />}
-          {currentKey === 'emergency' && <StepEmergencyContacts form={form} />}
-          {currentKey === 'welfare' && <StepWelfare form={form} />}
-          {currentKey === 'education' && <StepEducation form={employeeForm} />}
-          {currentKey === 'workHistory' && <StepWorkHistory form={employeeForm} />}
+          {currentKey === STEP.REMITTANCE && <StepRemittance form={form} currentEmployeeId={currentEmployeeId} />}
+          {currentKey === STEP.DEPENDENTS && <StepDependents form={form} isMarried={isMarried} />}
+          {currentKey === STEP.EMERGENCY && <StepEmergencyContacts form={form} />}
+          {currentKey === STEP.WELFARE && <StepWelfare form={form} />}
+          {currentKey === STEP.EDUCATION && <StepEducation form={employeeForm} />}
+          {currentKey === STEP.WORK_HISTORY && <StepWorkHistory form={employeeForm} />}
         </StepPanel>
 
         {/* OCD-478: optional Reason for Change + supporting documents,
@@ -313,8 +318,8 @@ function ProfileWizardForm({
               </label>
               <FileUpload
                 multiple
-                accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
-                maxSizeMB={10}
+                accept={SUPPORTING_DOCUMENT_ACCEPT}
+                maxSizeMB={SUPPORTING_DOCUMENT_MAX_SIZE_MB}
                 onFilesSelected={setChangeDocuments}
               />
             </div>

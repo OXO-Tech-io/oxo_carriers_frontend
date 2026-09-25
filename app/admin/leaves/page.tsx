@@ -12,6 +12,7 @@ import { ConfirmationDialog } from '@/components/ui/ConfirmationDialog';
 import { RejectLeaveModal } from '@/components/leaves/RejectLeaveModal';
 import { LeaveStatusBadge } from '@/components/leaves/LeaveStatusBadge';
 import type { LeaveRequest } from '@/types';
+import { DATE_FORMATS } from '@/lib/constants';
 
 type Tab = 'pending' | 'approved' | 'rejected';
 
@@ -183,8 +184,8 @@ export default function AdminLeaveManagementPage() {
                       {request.user?.first_name} {request.user?.last_name}
                     </p>
                     <p className="text-[11px] text-[var(--gray-400)] font-semibold truncate mt-0.5">
-                      {request.leave_type?.name} · {format(new Date(request.start_date), 'MMM dd')}–
-                      {format(new Date(request.end_date), 'MMM dd')} · {request.total_days}d
+                      {request.leave_type?.name} · {format(new Date(request.start_date), DATE_FORMATS.SHORT)}–
+                      {format(new Date(request.end_date), DATE_FORMATS.SHORT)} · {request.total_days}d
                     </p>
                   </div>
                   <LeaveStatusBadge status={request.status} />
@@ -218,7 +219,7 @@ export default function AdminLeaveManagementPage() {
                       <div>
                         <p className="text-[10px] text-[var(--gray-400)] font-bold uppercase tracking-wider mb-0.5">Dates</p>
                         <p className="text-xs font-bold text-[var(--foreground)]">
-                          {format(new Date(selected.start_date), 'MMM dd')} - {format(new Date(selected.end_date), 'MMM dd, yyyy')}
+                          {format(new Date(selected.start_date), DATE_FORMATS.SHORT)} - {format(new Date(selected.end_date), DATE_FORMATS.MEDIUM)}
                         </p>
                       </div>
                       <div>
@@ -271,7 +272,7 @@ export default function AdminLeaveManagementPage() {
                       <LeaveStatusBadge status={selected.status} />
                       {selected.team_leader_approval_date && (
                         <span className="text-[10px] text-[var(--gray-400)] font-semibold">
-                          TL Approved: {format(new Date(selected.team_leader_approval_date), 'MMM dd, yyyy')}
+                          TL Approved: {format(new Date(selected.team_leader_approval_date), DATE_FORMATS.MEDIUM)}
                         </span>
                       )}
                     </div>
