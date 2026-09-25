@@ -3,6 +3,8 @@
 import { useState } from "react";
 import { useForm, type UseFormReturn } from "react-hook-form";
 import { UserRole } from "@/types";
+import type { UserTitle } from "@/types/profile";
+import { ConfirmationDialog } from "@/components/ui/ConfirmationDialog";
 import { Stepper, StepPanel, type StepDefinition } from "@/components/ui/Stepper";
 import {
   nomineeToValue,
@@ -100,8 +102,13 @@ interface CreateUserModalProps {
   onSubmit: (data: {
     employee_id?: string;
     email: string;
+    // OCD-449: personal contact email, distinct from the account/login email
+    // above - omitted for Service Providers, same as first/last name.
+    personal_email?: string;
     first_name: string;
     last_name: string;
+    // OCD-475: parity with Edit Profile.
+    title?: UserTitle;
     role: UserRole;
     // Omitted for Service Providers (a separate, minimal flow) - required for
     // every other role, enforced server-side in UsersService.create.
@@ -120,6 +127,8 @@ interface CreateUserModalProps {
     swift_code?: string;
     company_name?: string;
     contact_number?: string;
+    // OCD-477: parity with My Profile's Education tab.
+    undergraduate_degree_completion_date?: string;
     profile?: CreateEmployeeProfilePayload;
   }) => Promise<void>;
   currentUserRole?: UserRole;
@@ -156,35 +165,77 @@ function stepFieldNames(stepKey: string, role: UserRole): (keyof EmployeeWizardV
   const isServiceProvider = role === UserRole.SERVICE_PROVIDER;
   switch (stepKey) {
     case "basic":
-      return isServiceProvider ? ["company_name", "email"] : ["first_name", "last_name", "email"];
+      return isServiceProvider
+        ? ["company_name", "email", "contact_number"]
+        : ["first_name", "last_name", "email", "personalEmail", "employee_id"];
+    case "bank":
+      return ["bank_name", "account_holder_name", "account_number", "bank_branch"];
     case "employment":
-      return role === UserRole.CONSULTANT ? ["employee_category", "hourly_rate"] : ["employee_category"];
+      return role === UserRole.CONSULTANT
+        ? ["employee_category", "hourly_rate", "position", "work_location", "hire_date", "department"]
+        : ["employee_category", "position", "work_location", "hire_date", "department"];
+    // Every field with a `validate` rule (not just `required` ones) must be
+    // listed here - RHF's `trigger()` only checks the exact field names it's
+    // given, so a format-only rule (e.g. noEmoji, validateNic,
+    // validateLinkedInUrl) would otherwise never actually block "Next"
+    // (OCD-413/416/417/419/420/427/429/433).
     case "statutory":
       return [
         "nationalId",
         "legalName",
         "initialsName",
+        "callingName",
         "permanentAddressLine1",
+        "permanentAddressLine2",
         "permanentCity",
         "permanentDistrict",
+        "gramaNiladariDivision",
+        "electorate",
+        "postalCode",
         "dateOfBirth",
         "birthPlace",
         "sex",
         "maritalStatus",
         "nationality",
+        "religion",
         "mobileNumber",
+        "secondaryContactNumber",
+        "spouseName",
+        "spouseNic",
+        "spouseDateOfBirth",
+        "spouseContactNumber",
+        "spouseOccupation",
         "motherName",
+        "motherOccupation",
+        "motherContactNumber",
         "fatherName",
+        "fatherOccupation",
+        "fatherContactNumber",
+        "siblingDetails",
         "nominees",
       ];
     case "remittance":
-      return ["accountHolderName", "accountNumber", "bankName", "bankBranch"];
+      return [
+        "residingAddressLine1",
+        "residingAddressLine2",
+        "residingCity",
+        "residingDistrict",
+        "landlineNumber",
+        "accountHolderName",
+        "accountNumber",
+        "bankName",
+        "bankBranch",
+        "bankBranchCode",
+        "swiftCode",
+      ];
     case "dependents":
       return ["dependents"];
     case "emergency":
-      return ["emergencyContacts"];
+      return ["emergencyContacts", "bloodType", "medicalConditions", "allergies"];
+    case "welfare":
+      return ["weddingAnniversaryDate", "hobbies", "communityActivities", "professionalMemberships", "linkedinProfile", "additionalNotes"];
     case "education":
-      return ["education"];
+      return ["education", "primarySchoolAttended", "secondarySchoolAttended"];
     case "workHistory":
       return ["workHistory"];
     default:
@@ -199,6 +250,14 @@ export default function CreateUserModal({
   currentUserRole,
 }: CreateUserModalProps) {
   const [stepIndex, setStepIndex] = useState(0);
+  // OCD-435: the furthest step the user has already validated their way
+  // past via "Next" - "View all steps" can jump anywhere up to here, in
+  // either direction, without skipping a step's own required-field
+  // validation (which already ran when the user first reached it).
+  const [maxStepIndex, setMaxStepIndex] = useState(0);
+  // OCD-450: guards the backdrop-click / close-button close path with a
+  // confirmation once the user has actually entered something.
+  const [showCloseConfirm, setShowCloseConfirm] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const form = useForm<EmployeeWizardValues>({ defaultValues: defaultEmployeeWizardValues });
   // EmployeeWizardValues extends WizardFormValues (same field names/types, plus
@@ -220,6 +279,7 @@ export default function CreateUserModal({
   const resetWizard = () => {
     form.reset(defaultEmployeeWizardValues);
     setStepIndex(0);
+    setMaxStepIndex(0);
   };
 
   const goNext = async () => {
@@ -229,7 +289,9 @@ export default function CreateUserModal({
     if (!valid) return;
     let nextIndex = stepIndex + 1;
     if (nextIndex === dependentsIndex && !isMarried) nextIndex += 1;
-    setStepIndex(Math.min(nextIndex, steps.length - 1));
+    nextIndex = Math.min(nextIndex, steps.length - 1);
+    setStepIndex(nextIndex);
+    setMaxStepIndex((prev) => Math.max(prev, nextIndex));
   };
 
   const goBack = () => {
@@ -238,15 +300,32 @@ export default function CreateUserModal({
     setStepIndex(Math.max(prevIndex, 0));
   };
 
-  // "View all steps" only lets you jump back to an already-completed step -
-  // stepping forward would skip that step's own required-field validation.
+  // OCD-435: "View all steps" can jump to any step already reached before -
+  // forward or backward - since each of those steps' required-field
+  // validation already ran the first time "Next" carried the user past it.
   const goToStep = (index: number) => {
-    if (index <= stepIndex) setStepIndex(index);
+    if (index <= maxStepIndex) setStepIndex(index);
   };
 
   const handleClose = () => {
     resetWizard();
     onClose();
+  };
+
+  // OCD-450: clicking the backdrop or the close button used to discard
+  // everything with no warning. Only prompt if there's actually something
+  // to lose.
+  const requestClose = () => {
+    if (form.formState.isDirty) {
+      setShowCloseConfirm(true);
+    } else {
+      handleClose();
+    }
+  };
+
+  const confirmDiscard = () => {
+    setShowCloseConfirm(false);
+    handleClose();
   };
 
   const handleFinalSubmit = async () => {
@@ -280,8 +359,10 @@ export default function CreateUserModal({
         : {
             employee_id: values.employee_id,
             email: values.email,
+            personal_email: values.personalEmail,
             first_name: values.first_name,
             last_name: values.last_name,
+            title: values.title || undefined,
             role: values.role,
             employee_category: values.employee_category as "internal" | "client_side",
             department: values.department,
@@ -290,6 +371,7 @@ export default function CreateUserModal({
             hire_date: values.hire_date,
             manager_id: values.manager_id,
             hourly_rate: values.hourly_rate,
+            undergraduate_degree_completion_date: values.undergraduateDegreeCompletionDate || undefined,
             bank_name: values.bankName,
             account_holder_name: values.accountHolderName,
             account_number: values.accountNumber,
@@ -400,18 +482,18 @@ export default function CreateUserModal({
       <div className="flex min-h-full items-end justify-center p-4 text-center sm:items-center sm:p-0">
         <div
           className="fixed inset-0 bg-opacity-50 backdrop-blur-sm transition-opacity"
-          onClick={handleClose}
+          onClick={requestClose}
         ></div>
         <div
-          className="relative transform overflow-hidden rounded-2xl bg-white text-left shadow-xl transition-all sm:my-8 sm:w-full sm:max-w-6xl"
+          className="relative transform overflow-hidden rounded-2xl bg-[var(--card-bg)] text-left shadow-xl transition-all sm:my-8 sm:w-full sm:max-w-6xl"
           onClick={(e) => e.stopPropagation()}
         >
-          <div className="bg-white px-6 pt-6 pb-6">
+          <div className="bg-[var(--card-bg)] px-6 pt-6 pb-6">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-2xl font-bold text-[#101828]">Create New Employee</h3>
+              <h3 className="text-2xl font-bold text-[var(--foreground)]">Create New Employee</h3>
               <button
-                onClick={handleClose}
-                className="text-[#98A2B3] hover:text-[#344054] transition-colors"
+                onClick={requestClose}
+                className="text-[var(--gray-400)] hover:text-[var(--gray-600)] transition-colors"
               >
                 <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path
@@ -448,11 +530,11 @@ export default function CreateUserModal({
               {currentKey === "review" && <StepReview form={form} />}
             </StepPanel>
 
-            <div className="flex items-center justify-between pt-6 mt-2 border-t border-[#E4E7EC]">
+            <div className="flex items-center justify-between pt-6 mt-2 border-t border-[var(--gray-100)]">
               <button
                 type="button"
-                onClick={stepIndex === 0 ? handleClose : goBack}
-                className="px-4 py-2.5 text-sm font-semibold text-[#344054] bg-white border border-[#D0D5DD] rounded-lg hover:bg-[#F9FAFB] transition-colors"
+                onClick={stepIndex === 0 ? requestClose : goBack}
+                className="px-4 py-2.5 text-sm font-semibold text-[var(--gray-600)] bg-[var(--card-bg)] border border-[var(--gray-100)] rounded-lg hover:bg-[var(--gray-25)] transition-colors"
               >
                 {stepIndex === 0 ? "Cancel" : "Back"}
               </button>
@@ -461,7 +543,7 @@ export default function CreateUserModal({
                   type="button"
                   onClick={handleFinalSubmit}
                   disabled={submitting}
-                  className="px-4 py-2.5 text-sm font-semibold text-white bg-[#465FFF] rounded-lg hover:bg-[#3641F5] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="px-4 py-2.5 text-sm font-semibold text-white bg-[var(--primary)] rounded-lg hover:bg-[var(--primary-hover)] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {submitting ? "Creating..." : "Create Employee"}
                 </button>
@@ -469,7 +551,7 @@ export default function CreateUserModal({
                 <button
                   type="button"
                   onClick={goNext}
-                  className="px-4 py-2.5 text-sm font-semibold text-white bg-[#465FFF] rounded-lg hover:bg-[#3641F5] transition-colors"
+                  className="px-4 py-2.5 text-sm font-semibold text-white bg-[var(--primary)] rounded-lg hover:bg-[var(--primary-hover)] transition-colors"
                 >
                   Next
                 </button>
@@ -478,6 +560,17 @@ export default function CreateUserModal({
           </div>
         </div>
       </div>
+
+      <ConfirmationDialog
+        isOpen={showCloseConfirm}
+        onClose={() => setShowCloseConfirm(false)}
+        onConfirm={confirmDiscard}
+        title="Discard new employee?"
+        message="You have unsaved changes. Are you sure you want to leave this form? Any unsaved information will be lost."
+        confirmLabel="Discard Changes"
+        cancelLabel="Continue Editing"
+        variant="danger"
+      />
     </div>
   );
 }

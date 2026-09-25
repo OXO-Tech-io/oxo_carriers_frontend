@@ -18,8 +18,19 @@ interface EmployeeNotesModalProps {
 // rendered for that role, matching the doc's write-only requirement. Only
 // HR Manager/super_admin sees the full note history with author + timestamp
 // and can edit entries.
+// OCD-480: notes are historical/audit records - only the note's own author,
+// or someone holding a strictly more senior role than the author, may edit
+// it (also enforced server-side - this only controls whether the Edit
+// button is shown). Mirrors the HR_MANAGER > HR_EXECUTIVE authority already
+// established for Profile Approvals (OCD-473).
+const NOTE_ROLE_RANK: Record<string, number> = {
+  hr_executive: 1,
+  hr_manager: 2,
+  super_admin: 3,
+};
+
 export function EmployeeNotesModal({ isOpen, onClose, employeeId, employeeName }: EmployeeNotesModalProps) {
-  const { isHRManager, isSuperAdmin } = useAuth();
+  const { user, isHRManager, isSuperAdmin } = useAuth();
   const canViewNotes = isHRManager || isSuperAdmin;
 
   const [content, setContent] = useState('');
@@ -41,6 +52,18 @@ export function EmployeeNotesModal({ isOpen, onClose, employeeId, employeeName }
   const startEdit = (note: EmployeeNote) => {
     setEditingId(note.id);
     setEditContent(note.content);
+  };
+
+  // OCD-480: super_admin outranks everyone; otherwise you can edit your own
+  // note, or a note authored by a strictly lower-ranked role. Notes with no
+  // resolvable author role are treated as rank 0 (editable by any of the
+  // three note-privileged roles).
+  const canEditNote = (note: EmployeeNote) => {
+    if (isSuperAdmin) return true;
+    if (user?.id != null && note.authorUserId === user.id) return true;
+    const actorRank = NOTE_ROLE_RANK[user?.role ?? ''] ?? 0;
+    const authorRank = note.authorRole ? NOTE_ROLE_RANK[note.authorRole] ?? 0 : 0;
+    return actorRank > authorRank;
   };
 
   const saveEdit = async () => {
@@ -119,14 +142,21 @@ export function EmployeeNotesModal({ isOpen, onClose, employeeId, employeeName }
                         </ul>
                       )}
                       <div className="mt-2 flex items-center justify-between">
-                        <p className="text-[10px] text-[var(--gray-400)]">{new Date(note.createdAt).toLocaleString()}</p>
-                        <button
-                          type="button"
-                          onClick={() => startEdit(note)}
-                          className="text-xs font-semibold text-[var(--primary)] hover:underline"
-                        >
-                          Edit
-                        </button>
+                        <p className="text-[10px] text-[var(--gray-400)]">
+                          {new Date(note.createdAt).toLocaleString()}
+                          {note.authorName && (
+                            <span className="font-semibold text-[var(--gray-500)]"> · Added by {note.authorName}</span>
+                          )}
+                        </p>
+                        {canEditNote(note) && (
+                          <button
+                            type="button"
+                            onClick={() => startEdit(note)}
+                            className="text-xs font-semibold text-[var(--primary)] hover:underline"
+                          >
+                            Edit
+                          </button>
+                        )}
                       </div>
                     </>
                   )}

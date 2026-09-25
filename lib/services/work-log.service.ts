@@ -36,6 +36,11 @@ export const workLogService = {
     return extractData(res);
   },
 
+  update: async (id: number, entry: WorkLogEntryDraft): Promise<WorkLog> => {
+    const res = await api.put<ApiResponse<WorkLog>>(`/work-logs/${id}`, entry);
+    return extractData(res);
+  },
+
   listMine: async (params: ListWorkLogsParams = {}): Promise<WorkLog[]> => {
     const res = await api.get<ApiResponse<WorkLog[]>>('/work-logs/mine', { params });
     return extractData(res);
@@ -56,11 +61,9 @@ export const workLogService = {
     return extractData(res);
   },
 
-  /** Attendance-style snapshot for a single day. Defaults to today server-side. */
-  getDailyStatus: async (date?: string): Promise<WorkLogDailyStatus> => {
-    const res = await api.get<ApiResponse<WorkLogDailyStatus>>('/work-logs/daily-status', {
-      params: date ? { date } : undefined,
-    });
+  /** Attendance-style snapshot for a single day or a date range. Defaults to today server-side. */
+  getDailyStatus: async (params: { date?: string; from?: string; to?: string } = {}): Promise<WorkLogDailyStatus> => {
+    const res = await api.get<ApiResponse<WorkLogDailyStatus>>('/work-logs/daily-status', { params });
     return extractData(res);
   },
 

@@ -2,9 +2,10 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { useForm } from 'react-hook-form';
+import { useForm, type UseFormReturn } from 'react-hook-form';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
+import { FileUpload } from '@/components/ui/FileUpload';
 import { Stepper, StepPanel, type StepDefinition } from '@/components/ui/Stepper';
 import { useToast } from '@/contexts/ToastContext';
 import { useProfileQuery } from '@/hooks/queries/use-profile-query';
@@ -13,47 +14,105 @@ import { useEmployeeNomineesQuery } from '@/hooks/queries/use-employee-nominees-
 import { useEmployeeDependentsQuery } from '@/hooks/queries/use-employee-dependents-query';
 import { useEmployeeEmergencyContactsQuery } from '@/hooks/queries/use-employee-emergency-contacts-query';
 import { useEmployeeWelfareInfoQuery } from '@/hooks/queries/use-employee-welfare-info-query';
+import { useEmployeeEducationQuery } from '@/hooks/queries/use-employee-education-query';
+import { useEmployeeWorkHistoryQuery } from '@/hooks/queries/use-employee-work-history-query';
 import { useSubmitProfileChangeMutation } from '@/hooks/mutations/use-submit-profile-change-mutation';
 import StepStatutory from '@/components/profile/wizard/StepStatutory';
 import StepRemittance from '@/components/profile/wizard/StepRemittance';
 import StepDependents from '@/components/profile/wizard/StepDependents';
 import StepEmergencyContacts from '@/components/profile/wizard/StepEmergencyContacts';
 import StepWelfare from '@/components/profile/wizard/StepWelfare';
+// OCD-456: Education & Work History are reused verbatim from the Create
+// Employee wizard - neither component references anything admin/role-only,
+// so they're safe to reuse here exactly as StepStatutory/StepRemittance/etc.
+// are already reused in the opposite direction by CreateUserModal.tsx.
+import StepEducation from '@/components/modals/employee-wizard/StepEducation';
+import StepWorkHistory from '@/components/modals/employee-wizard/StepWorkHistory';
+import type { EmployeeWizardValues } from '@/components/modals/employee-wizard/wizardTypes';
 import { buildDefaultValues, type WizardFormValues } from '@/components/profile/wizard/wizardTypes';
 import { buildWizardChanges } from '@/components/profile/wizard/wizardDiff';
+import {
+  PROFILE_WIZARD_STEP_KEYS as STEP,
+  SUPPORTING_DOCUMENT_ACCEPT,
+  SUPPORTING_DOCUMENT_MAX_SIZE_MB,
+} from '@/lib/constants';
 
+// OCD-456: unified with Create Employee's own step order (EMPLOYEE_STEPS in
+// CreateUserModal.tsx), minus the admin-only Basic Info/Employment
+// Details/Review & Confirm steps the ticket explicitly excludes from
+// self-service editing.
 const STEPS: StepDefinition[] = [
-  { key: 'statutory', label: 'Statutory Info' },
-  { key: 'remittance', label: 'Remittance' },
-  { key: 'dependents', label: 'Medical & Welfare' },
-  { key: 'emergency', label: 'Emergency Contacts' },
-  { key: 'welfare', label: 'Welfare' },
+  { key: STEP.STATUTORY, label: 'Statutory Info' },
+  { key: STEP.REMITTANCE, label: 'Remittance' },
+  { key: STEP.DEPENDENTS, label: 'Medical & Welfare' },
+  { key: STEP.EMERGENCY, label: 'Emergency Contacts' },
+  { key: STEP.WELFARE, label: 'Welfare' },
+  { key: STEP.EDUCATION, label: 'Education' },
+  { key: STEP.WORK_HISTORY, label: 'Work History' },
 ];
 
-// Fields validated (via RHF trigger) before "Next" advances past each step.
-// The final tab (Welfare) has no required fields.
+// Fields validated (via RHF trigger) before "Next"/final submit advances
+// past each step. Every field with a `validate` rule (not just `required`
+// ones) must be listed here - RHF's `trigger()` only checks the exact field
+// names it's given, so a format-only rule (e.g. noEmoji, validateNic,
+// validateLinkedInUrl) would otherwise never actually block progress
+// (OCD-413/416/417/419/420/427/429/433).
 const STEP_FIELD_NAMES: (keyof WizardFormValues)[][] = [
   [
     'nationalId',
     'legalName',
     'initialsName',
+    'callingName',
     'permanentAddressLine1',
+    'permanentAddressLine2',
     'permanentCity',
     'permanentDistrict',
+    'gramaNiladariDivision',
+    'electorate',
+    'postalCode',
     'dateOfBirth',
     'birthPlace',
     'sex',
     'maritalStatus',
     'nationality',
+    'religion',
     'mobileNumber',
+    'secondaryContactNumber',
+    'spouseName',
+    'spouseNic',
+    'spouseDateOfBirth',
+    'spouseContactNumber',
+    'spouseOccupation',
     'motherName',
+    'motherOccupation',
+    'motherContactNumber',
     'fatherName',
+    'fatherOccupation',
+    'fatherContactNumber',
+    'siblingDetails',
     'nominees',
   ],
-  ['accountHolderName', 'accountNumber', 'bankName', 'bankBranch'],
+  [
+    'residingAddressLine1',
+    'residingAddressLine2',
+    'residingCity',
+    'residingDistrict',
+    'landlineNumber',
+    'accountHolderName',
+    'accountNumber',
+    'bankName',
+    'bankBranch',
+    'bankBranchCode',
+    'swiftCode',
+  ],
   ['dependents'],
-  ['emergencyContacts'],
-  [],
+  ['emergencyContacts', 'bloodType', 'medicalConditions', 'allergies'],
+  ['weddingAnniversaryDate', 'hobbies', 'communityActivities', 'professionalMemberships', 'linkedinProfile', 'additionalNotes'],
+  // OCD-456: mirrors stepFieldNames('education', ...) in CreateUserModal.tsx -
+  // undergraduateDegreeCompletionDate has no validate/required rule so it's
+  // deliberately omitted here too.
+  ['education', 'primarySchoolAttended', 'secondarySchoolAttended'],
+  ['workHistory'],
 ];
 
 export default function ProfileWizardPage() {
@@ -73,8 +132,18 @@ export default function ProfileWizardPage() {
   const { data: welfareInfo, isLoading: welfareLoading } = useEmployeeWelfareInfoQuery(profile?.id, {
     enabled: !!profile?.id,
   });
+  const { data: education, isLoading: educationLoading } = useEmployeeEducationQuery();
+  const { data: workHistory, isLoading: workHistoryLoading } = useEmployeeWorkHistoryQuery();
 
-  const isLoading = !profile || piiLoading || nomineesLoading || dependentsLoading || contactsLoading || welfareLoading;
+  const isLoading =
+    !profile ||
+    piiLoading ||
+    nomineesLoading ||
+    dependentsLoading ||
+    contactsLoading ||
+    welfareLoading ||
+    educationLoading ||
+    workHistoryLoading;
 
   if (isLoading) {
     return (
@@ -88,9 +157,21 @@ export default function ProfileWizardPage() {
 
   return (
     <ProfileWizardForm
-      defaultValues={buildDefaultValues({ user: profile, pii, nominees, dependents, emergencyContacts, welfareInfo })}
+      defaultValues={buildDefaultValues({
+        user: profile,
+        pii,
+        nominees,
+        dependents,
+        emergencyContacts,
+        welfareInfo,
+        education,
+        workHistory,
+      })}
       email={profile?.email ?? ''}
       designation={profile?.position ?? ''}
+      // OCD-444: lets StepStatutory/StepRemittance's duplicate NIC/bank
+      // account checks exclude this employee's own already-saved value.
+      currentEmployeeId={profile?.employee_id}
       onDone={() => router.push('/profile')}
     />
   );
@@ -100,22 +181,36 @@ function ProfileWizardForm({
   defaultValues,
   email,
   designation,
+  currentEmployeeId,
   onDone,
 }: {
   defaultValues: WizardFormValues;
   email: string;
   designation: string;
+  currentEmployeeId?: string;
   onDone: () => void;
 }) {
   const toast = useToast();
   const submitChange = useSubmitProfileChangeMutation();
   const [stepIndex, setStepIndex] = useState(0);
+  // OCD-478: optional "Reason for Change" + supporting documents, collected
+  // on the final step only - kept local to this component rather than added
+  // to the RHF form since they don't belong to any wizard step's own field
+  // set and aren't part of the diff sent per-field via buildWizardChanges.
+  const [reasonForChange, setReasonForChange] = useState('');
+  const [changeDocuments, setChangeDocuments] = useState<File[]>([]);
   const form = useForm<WizardFormValues>({ defaultValues });
+  // EmployeeWizardValues extends WizardFormValues with the same field names/
+  // types for education/workHistory (see wizardTypes.ts), so this cast lets
+  // StepEducation/StepWorkHistory - written against EmployeeWizardValues for
+  // Create Employee - be reused verbatim here, mirroring the reverse cast
+  // CreateUserModal.tsx already does for the other Step* components.
+  const employeeForm = form as unknown as UseFormReturn<EmployeeWizardValues>;
   const maritalStatus = form.watch('maritalStatus');
   const isMarried = maritalStatus === 'married';
 
-  const steps = STEPS.map((s) => (s.key === 'dependents' ? { ...s, disabled: !isMarried } : s));
-  const dependentsIndex = STEPS.findIndex((s) => s.key === 'dependents');
+  const steps = STEPS.map((s) => (s.key === STEP.DEPENDENTS ? { ...s, disabled: !isMarried } : s));
+  const dependentsIndex = STEPS.findIndex((s) => s.key === STEP.DEPENDENTS);
 
   const goNext = async () => {
     const fieldNames = STEP_FIELD_NAMES[stepIndex];
@@ -139,13 +234,25 @@ function ProfileWizardForm({
   };
 
   const handleFinalSubmit = async () => {
+    // "Submit for Approval" on the last step (Work History) never went
+    // through goNext's trigger() call, so its own fields were never
+    // actually validated before this ran. Mirrors CreateUserModal.tsx's
+    // equivalent trigger before its own final submit.
+    const fieldNames = STEP_FIELD_NAMES[stepIndex];
+    const valid = fieldNames.length === 0 ? true : await form.trigger(fieldNames as any);
+    if (!valid) return;
+
     const changes = buildWizardChanges(defaultValues, form.getValues());
     if (changes.length === 0) {
       toast.info('No changes detected', 'Update at least one field before submitting.');
       return;
     }
     try {
-      await submitChange.mutateAsync({ changes });
+      await submitChange.mutateAsync({
+        changes,
+        comments: reasonForChange.trim() || undefined,
+        files: changeDocuments.length ? changeDocuments : undefined,
+      });
       toast.success('Change request submitted', 'HR will review your requested changes shortly.');
       onDone();
     } catch {
@@ -171,12 +278,53 @@ function ProfileWizardForm({
 
       <Card padding="lg">
         <StepPanel stepKey={currentKey}>
-          {currentKey === 'statutory' && <StepStatutory form={form} email={email} designation={designation} />}
-          {currentKey === 'remittance' && <StepRemittance form={form} />}
-          {currentKey === 'dependents' && <StepDependents form={form} isMarried={isMarried} />}
-          {currentKey === 'emergency' && <StepEmergencyContacts form={form} />}
-          {currentKey === 'welfare' && <StepWelfare form={form} />}
+          {currentKey === STEP.STATUTORY && (
+            <StepStatutory form={form} email={email} designation={designation} currentEmployeeId={currentEmployeeId} />
+          )}
+          {currentKey === STEP.REMITTANCE && <StepRemittance form={form} currentEmployeeId={currentEmployeeId} />}
+          {currentKey === STEP.DEPENDENTS && <StepDependents form={form} isMarried={isMarried} />}
+          {currentKey === STEP.EMERGENCY && <StepEmergencyContacts form={form} />}
+          {currentKey === STEP.WELFARE && <StepWelfare form={form} />}
+          {currentKey === STEP.EDUCATION && <StepEducation form={employeeForm} />}
+          {currentKey === STEP.WORK_HISTORY && <StepWorkHistory form={employeeForm} />}
         </StepPanel>
+
+        {/* OCD-478: optional Reason for Change + supporting documents,
+            shown only on the final step, right before "Submit for Approval". */}
+        {isLastStep && (
+          <div className="mt-8 pt-6 border-t border-[var(--gray-100)] space-y-4">
+            <div>
+              <h3 className="text-sm font-bold text-[var(--foreground)]">Supporting Information (Optional)</h3>
+              <p className="text-xs text-[var(--gray-400)] font-medium mt-1">
+                Give HR context for these changes and attach any supporting documents (e.g. NIC copy, address proof,
+                marriage certificate, educational certificate).
+              </p>
+            </div>
+            <div>
+              <label className="block text-[10px] font-bold text-[var(--gray-400)] uppercase tracking-wider mb-2">
+                Reason for Change
+              </label>
+              <textarea
+                value={reasonForChange}
+                onChange={(e) => setReasonForChange(e.target.value)}
+                rows={3}
+                placeholder="Explain why you're requesting these changes..."
+                className="w-full rounded-xl border border-[var(--gray-200)] bg-[var(--card-bg)] p-3 text-sm text-[var(--foreground)] focus:outline-none focus:ring-2 focus:ring-[var(--primary-ring)]"
+              />
+            </div>
+            <div>
+              <label className="block text-[10px] font-bold text-[var(--gray-400)] uppercase tracking-wider mb-2">
+                Supporting Documents
+              </label>
+              <FileUpload
+                multiple
+                accept={SUPPORTING_DOCUMENT_ACCEPT}
+                maxSizeMB={SUPPORTING_DOCUMENT_MAX_SIZE_MB}
+                onFilesSelected={setChangeDocuments}
+              />
+            </div>
+          </div>
+        )}
 
         <div className="flex items-center justify-between mt-8 pt-6 border-t border-[var(--gray-100)]">
           <Button type="button" variant="outline" onClick={goBack} disabled={stepIndex === 0}>

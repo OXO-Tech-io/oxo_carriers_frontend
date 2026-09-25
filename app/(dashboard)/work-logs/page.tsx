@@ -3,13 +3,23 @@
 import { useRef, useState } from 'react';
 import type { ColumnDef } from '@tanstack/react-table';
 import { Plus, Trash2, Download, Upload, AlertCircle, Clock } from 'lucide-react';
-import { Button, DataTable } from '@/components/ui';
+import { ActionsMenu, Badge, Button, DataTable } from '@/components/ui';
 import { useMyWorkLogsQuery, useWorkLogDeadlineQuery } from '@/hooks/queries/use-work-logs-query';
 import { useSubmitWorkLogMutation, useBulkUploadWorkLogMutation } from '@/hooks/mutations/use-work-log-mutations';
 import { workLogService } from '@/lib/services/work-log.service';
+import { WorkLogEditModal } from '@/components/modals/WorkLogEditModal';
 import type { BulkUploadResult, WorkLog, WorkLogEntryDraft } from '@/types/hrModules';
+import {
+  blockInvalidMinutesKeys,
+  clampMinutes,
+  isFutureDate,
+  isValidMinutes,
+  minutesByDate,
+  MAX_MINUTES_PER_DAY,
+  todayIso,
+} from '@/lib/work-log-validation';
 
-const emptyRow = (): WorkLogEntryDraft => ({ workDate: new Date().toISOString().slice(0, 10), taskDescription: '', hoursSpent: 0, remarks: '' });
+const emptyRow = (): WorkLogEntryDraft => ({ workDate: todayIso(), taskDescription: '', minutesSpent: 0, remarks: '' });
 
 const formatTime = (hhmm: string) => {
   const [hour, minute] = hhmm.split(':').map(Number);
@@ -22,6 +32,7 @@ export default function WorkLogsPage() {
   const [activeTab, setActiveTab] = useState<'entry' | 'bulk'>('entry');
   const [rows, setRows] = useState<WorkLogEntryDraft[]>([emptyRow()]);
   const [bulkResult, setBulkResult] = useState<BulkUploadResult | null>(null);
+  const [editingEntry, setEditingEntry] = useState<WorkLog | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const myLogsQuery = useMyWorkLogsQuery();
@@ -41,10 +52,19 @@ export default function WorkLogsPage() {
   const addRow = () => setRows((prev) => [...prev, emptyRow()]);
   const removeRow = (index: number) => setRows((prev) => prev.filter((_, i) => i !== index));
 
+  // Every row must be complete and valid before Submit becomes enabled - and
+  // the day's total across rows (plus whatever's already submitted, checked
+  // server-side) must stay within 24h. See OCD-459 and OCD-460.
+  const dailyTotals = minutesByDate(rows);
+  const rowsExceedDailyCap = [...dailyTotals.values()].some((total) => total > MAX_MINUTES_PER_DAY);
+  const allRowsValid = rows.every(
+    (r) => r.taskDescription.trim().length > 0 && isValidMinutes(r.minutesSpent) && !isFutureDate(r.workDate),
+  );
+  const canSubmit = allRowsValid && !rowsExceedDailyCap;
+
   const handleSubmit = async () => {
-    const valid = rows.filter((r) => r.taskDescription.trim() && r.hoursSpent > 0);
-    if (!valid.length) return;
-    await submitMutation.mutateAsync(valid);
+    if (!canSubmit) return;
+    await submitMutation.mutateAsync(rows);
     setRows([emptyRow()]);
   };
 
@@ -68,27 +88,38 @@ export default function WorkLogsPage() {
   const columns: ColumnDef<WorkLog, any>[] = [
     { accessorKey: 'workDate', header: 'Date', cell: ({ row }) => new Date(row.original.workDate).toLocaleDateString() },
     { accessorKey: 'taskDescription', header: 'Task' },
-    { accessorKey: 'hoursSpent', header: 'Hours' },
+    { accessorKey: 'minutesSpent', header: 'Minutes' },
     { accessorKey: 'remarks', header: 'Remarks', cell: ({ row }) => row.original.remarks || '—' },
     {
-      accessorKey: 'isLate',
+      id: 'status',
       header: 'Status',
-      cell: ({ row }) =>
-        row.original.isLate ? (
-          <span
-            className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2.5 py-0.5 text-xs font-semibold text-amber-700"
-            title={
-              row.original.deadlineAt
-                ? `Deadline was ${new Date(row.original.deadlineAt).toLocaleString()}`
-                : undefined
-            }
-          >
-            <AlertCircle className="h-3 w-3" />
-            Late submission
-          </span>
-        ) : (
-          <span className="text-xs text-[var(--gray-400)]">—</span>
-        ),
+      cell: ({ row }) => (
+        <div className="flex flex-wrap items-center gap-1.5">
+          {row.original.isLate ? (
+            <span
+              className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2.5 py-0.5 text-xs font-semibold text-amber-700"
+              title={
+                row.original.deadlineAt
+                  ? `Deadline was ${new Date(row.original.deadlineAt).toLocaleString()}`
+                  : undefined
+              }
+            >
+              <AlertCircle className="h-3 w-3" />
+              Late submission
+            </span>
+          ) : (
+            <span className="text-xs text-[var(--gray-400)]">—</span>
+          )}
+          {row.original.isEdited && <Badge variant="info">Edited</Badge>}
+        </div>
+      ),
+    },
+    {
+      id: 'actions',
+      header: '',
+      cell: ({ row }) => (
+        <ActionsMenu items={[{ label: 'Edit', onClick: () => setEditingEntry(row.original) }]} />
+      ),
     },
   ];
 
@@ -131,6 +162,13 @@ export default function WorkLogsPage() {
     );
   };
 
+  const mySubmissions = (
+    <div className="pt-4">
+      <h3 className="text-sm font-bold text-[var(--foreground)] mb-3">My Submissions</h3>
+      <DataTable columns={columns} data={myLogsQuery.data ?? []} isLoading={myLogsQuery.isLoading} />
+    </div>
+  );
+
   return (
     <div className="space-y-6 animate-fade-in">
       <div>
@@ -158,67 +196,81 @@ export default function WorkLogsPage() {
       {activeTab === 'entry' && (
         <div className="space-y-4">
           <div className="space-y-3">
-            {rows.map((row, index) => (
-              <div key={index} className="flex flex-wrap items-end gap-3 rounded-xl border border-[var(--gray-100)] p-3">
-                <div>
-                  <label className="text-xs font-semibold text-[var(--gray-400)]">Date</label>
-                  <input
-                    type="date"
-                    value={row.workDate}
-                    onChange={(e) => updateRow(index, { workDate: e.target.value })}
-                    className="mt-1 rounded-lg border border-[var(--gray-200)] bg-[var(--card-bg)] p-2 text-sm text-[var(--foreground)]"
-                  />
+            {rows.map((row, index) => {
+              const rowFuture = isFutureDate(row.workDate);
+              const dateTotal = dailyTotals.get(row.workDate) ?? 0;
+              return (
+                <div key={index} className="rounded-xl border border-[var(--gray-100)] p-3 space-y-2">
+                  <div className="flex flex-wrap items-end gap-3">
+                    <div>
+                      <label className="text-xs font-semibold text-[var(--gray-400)]">Date</label>
+                      <input
+                        type="date"
+                        value={row.workDate}
+                        max={todayIso()}
+                        onChange={(e) => updateRow(index, { workDate: e.target.value })}
+                        className="mt-1 rounded-lg border border-[var(--gray-200)] bg-[var(--card-bg)] p-2 text-sm text-[var(--foreground)]"
+                      />
+                    </div>
+                    <div className="flex-1 min-w-[200px]">
+                      <label className="text-xs font-semibold text-[var(--gray-400)]">Task Description</label>
+                      <input
+                        value={row.taskDescription}
+                        onChange={(e) => updateRow(index, { taskDescription: e.target.value })}
+                        className="mt-1 w-full rounded-lg border border-[var(--gray-200)] bg-[var(--card-bg)] p-2 text-sm text-[var(--foreground)]"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-xs font-semibold text-[var(--gray-400)]">Minutes</label>
+                      <input
+                        type="number"
+                        min={1}
+                        max={1440}
+                        step={1}
+                        inputMode="numeric"
+                        value={row.minutesSpent}
+                        onKeyDown={blockInvalidMinutesKeys}
+                        onChange={(e) => updateRow(index, { minutesSpent: clampMinutes(Number(e.target.value)) })}
+                        className="mt-1 w-24 rounded-lg border border-[var(--gray-200)] bg-[var(--card-bg)] p-2 text-sm text-[var(--foreground)]"
+                      />
+                    </div>
+                    <div className="flex-1 min-w-[150px]">
+                      <label className="text-xs font-semibold text-[var(--gray-400)]">Remarks</label>
+                      <input
+                        value={row.remarks ?? ''}
+                        onChange={(e) => updateRow(index, { remarks: e.target.value })}
+                        className="mt-1 w-full rounded-lg border border-[var(--gray-200)] bg-[var(--card-bg)] p-2 text-sm text-[var(--foreground)]"
+                      />
+                    </div>
+                    {rows.length > 1 && (
+                      <button type="button" onClick={() => removeRow(index)} className="p-2 text-red-500 hover:bg-red-50 rounded-lg">
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    )}
+                  </div>
+                  {rowFuture && (
+                    <p className="text-xs text-red-500">Worklogs cannot be submitted for future dates.</p>
+                  )}
+                  {!rowFuture && dateTotal > MAX_MINUTES_PER_DAY && (
+                    <p className="text-xs text-red-500">
+                      Total worklog minutes for {row.workDate} ({dateTotal}) cannot exceed {MAX_MINUTES_PER_DAY} minutes (24 hours).
+                    </p>
+                  )}
                 </div>
-                <div className="flex-1 min-w-[200px]">
-                  <label className="text-xs font-semibold text-[var(--gray-400)]">Task Description</label>
-                  <input
-                    value={row.taskDescription}
-                    onChange={(e) => updateRow(index, { taskDescription: e.target.value })}
-                    className="mt-1 w-full rounded-lg border border-[var(--gray-200)] bg-[var(--card-bg)] p-2 text-sm text-[var(--foreground)]"
-                  />
-                </div>
-                <div>
-                  <label className="text-xs font-semibold text-[var(--gray-400)]">Hours</label>
-                  <input
-                    type="number"
-                    step="0.5"
-                    min="0"
-                    max="24"
-                    value={row.hoursSpent}
-                    onChange={(e) => updateRow(index, { hoursSpent: Number(e.target.value) })}
-                    className="mt-1 w-24 rounded-lg border border-[var(--gray-200)] bg-[var(--card-bg)] p-2 text-sm text-[var(--foreground)]"
-                  />
-                </div>
-                <div className="flex-1 min-w-[150px]">
-                  <label className="text-xs font-semibold text-[var(--gray-400)]">Remarks</label>
-                  <input
-                    value={row.remarks ?? ''}
-                    onChange={(e) => updateRow(index, { remarks: e.target.value })}
-                    className="mt-1 w-full rounded-lg border border-[var(--gray-200)] bg-[var(--card-bg)] p-2 text-sm text-[var(--foreground)]"
-                  />
-                </div>
-                {rows.length > 1 && (
-                  <button type="button" onClick={() => removeRow(index)} className="p-2 text-red-500 hover:bg-red-50 rounded-lg">
-                    <Trash2 className="h-4 w-4" />
-                  </button>
-                )}
-              </div>
-            ))}
+              );
+            })}
           </div>
 
           <div className="flex items-center justify-between">
             <Button variant="outline" size="sm" leftIcon={<Plus className="h-4 w-4" />} onClick={addRow}>
               Add another task
             </Button>
-            <Button onClick={handleSubmit} isLoading={submitMutation.isPending}>
+            <Button onClick={handleSubmit} isLoading={submitMutation.isPending} disabled={!canSubmit}>
               Submit
             </Button>
           </div>
 
-          <div className="pt-4">
-            <h3 className="text-sm font-bold text-[var(--foreground)] mb-3">My Submissions</h3>
-            <DataTable columns={columns} data={myLogsQuery.data ?? []} isLoading={myLogsQuery.isLoading} />
-          </div>
+          {mySubmissions}
         </div>
       )}
 
@@ -262,8 +314,12 @@ export default function WorkLogsPage() {
               )}
             </div>
           )}
+
+          {mySubmissions}
         </div>
       )}
+
+      <WorkLogEditModal key={editingEntry?.id ?? 'closed'} entry={editingEntry} onClose={() => setEditingEntry(null)} />
     </div>
   );
 }

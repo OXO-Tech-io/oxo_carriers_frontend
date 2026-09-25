@@ -166,6 +166,33 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
+/* OCD-414: native date/time picker icons (WebKit/Chromium's calendar/clock
+   glyph) are painted by the OS using the input's `color-scheme`, not by
+   ordinary CSS `color` - so on a dark field background the icon stayed
+   near-black-on-dark and was effectively invisible. Applied once here,
+   globally, and driven by the same `.dark` class the app's manual theme
+   toggle already sets on <html> (see contexts/ThemeContext.tsx), so it
+   stays in sync with the toggle rather than the OS `prefers-color-scheme`
+   (which Tailwind's own `dark:` variant would use here, since this project
+   has no `@custom-variant dark` override - see components/layout/Header.tsx
+   for the one pre-existing, OS-driven `dark:` usage). This covers every
+   date/time field across the app (wizard steps included) without needing
+   a per-field className. */
+input[type="date"],
+input[type="time"],
+input[type="datetime-local"],
+input[type="month"],
+input[type="week"] {
+  color-scheme: light;
+}
+.dark input[type="date"],
+.dark input[type="time"],
+.dark input[type="datetime-local"],
+.dark input[type="month"],
+.dark input[type="week"] {
+  color-scheme: dark;
+}
+
 /* ── Utility ── */
 .transition-smooth { transition: all var(--transition); }
 
@@ -226,7 +253,14 @@ body {
 }
 .date-range-hint svg { flex-shrink: 0; }
 
-.holiday-calendar .react-datepicker {
+/* `calendarClassName` ("holiday-calendar") is applied to the SAME element as
+   react-datepicker's own root "react-datepicker" class, not to a wrapping
+   ancestor - `.holiday-calendar.react-datepicker` (no space) is required
+   here so this actually matches the root element. Every other rule below
+   targets a `react-datepicker__*` sub-element, which genuinely is a
+   descendant of that root, so the space-separated `.holiday-calendar
+   .react-datepicker__foo` form is correct for those. */
+.holiday-calendar.react-datepicker {
   border: 1px solid var(--gray-100);
   border-radius: var(--radius-2xl);
   font-family: inherit;
@@ -344,25 +378,27 @@ body {
 .holiday-calendar .react-datepicker__navigation--next { right: 16px; }
 .holiday-calendar .react-datepicker__navigation-icon::before { border-color: var(--gray-400); }
 .holiday-calendar .react-datepicker__navigation:hover *::before { border-color: var(--primary-hover); }
-.holiday-calendar .react-datepicker__month-dropdown,
-.holiday-calendar .react-datepicker__year-dropdown {
-  background-color: white;
+/* `dropdownMode: "select"` (set on the DatePicker below) renders native
+   <select> month/year-select> elements, not the __month-dropdown/-option
+   divs used by the "scroll" dropdown mode - those are styled here instead,
+   with `color-scheme` so the browser's own popup list (which CSS can't
+   reach) also renders dark instead of defaulting to a white native widget. */
+.holiday-calendar .react-datepicker__month-select,
+.holiday-calendar .react-datepicker__year-select,
+.holiday-calendar .react-datepicker__month-year-select {
+  background-color: var(--card-bg);
+  color: var(--foreground);
   border: 1px solid var(--gray-100);
   border-radius: 8px;
-  padding: 0.5rem;
-  box-shadow: var(--shadow-md);
-}
-.holiday-calendar .react-datepicker__month-option,
-.holiday-calendar .react-datepicker__year-option {
   padding: 0.25rem 0.5rem;
-  border-radius: 6px;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  color-scheme: light;
 }
-.holiday-calendar .react-datepicker__month-option:hover,
-.holiday-calendar .react-datepicker__year-option:hover { background-color: var(--gray-50); }
-.holiday-calendar .react-datepicker__month-option--selected,
-.holiday-calendar .react-datepicker__year-option--selected {
-  background-color: var(--primary);
-  color: white;
+.dark .holiday-calendar .react-datepicker__month-select,
+.dark .holiday-calendar .react-datepicker__year-select,
+.dark .holiday-calendar .react-datepicker__month-year-select {
+  color-scheme: dark;
 }
 .holiday-calendar .react-datepicker__day--in-range {
   background-color: var(--primary-light);
@@ -400,4 +436,34 @@ body {
 .holiday-calendar .react-datepicker__day--range-end.holiday-day {
   background-color: var(--warning-text);
   color: white;
+}
+
+/* Own pending/approved leave request markers (OCD-512) */
+.holiday-calendar .leave-day--pending {
+  background-color: var(--warning-light);
+  color: var(--warning-text);
+}
+.holiday-calendar .leave-day--pending:hover { background-color: var(--warning-light); }
+.holiday-calendar .leave-day--approved {
+  background-color: var(--success-light);
+  color: var(--success-text);
+}
+.holiday-calendar .leave-day--approved:hover { background-color: var(--success-light); }
+.leave-period-chip {
+  position: absolute;
+  top: 2px;
+  right: 3px;
+  font-size: 7px;
+  font-weight: 800;
+  line-height: 1;
+  padding: 1px 3px;
+  border-radius: 4px;
+}
+.leave-period-chip--pending {
+  background-color: var(--warning-light);
+  color: var(--warning-text);
+}
+.leave-period-chip--approved {
+  background-color: var(--success-light);
+  color: var(--success-text);
 }

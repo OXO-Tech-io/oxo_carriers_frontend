@@ -26,17 +26,40 @@ describe("DateRangePicker", () => {
     expect(apiMock.get).not.toHaveBeenCalled();
   });
 
-  it("shows the holiday indicator legend when showHolidays is true", async () => {
+  it("shows the calendar indicator legend when showHolidays is true", async () => {
     render(<DateRangePicker startDate={null} endDate={null} onChange={vi.fn()} />);
-    expect(screen.getByText("Holiday Indicators:")).toBeInTheDocument();
+    expect(screen.getByText("Calendar Indicators:")).toBeInTheDocument();
     await waitFor(() => expect(apiMock.get).toHaveBeenCalled());
   });
 
-  it("hides the holiday legend when showHolidays is false", () => {
+  it("hides the calendar legend when showHolidays is false", () => {
     render(
       <DateRangePicker startDate={null} endDate={null} onChange={vi.fn()} showHolidays={false} />,
     );
-    expect(screen.queryByText("Holiday Indicators:")).not.toBeInTheDocument();
+    expect(screen.queryByText("Calendar Indicators:")).not.toBeInTheDocument();
+  });
+
+  it("shows leave-marker legend items only when existingLeaveRequests is non-empty", async () => {
+    const { rerender } = render(
+      <DateRangePicker startDate={null} endDate={null} onChange={vi.fn()} />,
+    );
+    await waitFor(() => expect(apiMock.get).toHaveBeenCalled());
+    expect(screen.queryByText("Your Pending Leave")).not.toBeInTheDocument();
+    expect(screen.queryByText("Your Approved Leave")).not.toBeInTheDocument();
+
+    rerender(
+      <DateRangePicker
+        startDate={null}
+        endDate={null}
+        onChange={vi.fn()}
+        existingLeaveRequests={[
+          { start_date: "2026-01-05", end_date: "2026-01-06", status: "pending" },
+          { start_date: "2026-01-10", end_date: "2026-01-10", status: "hr_approved" },
+        ]}
+      />,
+    );
+    expect(screen.getByText("Your Pending Leave")).toBeInTheDocument();
+    expect(screen.getByText("Your Approved Leave")).toBeInTheDocument();
   });
 
   it("shows the selected range summary once both dates are set", async () => {

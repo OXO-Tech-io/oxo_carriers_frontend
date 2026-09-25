@@ -1,11 +1,15 @@
 import type {
   DependentRelationship,
   EmployeeDependent,
+  EmployeeEducation,
   EmployeeEmergencyContact,
   EmployeeNominee,
   EmployeePii,
   EmployeeWelfareInfo,
+  EmployeeWorkHistory,
+  EmploymentType,
   MaritalStatus,
+  QualificationLevel,
   Sex,
 } from '@/types/profile';
 import type { User } from '@/types';
@@ -34,6 +38,37 @@ export interface WizardEmergencyContact {
   name: string;
   relationship: string;
   contactNumber: string;
+}
+
+// OCD-456: Education & Work History, added as self-service wizard steps
+// mirroring Create Employee's StepEducation/StepWorkHistory
+// (components/modals/employee-wizard). `id` is optional (rather than
+// required, unlike WizardNominee/WizardDependent/WizardEmergencyContact
+// above) purely so this type stays structurally compatible with
+// employee-wizard/wizardTypes.ts's own WizardEducation/WizardWorkHistory
+// (which never carry an `id` at all) - EmployeeWizardValues extends this
+// same WizardFormValues and reuses those admin-side types for these two
+// fields. The profile wizard itself always populates `id` explicitly
+// (a real id for existing records, `null` for newly-added ones) - see
+// buildDefaultValues below and wizardDiff.ts's diffing.
+export interface WizardEducation {
+  id?: number | null;
+  qualificationLevel: QualificationLevel | '';
+  qualificationTitle: string;
+  awardingInstitution: string;
+  dateAwarded: string;
+  isOngoing: boolean;
+  remarks: string;
+}
+
+export interface WizardWorkHistory {
+  id?: number | null;
+  organization: string;
+  positionHeld: string;
+  employmentType: EmploymentType | '';
+  startDate: string;
+  endDate: string;
+  remarks: string;
 }
 
 export interface WizardFormValues {
@@ -72,6 +107,10 @@ export interface WizardFormValues {
   nominees: WizardNominee[];
 
   // Tab B - Salary Remittance & Correspondence
+  // OCD-470: when false (the default), the residing-address fields below stay
+  // empty/disabled and the permanent address is assumed as the residing
+  // address; when true, the user has opted to enter a different one.
+  residingAddressDiffersFromPermanent: boolean;
   residingAddressLine1: string;
   residingAddressLine2: string;
   residingCity: string;
@@ -100,6 +139,17 @@ export interface WizardFormValues {
   professionalMemberships: string;
   linkedinProfile: string;
   additionalNotes: string;
+
+  // Tab F - Education (OCD-456: previously only editable via the separate
+  // "Education" tab/modals on My Profile - now a wizard step, mirroring
+  // Create Employee's StepEducation).
+  primarySchoolAttended: string;
+  secondarySchoolAttended: string;
+  undergraduateDegreeCompletionDate: string;
+  education: WizardEducation[];
+
+  // Tab G - Work History (OCD-456: same as above, mirroring StepWorkHistory).
+  workHistory: WizardWorkHistory[];
 }
 
 export interface WizardSourceData {
@@ -109,10 +159,12 @@ export interface WizardSourceData {
   dependents: EmployeeDependent[] | undefined;
   emergencyContacts: EmployeeEmergencyContact[] | undefined;
   welfareInfo: EmployeeWelfareInfo | null | undefined;
+  education?: EmployeeEducation[] | undefined;
+  workHistory?: EmployeeWorkHistory[] | undefined;
 }
 
 export function buildDefaultValues(source: WizardSourceData): WizardFormValues {
-  const { user, pii, nominees, dependents, emergencyContacts, welfareInfo } = source;
+  const { user, pii, nominees, dependents, emergencyContacts, welfareInfo, education, workHistory } = source;
   return {
     nationalId: pii?.nationalId ?? '',
     legalName: pii?.legalName ?? '',
@@ -155,6 +207,13 @@ export function buildDefaultValues(source: WizardSourceData): WizardFormValues {
       proportionPercent: n.proportionPercent,
     })),
 
+    // Default to unchecked ("same as permanent") unless a distinct residing
+    // address was already recorded for this employee.
+    residingAddressDiffersFromPermanent: !!(
+      (pii?.residingAddressLine1 ?? '').trim() ||
+      (pii?.residingCity ?? '').trim() ||
+      (pii?.residingDistrict ?? '').trim()
+    ),
     residingAddressLine1: pii?.residingAddressLine1 ?? '',
     residingAddressLine2: pii?.residingAddressLine2 ?? '',
     residingCity: pii?.residingCity ?? '',
@@ -194,5 +253,28 @@ export function buildDefaultValues(source: WizardSourceData): WizardFormValues {
     professionalMemberships: welfareInfo?.professionalMemberships ?? '',
     linkedinProfile: user?.linkedin_profile ?? '',
     additionalNotes: pii?.additionalNotes ?? '',
+
+    primarySchoolAttended: user?.primary_school ?? '',
+    secondarySchoolAttended: user?.secondary_school ?? '',
+    undergraduateDegreeCompletionDate: user?.undergraduate_degree_completion_date ?? '',
+    education: (education ?? []).map((e) => ({
+      id: e.id,
+      qualificationLevel: e.qualificationLevel,
+      qualificationTitle: e.qualificationTitle ?? '',
+      awardingInstitution: e.awardingInstitution ?? '',
+      dateAwarded: e.dateAwarded ?? '',
+      isOngoing: e.isOngoing,
+      remarks: e.remarks ?? '',
+    })),
+
+    workHistory: (workHistory ?? []).map((w) => ({
+      id: w.id,
+      organization: w.organization ?? '',
+      positionHeld: w.positionHeld ?? '',
+      employmentType: w.employmentType,
+      startDate: w.startDate ?? '',
+      endDate: w.endDate ?? '',
+      remarks: w.remarks ?? '',
+    })),
   };
 }

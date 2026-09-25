@@ -3,37 +3,31 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { useLeaveTypesQuery } from '@/hooks/queries/use-leave-types-query';
-import { useLeaveCoverageCandidatesQuery } from '@/hooks/queries/use-leave-coverage-candidates-query';
 import { useLeaveBalanceQuery } from '@/hooks/queries/use-leave-balance-query';
 import { useLeaveRequestsQuery } from '@/hooks/queries/use-leave-requests-query';
 import { useHolidaysQuery } from '@/hooks/queries/use-holidays-query';
 import { useCreateLeaveMutation } from '@/hooks/mutations/use-create-leave-mutation';
-import { useApproveLeaveMutation } from '@/hooks/mutations/use-approve-leave-mutation';
-import { useRejectLeaveMutation } from '@/hooks/mutations/use-reject-leave-mutation';
 import {
   Calendar,
   Plus,
-  Clock,
   CheckCircle2,
-  XCircle,
   Upload,
-  User,
   AlertTriangle,
   History,
-  FileSpreadsheet,
+  Hourglass,
 } from 'lucide-react';
-import { format, isWeekend, isSameDay, startOfDay, endOfDay } from 'date-fns';
+import { format, isWeekend, isSameDay } from 'date-fns';
 import DateRangePicker from '@/components/DateRangePicker';
+import { LeaveStatusBadge } from '@/components/leaves/LeaveStatusBadge';
 
 import { BottomSheet } from '@/components/ui/BottomSheet';
 import { Card, CardHeader } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 
-type Tab = 'balance' | 'request' | 'history' | 'approvals';
+type Tab = 'balance' | 'request' | 'history';
 
 export default function LeavesPage() {
-  const { user, isHR, isSuperAdmin } = useAuth();
-  const canApprove = isHR || isSuperAdmin;
+  const { user } = useAuth();
   const [activeTab, setActiveTab] = useState<Tab>('balance');
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
@@ -47,7 +41,6 @@ export default function LeavesPage() {
     reason: '',
     is_half_day: false,
     half_day_period: '' as 'morning' | 'evening' | '',
-    coverup_employee_id: '',
   });
   const [attachment, setAttachment] = useState<File | null>(null);
   const [startDatePicker, setStartDatePicker] = useState<Date | null>(null);
@@ -72,32 +65,28 @@ export default function LeavesPage() {
     };
   }, []);
 
-  const isInternal = user?.employee_category === 'internal';
-  const coverageRangeEnd = formData.is_half_day ? formData.start_date : formData.end_date;
   const leaveTypesQuery = useLeaveTypesQuery();
-  const coverageCandidatesQuery = useLeaveCoverageCandidatesQuery(isInternal, formData.start_date, coverageRangeEnd);
   const leaveBalanceQuery = useLeaveBalanceQuery(user?.employee_id);
+  // Always scoped to the caller's own requests (`mine: true`) - org-wide
+  // approval queues live on the separate admin Leave Management page.
   const leaveRequestsQuery = useLeaveRequestsQuery(
-    activeTab === 'approvals' ? { status: 'pending' } : {},
-    { enabled: activeTab === 'history' || activeTab === 'approvals' }
+    { mine: true },
+    { enabled: activeTab === 'history' || activeTab === 'request' }
   );
   const holidaysQuery = useHolidaysQuery(yearStart, yearEnd);
 
   const leaveTypes = leaveTypesQuery.data ?? [];
-  const coverageCandidates = coverageCandidatesQuery.data ?? [];
   const balances = leaveBalanceQuery.data ?? [];
   const requests = leaveRequestsQuery.data ?? [];
   const holidays = holidaysQuery.data ?? [];
 
   const createLeaveMutation = useCreateLeaveMutation();
-  const approveLeaveMutation = useApproveLeaveMutation();
-  const rejectLeaveMutation = useRejectLeaveMutation();
 
   const submitting = createLeaveMutation.isPending;
   const loading =
     leaveTypesQuery.isLoading ||
     leaveBalanceQuery.isLoading ||
-    leaveRequestsQuery.isLoading;
+    (activeTab === 'history' && leaveRequestsQuery.isLoading);
 
   // Surface query errors
   useEffect(() => {
@@ -116,27 +105,27 @@ export default function LeavesPage() {
     leaveBalanceQuery.error,
     leaveRequestsQuery.error,
   ]);
-  
+
   // Calculate requested days (excluding weekends and holidays)
   const calculateDays = () => {
     if (!formData.start_date || !formData.end_date) return 0;
-    
+
     // If half-day, return 0.5
     if (formData.is_half_day) {
       return 0.5;
     }
-    
+
     const start = new Date(formData.start_date);
     const end = new Date(formData.end_date);
     if (end < start) return 0;
-    
+
     const dates: Date[] = [];
     const current = new Date(start);
     while (current <= end) {
       dates.push(new Date(current));
       current.setDate(current.getDate() + 1);
     }
-    
+
     const workingDays = dates.filter(date => {
       if (isWeekend(date)) {
         return false;
@@ -150,29 +139,18 @@ export default function LeavesPage() {
       }
       return true;
     });
-    
+
     return workingDays.length;
   };
-  
+
   const requestedDays = calculateDays();
-  const selectedBalance = formData.leave_type_id 
+  const selectedBalance = formData.leave_type_id
     ? balances.find(b => b.leave_type_id === parseInt(formData.leave_type_id))
     : null;
-  const hasInsufficientBalance = selectedBalance && requestedDays > selectedBalance.remaining_days;
-  
-  // If the chosen date range changes after a coverup employee was already
-  // selected and they now conflict with someone else's leave over the new
-  // range, drop the now-invalid selection instead of silently submitting it.
-  useEffect(() => {
-    if (
-      formData.coverup_employee_id &&
-      !coverageCandidatesQuery.isLoading &&
-      !coverageCandidates.some((c) => c.employee_id === formData.coverup_employee_id)
-    ) {
-      setFormData((prev) => ({ ...prev, coverup_employee_id: '' }));
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [coverageCandidates, coverageCandidatesQuery.isLoading]);
+  const availableForRequest = selectedBalance
+    ? (selectedBalance.available_days ?? selectedBalance.remaining_days)
+    : null;
+  const hasInsufficientBalance = availableForRequest !== null && requestedDays > availableForRequest;
 
   // When half-day is selected, automatically set end_date to start_date
   useEffect(() => {
@@ -216,6 +194,11 @@ export default function LeavesPage() {
     setError('');
     setSuccess('');
 
+    if (!attachment) {
+      setError('An attachment is required to submit a leave request');
+      return;
+    }
+
     const formDataToSend = new FormData();
     formDataToSend.append('leave_type_id', formData.leave_type_id);
     formDataToSend.append('start_date', formData.start_date);
@@ -227,12 +210,7 @@ export default function LeavesPage() {
     if (formData.is_half_day && formData.half_day_period) {
       formDataToSend.append('half_day_period', formData.half_day_period);
     }
-    if (attachment) {
-      formDataToSend.append('document', attachment);
-    }
-    if (isInternal && formData.coverup_employee_id) {
-      formDataToSend.append('coverup_employee_id', formData.coverup_employee_id);
-    }
+    formDataToSend.append('document', attachment);
 
     try {
       await createLeaveMutation.mutateAsync(formDataToSend);
@@ -244,7 +222,6 @@ export default function LeavesPage() {
         reason: '',
         is_half_day: false,
         half_day_period: '',
-        coverup_employee_id: '',
       });
       setAttachment(null);
       setIsMobileSheetOpen(false);
@@ -255,54 +232,6 @@ export default function LeavesPage() {
           ?.message || 'Failed to submit leave request';
       setError(message);
     }
-  };
-
-  const handleApprove = async (requestId: number, approvedBy: 'team_leader' | 'hr') => {
-    setError('');
-    try {
-      await approveLeaveMutation.mutateAsync({ id: requestId, input: { approvedBy } });
-      setSuccess('Leave request approved successfully');
-    } catch (err) {
-      const message =
-        (err as { response?: { data?: { message?: string } } })?.response?.data
-          ?.message || 'Failed to approve leave request';
-      setError(message);
-    }
-  };
-
-  const handleReject = async (requestId: number, rejectionReason: string) => {
-    setError('');
-    try {
-      await rejectLeaveMutation.mutateAsync({ id: requestId, input: { rejectionReason } });
-      setSuccess('Leave request rejected');
-    } catch (err) {
-      const message =
-        (err as { response?: { data?: { message?: string } } })?.response?.data
-          ?.message || 'Failed to reject leave request';
-      setError(message);
-    }
-  };
-
-  const getStatusBadge = (status: string) => {
-    const styles = {
-      pending: 'bg-amber-100 dark:bg-amber-950/30 text-amber-700 dark:text-amber-300',
-      team_leader_approved: 'bg-blue-100 dark:bg-blue-950/30 text-blue-700 dark:text-blue-300',
-      hr_approved: 'bg-emerald-100 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-300',
-      rejected: 'bg-red-100 dark:bg-red-950/30 text-red-700 dark:text-red-300',
-      cancelled: 'bg-gray-100 dark:bg-slate-950/30 text-gray-700 dark:text-slate-300',
-    };
-    return styles[status as keyof typeof styles] || styles.pending;
-  };
-
-  const getStatusLabel = (status: string) => {
-    const labels: Record<string, string> = {
-      pending: 'Pending',
-      team_leader_approved: 'TL Approved',
-      hr_approved: 'Approved',
-      rejected: 'Rejected',
-      cancelled: 'Cancelled',
-    };
-    return labels[status] || status;
   };
 
   const handleRequestClick = () => {
@@ -333,7 +262,7 @@ export default function LeavesPage() {
                 const balance = balances.find((b) => b.leave_type_id === type.id);
                 return (
                   <option key={type.id} value={type.id}>
-                    {type.name} {balance && `(${balance.remaining_days} days remaining)`}
+                    {type.name} {balance && `(${balance.available_days ?? balance.remaining_days} days available)`}
                   </option>
                 );
               })}
@@ -341,8 +270,8 @@ export default function LeavesPage() {
           {selectedBalance && (
             <div className="mt-2 p-3 bg-blue-500/10 rounded-xl border border-blue-500/10">
               <div className="flex items-center justify-between text-xs font-bold text-[var(--primary)]">
-                <span>Available Balance:</span>
-                <span>{selectedBalance.remaining_days} days</span>
+                <span>Available to Request:</span>
+                <span>{availableForRequest} days</span>
               </div>
             </div>
           )}
@@ -350,10 +279,11 @@ export default function LeavesPage() {
 
         <div>
           <label className="block text-xs font-bold text-[var(--gray-500)] uppercase tracking-wider mb-2">
-            Attachment (Optional)
+            Attachment *
           </label>
           <label className="block cursor-pointer">
             <input
+              required
               type="file"
               accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
               onChange={(e) => setAttachment(e.target.files?.[0] || null)}
@@ -380,6 +310,7 @@ export default function LeavesPage() {
               inline={true}
               monthsShown={formData.is_half_day || !isDesktopView ? 1 : 2}
               showHolidays={true}
+              existingLeaveRequests={requests}
             />
           </div>
           {formData.start_date && (
@@ -410,8 +341,8 @@ export default function LeavesPage() {
               checked={formData.is_half_day}
               onChange={(e) => {
                 const isHalfDay = e.target.checked;
-                setFormData({ 
-                  ...formData, 
+                setFormData({
+                  ...formData,
                   is_half_day: isHalfDay,
                   end_date: isHalfDay ? formData.start_date : formData.end_date,
                   half_day_period: isHalfDay ? formData.half_day_period : ''
@@ -423,7 +354,7 @@ export default function LeavesPage() {
               Half-day leave
             </label>
           </div>
-          
+
           {formData.is_half_day && (
             <div>
               <label className="block text-xs font-bold text-[var(--gray-500)] uppercase tracking-wider mb-2">
@@ -450,16 +381,16 @@ export default function LeavesPage() {
                 {requestedDays === 0.5 ? '0.5 day' : `${requestedDays} ${requestedDays === 1 ? 'day' : 'days'}`} requested
               </span>
             </div>
-            {hasInsufficientBalance && selectedBalance && (
+            {hasInsufficientBalance && availableForRequest !== null && (
               <div className="mt-2 flex items-start gap-2 text-xs font-medium text-red-600 dark:text-red-400">
                 <AlertTriangle className="h-4 w-4 shrink-0" />
-                <span>Insufficient Balance: You only have {selectedBalance.remaining_days} days left.</span>
+                <span>Insufficient Balance: You only have {availableForRequest} days available to request.</span>
               </div>
             )}
-            {selectedBalance && !hasInsufficientBalance && requestedDays > 0 && (
+            {!hasInsufficientBalance && availableForRequest !== null && requestedDays > 0 && (
               <div className="mt-2 flex items-start gap-2 text-xs font-medium text-emerald-600 dark:text-emerald-400">
                 <CheckCircle2 className="h-4 w-4 shrink-0" />
-                <span>Sufficient Balance: {selectedBalance.remaining_days - requestedDays} days remaining after approval.</span>
+                <span>Sufficient Balance: {availableForRequest - requestedDays} days remaining after approval.</span>
               </div>
             )}
           </div>
@@ -478,37 +409,6 @@ export default function LeavesPage() {
             className="block w-full px-3 py-2.5 border border-[var(--gray-100)] rounded-xl text-sm font-semibold text-[var(--foreground)] placeholder:text-[var(--gray-300)] bg-[var(--card-bg)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)]"
           />
         </div>
-
-        {isInternal && (
-          <div>
-            <label className="block text-xs font-bold text-[var(--gray-500)] uppercase tracking-wider mb-2">
-              Coverup Employee *
-            </label>
-            <select
-              required
-              value={formData.coverup_employee_id}
-              onChange={(e) => setFormData({ ...formData, coverup_employee_id: e.target.value })}
-              className="block w-full px-3 py-2.5 border border-[var(--gray-100)] rounded-xl text-sm font-semibold text-[var(--foreground)] bg-[var(--card-bg)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)]"
-            >
-              <option value="">Select the colleague covering your work</option>
-              {coverageCandidates.map((candidate) => (
-                <option key={candidate.employee_id} value={candidate.employee_id}>
-                  {candidate.first_name} {candidate.last_name}
-                  {candidate.department ? ` (${candidate.department})` : ''}
-                </option>
-              ))}
-            </select>
-            {formData.start_date && coverageRangeEnd ? (
-              <p className="mt-1.5 text-[11px] text-[var(--gray-400)] font-medium">
-                Colleagues who already have leave scheduled during these dates aren&apos;t shown.
-              </p>
-            ) : (
-              <p className="mt-1.5 text-[11px] text-[var(--gray-400)] font-medium">
-                Pick your date range first to hide colleagues who are already on leave then.
-              </p>
-            )}
-          </div>
-        )}
       </div>
 
       <div className="flex items-center justify-end gap-3 pt-2">
@@ -523,7 +423,6 @@ export default function LeavesPage() {
               reason: '',
               is_half_day: false,
               half_day_period: '',
-              coverup_employee_id: ''
             });
             setAttachment(null);
             setIsMobileSheetOpen(false);
@@ -533,7 +432,7 @@ export default function LeavesPage() {
         </Button>
         <Button
           type="submit"
-          disabled={submitting || hasInsufficientBalance || !formData.leave_type_id || !formData.start_date || (!formData.end_date && !formData.is_half_day) || !formData.reason || (formData.is_half_day && !formData.half_day_period) || (isInternal && !formData.coverup_employee_id)}
+          disabled={submitting || hasInsufficientBalance || !formData.leave_type_id || !formData.start_date || (!formData.end_date && !formData.is_half_day) || !formData.reason || (formData.is_half_day && !formData.half_day_period) || !attachment}
           isLoading={submitting}
         >
           Submit
@@ -547,8 +446,8 @@ export default function LeavesPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl lg:text-3xl font-extrabold text-[var(--foreground)] tracking-tight">Leave Management</h1>
-          <p className="text-sm text-[var(--gray-400)] font-medium mt-1">Manage leave requests, view balances, and approve time-off.</p>
+          <h1 className="text-2xl lg:text-3xl font-extrabold text-[var(--foreground)] tracking-tight">Leaves</h1>
+          <p className="text-sm text-[var(--gray-400)] font-medium mt-1">Manage your leave requests and view your balances.</p>
         </div>
         <Button
           onClick={handleRequestClick}
@@ -586,18 +485,6 @@ export default function LeavesPage() {
               {tab === 'balance' ? 'Balances' : tab === 'request' ? 'Request Leave' : 'My Requests'}
             </button>
           ))}
-          {canApprove && (
-            <button
-              onClick={() => setActiveTab('approvals')}
-              className={`py-3 px-1 border-b-2 font-bold text-xs uppercase tracking-wider whitespace-nowrap transition-colors cursor-pointer ${
-                activeTab === 'approvals'
-                  ? 'border-[var(--primary)] text-[var(--primary)]'
-                  : 'border-transparent text-[var(--gray-400)] hover:text-[var(--foreground)]'
-              }`}
-            >
-              Pending Approvals
-            </button>
-          )}
         </nav>
       </div>
 
@@ -632,10 +519,20 @@ export default function LeavesPage() {
                       <span className="text-[var(--gray-400)]">Taken</span>
                       <span className="text-[var(--foreground)]">{balance.used_days} days</span>
                     </div>
+                    {!!balance.pending_days && (
+                      <div className="flex items-center justify-between text-xs font-semibold">
+                        <span className="text-[var(--gray-400)] flex items-center gap-1.5">
+                          <Hourglass className="h-3.5 w-3.5" /> Pending
+                        </span>
+                        <span className="text-[var(--warning-text)]">{balance.pending_days} days</span>
+                      </div>
+                    )}
                     <div className="pt-2">
                       <div className="flex items-center justify-between text-sm">
-                        <span className="font-bold text-[var(--foreground)]">Remaining</span>
-                        <span className="font-extrabold text-[var(--primary)] text-base">{balance.remaining_days} days</span>
+                        <span className="font-bold text-[var(--foreground)]">Available to Request</span>
+                        <span className="font-extrabold text-[var(--primary)] text-base">
+                          {balance.available_days ?? balance.remaining_days} days
+                        </span>
                       </div>
                     </div>
                   </div>
@@ -679,7 +576,7 @@ export default function LeavesPage() {
                     ) : (
                       requests.map((request) => (
                         <tr key={request.id} className="hover:bg-[var(--gray-25)] transition-colors">
-                          <td className="px-6 py-4 whitespace-nowrap">
+                          <td className="px-6 py-4">
                             <p className="text-sm font-bold text-[var(--foreground)]">{request.leave_type?.name}</p>
                             {request.reason && (
                               <p className="text-xs text-[var(--gray-400)] mt-0.5 max-w-xs truncate">{request.reason}</p>
@@ -687,6 +584,11 @@ export default function LeavesPage() {
                             {request.coverup_employee && (
                               <p className="text-xs text-[var(--gray-400)] mt-0.5">
                                 Covered by: {request.coverup_employee.first_name} {request.coverup_employee.last_name}
+                              </p>
+                            )}
+                            {request.status === 'rejected' && request.rejection_reason && (
+                              <p className="text-xs text-[var(--error-text)] mt-1 max-w-xs">
+                                Rejection reason: {request.rejection_reason}
                               </p>
                             )}
                           </td>
@@ -697,9 +599,7 @@ export default function LeavesPage() {
                             {request.total_days === 0.5 ? '0.5 day' : `${request.total_days} days`}
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap">
-                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${getStatusBadge(request.status)}`}>
-                              {getStatusLabel(request.status)}
-                            </span>
+                            <LeaveStatusBadge status={request.status} />
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-xs font-medium text-[var(--gray-400)]">
                             {format(new Date(request.created_at), 'MMM dd, yyyy')}
@@ -711,139 +611,6 @@ export default function LeavesPage() {
                 </table>
               </div>
             </Card>
-          )}
-
-          {/* Approvals Tab (HR Only) */}
-          {activeTab === 'approvals' && canApprove && (
-            <div className="space-y-4 max-w-3xl mx-auto">
-              {requests.length === 0 ? (
-                <Card className="text-center p-12">
-                  <CheckCircle2 className="h-10 w-10 text-[var(--gray-300)] mx-auto mb-3" />
-                  <p className="text-sm font-bold text-[var(--gray-400)]">No pending approvals left</p>
-                </Card>
-              ) : (
-                requests.map((request) => (
-                  <Card key={request.id} className="relative">
-                    <div className="flex flex-col md:flex-row md:items-start justify-between gap-6">
-                      <div className="flex-1 space-y-4">
-                        {/* Profile Info */}
-                        <div className="flex items-center gap-3">
-                          <div className="p-2 rounded-xl bg-[var(--primary-light)] text-[var(--primary)] shrink-0">
-                            <User className="h-5 w-5" />
-                          </div>
-                          <div>
-                            <p className="text-sm font-bold text-[var(--foreground)]">
-                              {request.user?.first_name} {request.user?.last_name}
-                            </p>
-                            <p className="text-xs text-[var(--gray-400)] mt-0.5 font-medium">{request.user?.email}</p>
-                          </div>
-                        </div>
-
-                        {/* Grid Details */}
-                        <div className="grid grid-cols-2 md:grid-cols-3 gap-4 p-3.5 bg-[var(--gray-25)] border border-[var(--gray-100)] rounded-xl">
-                          <div>
-                            <p className="text-[10px] text-[var(--gray-400)] font-bold uppercase tracking-wider mb-0.5">Leave Type</p>
-                            <p className="text-xs font-bold text-[var(--foreground)]">{request.leave_type?.name}</p>
-                          </div>
-                          <div>
-                            <p className="text-[10px] text-[var(--gray-400)] font-bold uppercase tracking-wider mb-0.5">Dates</p>
-                            <p className="text-xs font-bold text-[var(--foreground)]">
-                              {format(new Date(request.start_date), 'MMM dd')} - {format(new Date(request.end_date), 'MMM dd, yyyy')}
-                            </p>
-                          </div>
-                          <div>
-                            <p className="text-[10px] text-[var(--gray-400)] font-bold uppercase tracking-wider mb-0.5">Requested Days</p>
-                            <p className="text-xs font-extrabold text-[var(--primary)]">{request.total_days} days</p>
-                          </div>
-                          {request.coverup_employee && (
-                            <div>
-                              <p className="text-[10px] text-[var(--gray-400)] font-bold uppercase tracking-wider mb-0.5">Coverup Employee</p>
-                              <p className="text-xs font-bold text-[var(--foreground)]">
-                                {request.coverup_employee.first_name} {request.coverup_employee.last_name}
-                              </p>
-                            </div>
-                          )}
-                        </div>
-
-                        {request.reason && (
-                          <div className="text-xs">
-                            <span className="font-bold text-[var(--gray-400)] uppercase tracking-wider block mb-1">Reason</span>
-                            <p className="text-[var(--gray-500)] bg-[var(--gray-25)] p-3 rounded-xl border border-[var(--gray-100)] leading-relaxed">{request.reason}</p>
-                          </div>
-                        )}
-
-                        {request.attachment_url && (
-                          <div className="pt-2">
-                            <a
-                              href={request.attachment_url}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="inline-flex items-center gap-1.5 text-xs font-bold text-[var(--primary)] hover:underline"
-                            >
-                              <FileSpreadsheet className="h-4 w-4" />
-                              <span>View Attachment Doc</span>
-                            </a>
-                          </div>
-                        )}
-
-                        <div className="flex items-center gap-2">
-                          <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${getStatusBadge(request.status)}`}>
-                            {getStatusLabel(request.status)}
-                          </span>
-                          {request.team_leader_approval_date && (
-                            <span className="text-[10px] text-[var(--gray-400)] font-semibold">
-                              TL Approved: {format(new Date(request.team_leader_approval_date), 'MMM dd, yyyy')}
-                            </span>
-                          )}
-                        </div>
-                      </div>
-
-                      {/* Actions */}
-                      <div className="flex md:flex-col gap-2 shrink-0 justify-end">
-                        {request.status === 'pending' && (
-                          <>
-                            <button
-                              onClick={() => handleApprove(request.id, 'hr')}
-                              className="px-4 py-2 text-xs font-bold text-white bg-emerald-500 hover:bg-emerald-600 rounded-xl transition-colors cursor-pointer"
-                            >
-                              Approve
-                            </button>
-                            <button
-                              onClick={() => {
-                                const reason = prompt('Please provide a rejection reason:');
-                                if (reason) handleReject(request.id, reason);
-                              }}
-                              className="px-4 py-2 text-xs font-bold text-white bg-red-500 hover:bg-red-600 rounded-xl transition-colors cursor-pointer"
-                            >
-                              Reject
-                            </button>
-                          </>
-                        )}
-                        {request.status === 'team_leader_approved' && (
-                          <>
-                            <button
-                              onClick={() => handleApprove(request.id, 'hr')}
-                              className="px-4 py-2 text-xs font-bold text-white bg-emerald-500 hover:bg-emerald-600 rounded-xl transition-colors cursor-pointer"
-                            >
-                              Final Approve
-                            </button>
-                            <button
-                              onClick={() => {
-                                const reason = prompt('Please provide a rejection reason:');
-                                if (reason) handleReject(request.id, reason);
-                              }}
-                              className="px-4 py-2 text-xs font-bold text-white bg-red-500 hover:bg-red-600 rounded-xl transition-colors cursor-pointer"
-                            >
-                              Reject
-                            </button>
-                          </>
-                        )}
-                      </div>
-                    </div>
-                  </Card>
-                ))
-              )}
-            </div>
           )}
         </>
       )}

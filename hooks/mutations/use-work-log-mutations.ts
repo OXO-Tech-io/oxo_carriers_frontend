@@ -12,6 +12,16 @@ export const useSubmitWorkLogMutation = () => {
   });
 };
 
+export const useUpdateWorkLogMutation = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, entry }: { id: number; entry: WorkLogEntryDraft }) => workLogService.update(id, entry),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['work-logs', 'mine'] });
+    },
+  });
+};
+
 export const useUpdateWorkLogDeadlineMutation = () => {
   const queryClient = useQueryClient();
   return useMutation({

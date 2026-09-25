@@ -72,6 +72,32 @@ describe("Sidebar", () => {
     expect(screen.queryByText("Leave Calendar")).not.toBeInTheDocument();
   });
 
+  it("shows the admin Leave Management item for an HR Manager (OCD-510)", async () => {
+    useAuthMock.mockReturnValue({
+      user: { id: 6, first_name: "K", last_name: "L", role: "hr_manager" },
+      isSuperAdmin: false,
+      isHRManager: true,
+    });
+    apiMock.get.mockResolvedValue({ data: { permissionLevels: { leaves: "write" } } });
+
+    render(<Sidebar />);
+    await waitFor(() => expect(apiMock.get).toHaveBeenCalledWith("/permissions/me"));
+    await waitFor(() => expect(screen.getAllByText("Leave Management").length).toBeGreaterThan(0));
+  });
+
+  it("hides the admin Leave Management item from an HR Executive (OCD-504)", async () => {
+    useAuthMock.mockReturnValue({
+      user: { id: 7, first_name: "M", last_name: "N", role: "hr_executive" },
+      isSuperAdmin: false,
+      isHRManager: false,
+    });
+    apiMock.get.mockResolvedValue({ data: { permissionLevels: { leaves: "write" } } });
+
+    render(<Sidebar />);
+    await waitFor(() => expect(screen.getAllByText("Leave Calendar").length).toBeGreaterThan(0));
+    expect(screen.queryByText("Leave Management")).not.toBeInTheDocument();
+  });
+
   it("gates the employee-facing Documents item and admin Document Vault item by document_vault read/write", async () => {
     useAuthMock.mockReturnValue({ user: { id: 5, first_name: "I", last_name: "J", role: "employee" }, isSuperAdmin: false });
     apiMock.get.mockResolvedValue({ data: { permissionLevels: { document_vault: "read" } } });

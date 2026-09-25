@@ -80,7 +80,7 @@ describe("EmployeeNotesModal", () => {
   });
 
   it("lets an HR manager edit an existing note", async () => {
-    useAuthMock.mockReturnValue({ isHRManager: true, isSuperAdmin: false });
+    useAuthMock.mockReturnValue({ user: { id: 99, role: "hr_manager" }, isHRManager: true, isSuperAdmin: false });
     useEmployeeNotesQueryMock.mockReturnValue({ data: [note], isLoading: false });
     updateMutateAsyncMock.mockResolvedValue({});
     render(<EmployeeNotesModal isOpen onClose={vi.fn()} employeeId={1} employeeName="Jane Doe" />);
@@ -96,12 +96,36 @@ describe("EmployeeNotesModal", () => {
   });
 
   it("cancelling an edit reverts to the read-only view", () => {
-    useAuthMock.mockReturnValue({ isHRManager: true, isSuperAdmin: false });
+    useAuthMock.mockReturnValue({ user: { id: 99, role: "hr_manager" }, isHRManager: true, isSuperAdmin: false });
     useEmployeeNotesQueryMock.mockReturnValue({ data: [note], isLoading: false });
     render(<EmployeeNotesModal isOpen onClose={vi.fn()} employeeId={1} employeeName="Jane Doe" />);
 
     fireEvent.click(screen.getByText("Edit"));
     fireEvent.click(screen.getByText("Cancel"));
     expect(screen.getByText("Great performance this quarter")).toBeInTheDocument();
+  });
+
+  // OCD-479 / OCD-480
+  it("shows who added the note, and hides Edit for a same-ranked HR Manager who isn't the author", () => {
+    useAuthMock.mockReturnValue({ user: { id: 99, role: "hr_manager" }, isHRManager: true, isSuperAdmin: false });
+    useEmployeeNotesQueryMock.mockReturnValue({
+      data: [{ ...note, authorUserId: 2, authorName: "Alex Author", authorRole: "hr_manager" }],
+      isLoading: false,
+    });
+    render(<EmployeeNotesModal isOpen onClose={vi.fn()} employeeId={1} employeeName="Jane Doe" />);
+
+    expect(screen.getByText(/Added by Alex Author/)).toBeInTheDocument();
+    expect(screen.queryByText("Edit")).not.toBeInTheDocument();
+  });
+
+  it("lets a super admin edit a note authored by someone else", () => {
+    useAuthMock.mockReturnValue({ user: { id: 99, role: "super_admin" }, isHRManager: false, isSuperAdmin: true });
+    useEmployeeNotesQueryMock.mockReturnValue({
+      data: [{ ...note, authorUserId: 2, authorName: "Alex Author", authorRole: "hr_manager" }],
+      isLoading: false,
+    });
+    render(<EmployeeNotesModal isOpen onClose={vi.fn()} employeeId={1} employeeName="Jane Doe" />);
+
+    expect(screen.getByText("Edit")).toBeInTheDocument();
   });
 });

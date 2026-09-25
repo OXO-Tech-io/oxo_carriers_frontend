@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/Button';
 import { DEPENDENT_RELATIONSHIP_OPTIONS, SEX_OPTIONS } from '@/types/profile';
 import { Field, RepeatableCard, inputClass } from './shared';
 import type { WizardFormValues } from './wizardTypes';
+import { noEmoji, noFutureDate, validateNic, validateMobileNumber, MOBILE_NUMBER_HINT } from '@/lib/validation/textValidation';
 
 interface StepProps {
   form: UseFormReturn<WizardFormValues>;
@@ -36,7 +37,8 @@ export default function StepDependents({ form, isMarried }: StepProps) {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <p className="text-xs text-[var(--gray-400)] font-medium">
-          Add family members to be registered for medical insurance and welfare benefits.
+          Add family members to be registered for medical insurance and welfare benefits. Your spouse is added here
+          automatically from the details entered on the Statutory Information tab.
         </p>
         <Button
           type="button"
@@ -60,22 +62,35 @@ export default function StepDependents({ form, isMarried }: StepProps) {
       </div>
       {fields.length === 0 && <p className="text-xs text-[var(--gray-400)] font-medium">No family members added yet.</p>}
       {fields.map((f, index) => (
-        <RepeatableCard key={f.id} title={`Family Member ${index + 1}`} onRemove={() => remove(index)}>
+        <RepeatableCard
+          key={f.id}
+          title={dependentValues?.[index]?.relationship === 'spouse' ? 'Spouse (from Statutory Info)' : `Family Member ${index + 1}`}
+          onRemove={() => remove(index)}
+        >
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <Field label="Full Name" error={errors.dependents?.[index]?.fullName?.message}>
-              <input {...register(`dependents.${index}.fullName`, { required: 'Full name is required' })} className={inputClass} />
-            </Field>
-            <Field label="NIC Number (not applicable for children under 16)">
-              <input {...register(`dependents.${index}.nic`)} className={inputClass} />
-            </Field>
-            <Field label="Date of Birth" error={errors.dependents?.[index]?.dateOfBirth?.message}>
+            <Field label="Full Name" required error={errors.dependents?.[index]?.fullName?.message}>
               <input
-                type="date"
-                {...register(`dependents.${index}.dateOfBirth`, { required: 'Date of birth is required' })}
+                {...register(`dependents.${index}.fullName`, { required: 'Full name is required', validate: noEmoji })}
                 className={inputClass}
               />
             </Field>
-            <Field label="Gender" error={errors.dependents?.[index]?.gender?.message}>
+            <Field
+              label="NIC Number (not applicable for children under 16)"
+              error={errors.dependents?.[index]?.nic?.message}
+            >
+              <input {...register(`dependents.${index}.nic`, { validate: validateNic })} className={inputClass} />
+            </Field>
+            <Field label="Date of Birth" required error={errors.dependents?.[index]?.dateOfBirth?.message}>
+              <input
+                type="date"
+                {...register(`dependents.${index}.dateOfBirth`, {
+                  required: 'Date of birth is required',
+                  validate: noFutureDate,
+                })}
+                className={inputClass}
+              />
+            </Field>
+            <Field label="Gender" required error={errors.dependents?.[index]?.gender?.message}>
               <select {...register(`dependents.${index}.gender`, { required: 'Gender is required' })} className={inputClass}>
                 <option value="">Select</option>
                 {SEX_OPTIONS.map((opt) => (
@@ -85,7 +100,7 @@ export default function StepDependents({ form, isMarried }: StepProps) {
                 ))}
               </select>
             </Field>
-            <Field label="Relationship" error={errors.dependents?.[index]?.relationship?.message}>
+            <Field label="Relationship" required error={errors.dependents?.[index]?.relationship?.message}>
               <select
                 {...register(`dependents.${index}.relationship`, { required: 'Relationship is required' })}
                 className={inputClass}
@@ -98,12 +113,22 @@ export default function StepDependents({ form, isMarried }: StepProps) {
                 ))}
               </select>
             </Field>
-            <Field label="Mobile Number (if available)">
-              <input {...register(`dependents.${index}.mobileNumber`)} className={inputClass} />
+            <Field
+              label="Mobile Number (if available)"
+              error={errors.dependents?.[index]?.mobileNumber?.message}
+              hint={MOBILE_NUMBER_HINT}
+            >
+              <input
+                {...register(`dependents.${index}.mobileNumber`, { validate: validateMobileNumber })}
+                placeholder="07XXXXXXXX"
+                inputMode="numeric"
+                maxLength={10}
+                className={inputClass}
+              />
             </Field>
             {dependentValues?.[index]?.relationship === 'child' && (
-              <Field label="School">
-                <input {...register(`dependents.${index}.school`)} className={inputClass} />
+              <Field label="School" error={errors.dependents?.[index]?.school?.message}>
+                <input {...register(`dependents.${index}.school`, { validate: noEmoji })} className={inputClass} />
               </Field>
             )}
           </div>

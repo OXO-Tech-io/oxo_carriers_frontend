@@ -35,6 +35,7 @@ import {
   ChevronsLeft,
   Clock,
   FolderOpen,
+  Archive,
 } from "lucide-react";
 
 type AccessLevel = "read" | "write";
@@ -47,6 +48,11 @@ type MenuItem = {
   permissionKeys?: string[];
   requiredLevel?: AccessLevel;
   superAdminOnly?: boolean;
+  /** Restricted to Administrator + HR Manager, bypassing the generic
+   * permission-key system entirely (same pattern as superAdminOnly) - used
+   * where a role list is a fixed product requirement rather than an
+   * admin-configurable permission. */
+  hrManagerOnly?: boolean;
 };
 
 const navigation: MenuItem[] = [
@@ -161,6 +167,12 @@ const adminNavigation: MenuItem[] = [
     superAdminOnly: true,
   },
   {
+    name: "Leave Management",
+    href: "/admin/leaves",
+    icon: Calendar,
+    hrManagerOnly: true,
+  },
+  {
     name: "Leave Calendar",
     href: "/admin/leave-calendar",
     icon: CalendarDays,
@@ -196,10 +208,13 @@ const adminNavigation: MenuItem[] = [
     requiredLevel: "read",
   },
   {
+    // Salary bulk upload (POST /salaries/bulk-uploads) - was mis-keyed to
+    // "users" even though it's a salary feature; matches the backend guard
+    // (PermissionGuard + RequirePermission(SALARIES, 'write')).
     name: "Bulk Upload",
     href: "/admin/upload",
     icon: Upload,
-    permissionKeys: ["users"],
+    permissionKeys: ["salaries"],
     requiredLevel: "write",
   },
   {
@@ -270,6 +285,13 @@ const adminNavigation: MenuItem[] = [
     href: "/admin/attendance",
     icon: Clock,
     permissionKeys: ["attendance"],
+    requiredLevel: "read",
+  },
+  {
+    name: "Archive",
+    href: "/admin/archive",
+    icon: Archive,
+    permissionKeys: ["archive"],
     requiredLevel: "read",
   },
 ];
@@ -367,7 +389,7 @@ function NavItems({
 
 export default function Sidebar() {
   const pathname = usePathname();
-  const { user, isSuperAdmin } = useAuth();
+  const { user, isSuperAdmin, isHRManager } = useAuth();
   const { collapsed, toggle } = useSidebar();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [permissionLevels, setPermissionLevels] = useState<
@@ -419,6 +441,7 @@ export default function Sidebar() {
   const canSeeItem = (item: MenuItem) => {
     if (isSuperAdmin) return true;
     if (item.superAdminOnly) return false;
+    if (item.hrManagerOnly) return isHRManager;
     if (!item.permissionKeys || item.permissionKeys.length === 0) return false;
     return item.permissionKeys.some((key) =>
       canAccessPermission(key, item.requiredLevel || "read"),
@@ -431,7 +454,7 @@ export default function Sidebar() {
     }
 
     return [...navigation, ...adminNavigation].filter(canSeeItem);
-  }, [permissionLoaded, isSuperAdmin, permissionLevels]);
+  }, [permissionLoaded, isSuperAdmin, isHRManager, permissionLevels]);
 
   if (!user) return null;
 

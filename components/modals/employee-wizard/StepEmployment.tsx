@@ -1,6 +1,7 @@
 import { UseFormReturn } from "react-hook-form";
 import { UserRole } from "@/types";
 import { WORK_LOCATION_OPTIONS } from "@/types/profile";
+import { noEmoji, noFutureDate } from "@/lib/validation/textValidation";
 import { Field, inputClass } from "./shared";
 import { EmployeeWizardValues } from "./wizardTypes";
 
@@ -31,15 +32,19 @@ export default function StepEmployment({ form }: StepProps) {
         </select>
       </Field>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <Field label="Department">
-          <input type="text" {...register("department")} className={inputClass} />
+        <Field label="Department" error={errors.department?.message}>
+          <input type="text" {...register("department", { validate: noEmoji })} className={inputClass} />
         </Field>
-        <Field label="Position">
-          <input type="text" {...register("position")} className={inputClass} />
+        <Field label="Position" required error={errors.position?.message}>
+          <input
+            type="text"
+            {...register("position", { required: "Position is required", validate: noEmoji })}
+            className={inputClass}
+          />
         </Field>
       </div>
-      <Field label="Work Location">
-        <select {...register("work_location")} className={inputClass}>
+      <Field label="Work Location" required error={errors.work_location?.message}>
+        <select {...register("work_location", { required: "Work Location is required" })} className={inputClass}>
           <option value="">Select</option>
           {WORK_LOCATION_OPTIONS.map((opt) => (
             <option key={opt.value} value={opt.value}>
@@ -48,8 +53,12 @@ export default function StepEmployment({ form }: StepProps) {
           ))}
         </select>
       </Field>
-      <Field label="Hire Date">
-        <input type="date" {...register("hire_date")} className={inputClass} />
+      <Field label="Hire Date" required error={errors.hire_date?.message}>
+        <input
+          type="date"
+          {...register("hire_date", { required: "Hire Date is required", validate: noFutureDate })}
+          className={inputClass}
+        />
       </Field>
       {isConsultant && (
         <Field

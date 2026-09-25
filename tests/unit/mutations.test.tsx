@@ -39,6 +39,7 @@ import {
   useResubmitMedicalInsuranceClaimMutation,
   useApproveMedicalInsuranceClaimMutation,
   useRejectMedicalInsuranceClaimMutation,
+  useRecordMedicalInsuranceClaimPaymentMutation,
 } from "@/hooks/mutations/use-medical-insurance-mutations";
 import {
   useCreateConsultantSubmissionMutation,
@@ -109,6 +110,7 @@ const {
     resubmitClaim: vi.fn(),
     approveClaim: vi.fn(),
     rejectClaim: vi.fn(),
+    recordPayment: vi.fn(),
   },
 
   consultantSubmissionServiceMock: {
@@ -203,6 +205,7 @@ describe("mutation hooks", () => {
     medicalInsuranceServiceMock.resubmitClaim.mockResolvedValue({ id: 1 });
     medicalInsuranceServiceMock.approveClaim.mockResolvedValue({ id: 1 });
     medicalInsuranceServiceMock.rejectClaim.mockResolvedValue({ id: 1 });
+    medicalInsuranceServiceMock.recordPayment.mockResolvedValue({ id: 1 });
 
     consultantSubmissionServiceMock.createSubmission.mockResolvedValue({
       id: 1,
@@ -380,6 +383,10 @@ describe("mutation hooks", () => {
       id: 1,
       admin_comment: "x",
     });
+    await runMutation(useRecordMedicalInsuranceClaimPaymentMutation, {
+      id: 1,
+      payment: { payment_status: "paid" },
+    });
 
     await runMutation(useCreateConsultantSubmissionMutation, new FormData());
     await runMutation(useResubmitConsultantSubmissionMutation, {
@@ -414,6 +421,10 @@ describe("mutation hooks", () => {
     expect(medicalInsuranceServiceMock.rejectClaim).toHaveBeenCalledWith(
       1,
       "x",
+    );
+    expect(medicalInsuranceServiceMock.recordPayment).toHaveBeenCalledWith(
+      1,
+      { payment_status: "paid" },
     );
 
     expect(consultantSubmissionServiceMock.createSubmission).toHaveBeenCalled();

@@ -87,4 +87,19 @@ export const medicalInsuranceService = {
     });
     return extractData<MedicalInsuranceClaim>(res as never);
   },
+
+  recordPayment: async (
+    id: number,
+    payment: {
+      payment_status: string;
+      paid_amount?: string;
+      payment_date?: string;
+      payment_reference?: string;
+    },
+  ): Promise<MedicalInsuranceClaim> => {
+    const res = await api.put<
+      ApiResponse<MedicalInsuranceClaim> | MedicalInsuranceClaim
+    >(`/medical-insurance-claims/${id}/payments`, payment);
+    return extractData<MedicalInsuranceClaim>(res as never);
+  },
 };

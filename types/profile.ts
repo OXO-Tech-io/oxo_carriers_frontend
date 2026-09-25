@@ -3,6 +3,8 @@
 // (which mirror an older, differently-shaped API), these mirror the new
 // backend endpoints' raw camelCase JSON shape directly - no mapper needed.
 
+import type { Attachment } from './hrModules';
+
 export type QualificationLevel =
   | 'certificate'
   | 'advanced_certificate'
@@ -14,14 +16,18 @@ export type QualificationLevel =
   | 'mphil'
   | 'phd';
 
+// OCD-434: "Degree" and "Masters" were ambiguous (a Master's is also a
+// "degree") - values are unchanged (still matches the backend's
+// qualification_level enum / qualificationLevelValues), only the labels
+// shown to users were clarified.
 export const QUALIFICATION_LEVEL_OPTIONS: { value: QualificationLevel; label: string }[] = [
   { value: 'certificate', label: 'Certificate' },
   { value: 'advanced_certificate', label: 'Advanced Certificate' },
   { value: 'diploma', label: 'Diploma' },
   { value: 'advanced_diploma', label: 'Advanced Diploma' },
-  { value: 'degree', label: 'Degree' },
+  { value: 'degree', label: "Bachelor's Degree" },
   { value: 'postgraduate_diploma', label: 'Postgraduate Diploma' },
-  { value: 'masters', label: 'Masters' },
+  { value: 'masters', label: "Master's Degree" },
   { value: 'mphil', label: 'MPhil' },
   { value: 'phd', label: 'PhD' },
 ];
@@ -308,7 +314,12 @@ export type ScalarUserField =
   | 'gramaNiladariDivision'
   | 'electorate'
   | 'postalCode'
-  | 'linkedinProfile';
+  | 'linkedinProfile'
+  // OCD-456: Education step (primary/secondary school attended), now
+  // editable via the self-service profile wizard - maps to
+  // tbl_employee.primary_school / secondary_school.
+  | 'primarySchool'
+  | 'secondarySchool';
 
 export type ProfileChangeItem =
   | {
@@ -453,12 +464,18 @@ export interface ProfileChangeRequest {
   previousRequestId: number | null;
   createdAt: string;
   updatedAt: string;
+  // OCD-478: supporting documents (NIC copy, address proof, etc.) uploaded
+  // alongside the optional Reason for Change (`comments` above).
+  attachments?: Attachment[];
 }
 
 export interface SubmitProfileChangeRequestInput {
   changes: ProfileChangeItem[];
   comments?: string;
   previousRequestId?: number;
+  // OCD-478: optional supporting documents attached to the change request -
+  // when present, the request is sent as multipart/form-data instead of JSON.
+  files?: File[];
 }
 
 export interface AppNotification {

@@ -17,6 +17,8 @@ function ResetPasswordForm() {
   const [success, setSuccess] = useState('');
   const [loading, setLoading] = useState(false);
 
+  const passwordsMatch = newPassword.length > 0 && newPassword === confirmPassword;
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
@@ -29,11 +31,6 @@ function ResetPasswordForm() {
 
     if (newPassword !== confirmPassword) {
       setError('Passwords do not match');
-      return;
-    }
-
-    if (newPassword.length < 8) {
-      setError('Password must be at least 8 characters long');
       return;
     }
 
@@ -126,13 +123,16 @@ function ResetPasswordForm() {
                 placeholder="Confirm new password"
               />
             </div>
+            {confirmPassword.length > 0 && !passwordsMatch && (
+              <p className="mt-1.5 text-sm text-red-500">Passwords do not match</p>
+            )}
           </div>
         </div>
 
         <div>
           <button
             type="submit"
-            disabled={loading || !!success}
+            disabled={loading || !!success || !passwordsMatch}
             className="group relative w-full flex justify-center items-center py-3.5 px-4 border border-transparent text-base font-semibold rounded-xl text-white bg-[var(--primary)] hover:bg-[var(--primary-hover)] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[var(--primary)] disabled:opacity-50 disabled:cursor-not-allowed shadow-sm hover:shadow transition-colors duration-200"
           >
             {loading ? (

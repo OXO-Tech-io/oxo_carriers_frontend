@@ -39,6 +39,14 @@ function RangeHint({ startDate, endDate }: { startDate: Date | null; endDate: Da
   );
 }
 
+export interface ExistingLeaveMarker {
+  start_date: string | Date;
+  end_date: string | Date;
+  status: string;
+  is_half_day?: boolean;
+  half_day_period?: 'morning' | 'evening';
+}
+
 interface DateRangePickerProps {
   startDate: Date | null;
   endDate: Date | null;
@@ -50,6 +58,10 @@ interface DateRangePickerProps {
   inline?: boolean;
   monthsShown?: number;
   showHolidays?: boolean;
+  /** The viewer's own pending/approved leave requests, shown as day markers
+   * with a legend so they know which dates they've already requested off
+   * (OCD-512). Omit to render the calendar without this overlay. */
+  existingLeaveRequests?: ExistingLeaveMarker[];
 }
 
 export default function DateRangePicker({
@@ -63,6 +75,7 @@ export default function DateRangePicker({
   inline = false,
   monthsShown = 2,
   showHolidays = true,
+  existingLeaveRequests: leaveMarkers = [],
 }: DateRangePickerProps) {
   const [holidays, setHolidays] = useState<LeaveCalendarEntry[]>([]);
   const [loadingHolidays, setLoadingHolidays] = useState(false);
@@ -112,6 +125,31 @@ export default function DateRangePicker({
     return holiday ? holiday.name : null;
   };
 
+  // Pending/team-leader-approved and HR-approved leave requests get a
+  // color-coded marker on the calendar so the viewer can see, at a glance,
+  // which dates they've already requested off (OCD-512). Rejected/cancelled
+  // requests leave the date unmarked, since it's available to request again.
+  const getLeaveMarker = (
+    date: Date
+  ): { variant: 'pending' | 'approved'; period?: 'morning' | 'evening'; label: string } | null => {
+    const dayStart = startOfDay(date).getTime();
+    for (const request of leaveMarkers) {
+      if (request.status === 'rejected' || request.status === 'cancelled') continue;
+      const rangeStart = startOfDay(new Date(request.start_date)).getTime();
+      const rangeEnd = endOfDay(new Date(request.end_date)).getTime();
+      if (dayStart < rangeStart || dayStart > rangeEnd) continue;
+
+      const variant: 'pending' | 'approved' = request.status === 'hr_approved' ? 'approved' : 'pending';
+      const period = request.is_half_day ? request.half_day_period : undefined;
+      const statusLabel = variant === 'approved' ? 'Approved' : 'Pending';
+      let periodLabel = '';
+      if (period === 'morning') periodLabel = ' (Morning)';
+      else if (period === 'evening') periodLabel = ' (Evening)';
+      return { variant, period, label: `${statusLabel} leave${periodLabel}` };
+    }
+    return null;
+  };
+
   // Custom day class name for highlighting holidays
   const dayClassName = (date: Date) => {
     const classes: string[] = [];
@@ -130,6 +168,17 @@ export default function DateRangePicker({
     // Add holiday class for custom holidays (not weekends)
     if (isCustomHoliday) {
       classes.push('holiday-day');
+    }
+
+    // Tint the whole cell for a full-day pending/approved leave request -
+    // half-day requests only get the AM/PM chip rendered in renderDayContents,
+    // since tinting the entire cell would misleadingly suggest the whole date
+    // is unavailable.
+    if (!isWeekendDay && !isCustomHoliday) {
+      const marker = getLeaveMarker(date);
+      if (marker && !marker.period) {
+        classes.push(marker.variant === 'approved' ? 'leave-day--approved' : 'leave-day--pending');
+      }
     }
 
     // Add range selection classes (only for selectable dates)
@@ -216,6 +265,7 @@ export default function DateRangePicker({
     renderDayContents: (dayOfMonth: number, date: Date) => {
       const holidayName = getHolidayName(date);
       const isWeekendDay = isWeekend(date);
+      const marker = getLeaveMarker(date);
       return (
         <div className="date-picker-day">
           <span>{dayOfMonth}</span>
@@ -224,35 +274,63 @@ export default function DateRangePicker({
               ●
             </span>
           )}
+          {marker?.period && (
+            <span
+              className={`leave-period-chip leave-period-chip--${marker.variant}`}
+              title={marker.label}
+            >
+              {marker.period === 'morning' ? 'AM' : 'PM'}
+            </span>
+          )}
         </div>
       );
     }
   };
+
+  const hasLeaveMarkers = leaveMarkers.length > 0;
 
   return (
     <div className="w-full">
       {selectsRange && !disabled && <RangeHint startDate={startDate} endDate={endDate} />}
       <DatePicker {...datePickerProps} />
       {showHolidays && (
-        <div className="mt-3 rounded-lg bg-blue-50 p-3">
-          <p className="text-xs font-semibold text-blue-800 mb-2">Holiday Indicators:</p>
-          <div className="flex flex-wrap items-center gap-4 text-xs text-blue-700 mb-2">
+        <div className="mt-3 rounded-lg bg-[var(--info-light)] p-3">
+          <p className="text-xs font-semibold text-[var(--info-text)] mb-2">Calendar Indicators:</p>
+          <div className="flex flex-wrap items-center gap-4 text-xs text-[var(--info-text)] mb-2">
             <div className="flex items-center gap-2">
-              <span className="inline-block w-4 h-4 rounded bg-red-200 border border-red-300"></span>
+              <span className="inline-block w-4 h-4 rounded bg-[var(--error-light)] border border-[var(--error-text)]"></span>
               <span>Weekend (Saturday/Sunday) - Disabled</span>
             </div>
             <div className="flex items-center gap-2">
-              <span className="inline-block w-4 h-4 rounded bg-amber-200 border border-amber-300"></span>
+              <span className="inline-block w-4 h-4 rounded bg-[var(--warning-light)] border border-[var(--warning-text)]"></span>
               <span>Custom Holiday - Disabled</span>
             </div>
+            {hasLeaveMarkers && (
+              <>
+                <div className="flex items-center gap-2">
+                  <span className="inline-block w-4 h-4 rounded leave-day--pending"></span>
+                  <span>Your Pending Leave</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="inline-block w-4 h-4 rounded leave-day--approved"></span>
+                  <span>Your Approved Leave</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="leave-period-chip leave-period-chip--pending">AM</span>
+                  <span>/</span>
+                  <span className="leave-period-chip leave-period-chip--approved">PM</span>
+                  <span>Half-Day Leave</span>
+                </div>
+              </>
+            )}
           </div>
-          <p className="text-xs text-blue-600 mt-2">
+          <p className="text-xs text-[var(--info-text)] mt-2">
             Weekends and holidays are automatically excluded from leave calculations and cannot be selected.
           </p>
         </div>
       )}
       {startDate && endDate && (
-        <div className="mt-2 text-sm text-[#101828]">
+        <div className="mt-2 text-sm text-[var(--foreground)]">
           Selected Range: <span className="font-semibold">
             {format(startDate, 'MMM d, yyyy')} - {format(endDate, 'MMM d, yyyy')}
           </span>

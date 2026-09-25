@@ -107,9 +107,37 @@ export const profileService = {
     return res.data.data;
   },
 
+  // OCD-478: sent as multipart/form-data (so supporting documents can ride
+  // along) whenever files are attached; otherwise stays a plain JSON POST,
+  // same as before.
   submitChangeRequest: async (input: SubmitProfileChangeRequestInput): Promise<ProfileChangeRequest> => {
-    const res = await api.post<ApiResponse<ProfileChangeRequest>>('/profile-change-requests', input);
+    const { files, ...rest } = input;
+    if (!files || files.length === 0) {
+      const res = await api.post<ApiResponse<ProfileChangeRequest>>('/profile-change-requests', rest);
+      return res.data.data;
+    }
+    const formData = new FormData();
+    formData.append('changes', JSON.stringify(rest.changes));
+    if (rest.comments) formData.append('comments', rest.comments);
+    if (rest.previousRequestId !== undefined) formData.append('previousRequestId', String(rest.previousRequestId));
+    files.forEach((file) => formData.append('documents', file));
+    const res = await api.post<ApiResponse<ProfileChangeRequest>>('/profile-change-requests', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
     return res.data.data;
+  },
+
+  // OCD-454: uploads the "My Profile" camera-icon picture and returns the
+  // updated user row (with the new profilePictureUrl already set).
+  uploadProfilePicture: async (userId: number, file: File): Promise<User> => {
+    const formData = new FormData();
+    formData.append('profilePicture', file);
+    const res = await api.post<{ success: boolean; user: DbUserResponse }>(
+      `/users/${userId}/profile-pictures`,
+      formData,
+      { headers: { 'Content-Type': 'multipart/form-data' } },
+    );
+    return mapDbUserToAppUser(res.data.user) as User;
   },
 
   approveChangeRequest: async (id: number, reviewerComments?: string): Promise<ProfileChangeRequest> => {

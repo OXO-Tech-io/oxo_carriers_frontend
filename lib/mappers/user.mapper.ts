@@ -46,6 +46,7 @@ export interface DbUserResponse {
   linkedinProfile?: string | null;
   declarationAccepted?: boolean | null;
   declarationAcceptedAt?: string | null;
+  profilePictureUrl?: string | null;
 }
 
 export function mapDbUserToAppUser(raw: DbUserResponse | null | undefined): User | null {
@@ -91,5 +92,6 @@ export function mapDbUserToAppUser(raw: DbUserResponse | null | undefined): User
     linkedin_profile: raw.linkedinProfile ?? null,
     declaration_accepted: raw.declarationAccepted ?? null,
     declaration_accepted_at: raw.declarationAcceptedAt ?? null,
+    profile_picture_url: raw.profilePictureUrl ?? null,
   };
 }

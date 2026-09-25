@@ -30,6 +30,12 @@ export interface EmployeeNote {
   id: number;
   employeeUserId: number;
   authorUserId: number | null;
+  // OCD-479: resolved server-side (null if the author's account was later
+  // removed) so the note history can show who added each note.
+  authorName?: string | null;
+  // OCD-480: the author's role at resolution time - lets the Edit button's
+  // visibility mirror the server's "author or more senior role" rule.
+  authorRole?: string | null;
   content: string;
   createdAt: string;
   updatedAt: string;
@@ -383,12 +389,18 @@ export interface WorkLog {
   userId: number;
   workDate: string;
   taskDescription: string;
-  hoursSpent: string;
+  /** Recorded in minutes (0-1440/day) per the requirements doc. */
+  minutesSpent: number;
   remarks: string | null;
-  /** True when submitted after that work date's deadline. Late entries are still accepted. */
+  /** True when submitted after that work date's deadline. Late entries are still accepted.
+   *  Always false whenever the deadline feature is currently disabled, regardless of what
+   *  applied at submission time. */
   isLate: boolean;
   /** Deadline that applied, or null for weekends, holidays, and entries logged with the deadline off. */
   deadlineAt: string | null;
+  /** True once the employee has edited this entry after its original submission. */
+  isEdited: boolean;
+  lastModifiedAt: string | null;
   createdAt: string;
 }
 
@@ -417,13 +429,15 @@ export interface WorkLogDeadlineSettingsUpdate {
 export interface WorkLogEntryDraft {
   workDate: string;
   taskDescription: string;
-  hoursSpent: number;
+  /** Recorded in minutes (0-1440/day) per the requirements doc. */
+  minutesSpent: number;
   remarks?: string;
 }
 
 export interface WorkLogDailyStatus {
-  date: string;
-  /** Employees holding the work_logs permission (any level) - who's expected to log. */
+  from: string;
+  to: string;
+  /** All active employees in the system - who's expected to log. */
   totalEligible: number;
   submittedCount: number;
   onTimeCount: number;
@@ -444,7 +458,7 @@ export interface WorkLogUserSummary {
   employeeId: string | null;
   firstName: string;
   lastName: string;
-  totalHours: number;
+  totalMinutes: number;
   entryCount: number;
   lateCount: number;
 }

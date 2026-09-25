@@ -1,6 +1,6 @@
 import { UserRole } from "@/types";
 import { buildDefaultValues, type WizardFormValues } from "@/components/profile/wizard/wizardTypes";
-import type { EmploymentType, QualificationLevel } from "@/types/profile";
+import type { EmploymentType, QualificationLevel, UserTitle } from "@/types/profile";
 
 // Extends the profile wizard's own form shape (statutory info, nominees,
 // remittance, dependents, emergency contacts, welfare) so the same Step*
@@ -9,8 +9,14 @@ import type { EmploymentType, QualificationLevel } from "@/types/profile";
 export interface EmployeeWizardValues extends WizardFormValues {
   employee_id: string;
   email: string;
+  // OCD-449: distinct from the account/login email above - a personal
+  // contact address, required for parity with the requirements document.
+  personalEmail: string;
   first_name: string;
   last_name: string;
+  // OCD-475: parity with Edit Profile, which already has this (see
+  // TITLE_OPTIONS in types/profile.ts). Optional, same as there.
+  title: UserTitle | "";
   role: UserRole;
   employee_category: "" | "internal" | "client_side";
   department: string;
@@ -18,6 +24,10 @@ export interface EmployeeWizardValues extends WizardFormValues {
   work_location: "" | "office" | "remote" | "hybrid";
   primarySchoolAttended: string;
   secondarySchoolAttended: string;
+  // OCD-477: parity with the "Undergraduate Degree Completion Date" card on
+  // My Profile's Education tab - a single employee-level field (maps to
+  // tbl_employee.undergraduate_degree_completion_date), not a per-qualification one.
+  undergraduateDegreeCompletionDate: string;
   hire_date: string;
   manager_id: string;
   hourly_rate: string;
@@ -69,8 +79,10 @@ export const defaultEmployeeWizardValues: EmployeeWizardValues = {
   }),
   employee_id: "",
   email: "",
+  personalEmail: "",
   first_name: "",
   last_name: "",
+  title: "",
   role: UserRole.EMPLOYEE,
   employee_category: "",
   department: "",
@@ -78,6 +90,7 @@ export const defaultEmployeeWizardValues: EmployeeWizardValues = {
   work_location: "",
   primarySchoolAttended: "",
   secondarySchoolAttended: "",
+  undergraduateDegreeCompletionDate: "",
   hire_date: "",
   manager_id: "",
   hourly_rate: "",
