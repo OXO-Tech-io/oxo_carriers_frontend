@@ -27,26 +27,7 @@ describe("ResetPasswordPage", () => {
 
   const getSubmitButton = () => screen.getByRole("button", { name: /set new password/i });
 
-  it("disables submit and shows failing rules while the password is weak", () => {
-    render(<ResetPasswordPage />);
-    const newPassword = screen.getByLabelText(/^new password$/i);
-
-    fireEvent.change(newPassword, { target: { value: "abc" } });
-
-    expect(getSubmitButton()).toBeDisabled();
-    expect(screen.getByText(/at least 8 characters/i)).toBeInTheDocument();
-    // At least one failing rule is rendered with the ✖ marker.
-    expect(screen.getAllByText("✖").length).toBeGreaterThan(0);
-  });
-
-  it("rejects a denylisted password even though it's long enough", () => {
-    render(<ResetPasswordPage />);
-    fireEvent.change(screen.getByLabelText(/^new password$/i), { target: { value: "qwerty123" } });
-    expect(getSubmitButton()).toBeDisabled();
-    expect(screen.getByText(/not a common or easily guessable password/i)).toBeInTheDocument();
-  });
-
-  it("enables submit only once every rule passes and the confirmation matches", () => {
+  it("disables submit until the confirmation matches the new password", () => {
     render(<ResetPasswordPage />);
     const newPassword = screen.getByLabelText(/^new password$/i);
     const confirmPassword = screen.getByLabelText(/confirm new password/i);
@@ -54,9 +35,39 @@ describe("ResetPasswordPage", () => {
     fireEvent.change(newPassword, { target: { value: "Str0ng!Pass" } });
     expect(getSubmitButton()).toBeDisabled();
 
+    fireEvent.change(confirmPassword, { target: { value: "Different1!" } });
+    expect(getSubmitButton()).toBeDisabled();
+    expect(screen.getByText(/passwords do not match/i)).toBeInTheDocument();
+
     fireEvent.change(confirmPassword, { target: { value: "Str0ng!Pass" } });
     expect(getSubmitButton()).not.toBeDisabled();
-    expect(screen.getAllByText("✔")).toHaveLength(6);
+    expect(screen.queryByText(/passwords do not match/i)).not.toBeInTheDocument();
+  });
+
+  it("does not enforce a client-side password policy (the Keycloak realm policy does)", () => {
+    render(<ResetPasswordPage />);
+    fireEvent.change(screen.getByLabelText(/^new password$/i), { target: { value: "abc" } });
+    fireEvent.change(screen.getByLabelText(/confirm new password/i), { target: { value: "abc" } });
+
+    expect(getSubmitButton()).not.toBeDisabled();
+    expect(screen.queryByText(/password strength/i)).not.toBeInTheDocument();
+    expect(screen.queryByText("✖")).not.toBeInTheDocument();
+  });
+
+  it("shows the server's message when the password is rejected", async () => {
+    apiMock.post.mockRejectedValue({
+      response: { data: { message: "Password does not meet the realm password policy" } },
+    });
+    render(<ResetPasswordPage />);
+
+    fireEvent.change(screen.getByLabelText(/^new password$/i), { target: { value: "abc" } });
+    fireEvent.change(screen.getByLabelText(/confirm new password/i), { target: { value: "abc" } });
+    fireEvent.click(getSubmitButton());
+
+    await waitFor(() =>
+      expect(screen.getByText(/does not meet the realm password policy/i)).toBeInTheDocument(),
+    );
+    expect(routerMock.push).not.toHaveBeenCalled();
   });
 
   it("submits the new password once valid and redirects on success", async () => {
