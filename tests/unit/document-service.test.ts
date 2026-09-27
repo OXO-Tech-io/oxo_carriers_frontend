@@ -32,6 +32,8 @@ describe("documentService", () => {
       targetType: "individual",
       individualEmployeeIds: [1, 2],
       files: [file],
+      version: "1.0",
+      isMandatoryViewing: true,
     });
 
     expect(apiMock.post).toHaveBeenCalledWith(
@@ -45,6 +47,9 @@ describe("documentService", () => {
     expect(formData.get("targetType")).toBe("individual");
     expect(formData.get("individualEmployeeIds")).toBe(JSON.stringify([1, 2]));
     expect(formData.get("document")).toBeInstanceOf(File);
+    // OCD-500: version and mandatory-viewing flag are required going forward.
+    expect(formData.get("version")).toBe("1.0");
+    expect(formData.get("isMandatoryViewing")).toBe("true");
   });
 
   it("create omits individualEmployeeIds for an 'all' target", async () => {
@@ -54,11 +59,15 @@ describe("documentService", () => {
       targetType: "all",
       individualEmployeeIds: [],
       files: [],
+      version: "2.0",
+      isMandatoryViewing: false,
     });
 
     const formData = apiMock.post.mock.calls[0][1] as FormData;
     expect(formData.get("targetType")).toBe("all");
     expect(formData.get("individualEmployeeIds")).toBeNull();
+    expect(formData.get("version")).toBe("2.0");
+    expect(formData.get("isMandatoryViewing")).toBe("false");
   });
 
   it("listAll fetches the admin manage list", async () => {

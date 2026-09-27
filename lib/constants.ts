@@ -21,6 +21,15 @@ export const PROFILE_WIZARD_STEP_KEYS = {
 export const SUPPORTING_DOCUMENT_ACCEPT = '.pdf,.jpg,.jpeg,.png,.doc,.docx';
 export const SUPPORTING_DOCUMENT_MAX_SIZE_MB = 10;
 
+// Document Vault uploads (OCD-495): narrower than SUPPORTING_DOCUMENT_ACCEPT -
+// JPG, PNG, PDF, DOC, DOCX only. The mime types cover the file picker/drag-drop
+// check in FileUpload.handleFiles; the .doc/.docx extensions are included as a
+// fallback since some browsers/OSes report an empty or generic mime type for them.
+export const DOCUMENT_VAULT_ACCEPT =
+  'image/jpeg,image/png,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,.doc,.docx';
+export const DOCUMENT_VAULT_ACCEPT_HINT = 'Supported file types: JPG, PNG, PDF, DOC, DOCX.';
+export const DOCUMENT_VAULT_TYPE_ERROR = 'Invalid file type. Only JPG, PNG, PDF, DOC, and DOCX files are allowed.';
+
 // date-fns format() patterns.
 export const DATE_FORMATS = {
   /** e.g. "Mar 05" */

@@ -12,18 +12,46 @@ interface FileUploadProps {
   accept?: string;
   multiple?: boolean;
   maxSizeMB?: number;
+  /** Total number of files allowed (selected + existing). Omitted means no cap. */
+  maxFiles?: number;
   onFilesSelected: (files: File[]) => void;
   existingFiles?: ExistingFile[];
   onRemoveExisting?: (url: string) => void;
+  /** Overrides the default "unsupported file type" message when `accept` rejects a file. */
+  typeErrorMessage?: string;
 }
+
+/**
+ * The native `accept` attribute on <input type="file"> is only a picker
+ * *filter hint* - browsers don't enforce it on drag-and-drop or on an
+ * explicit "All Files" selection, so without this check any file type could
+ * be silently accepted regardless of `accept` (OCD-516/OCD-495/OCD-570).
+ */
+const isFileTypeAllowed = (file: File, accept?: string): boolean => {
+  if (!accept) return true;
+  const rules = accept
+    .split(',')
+    .map((rule) => rule.trim().toLowerCase())
+    .filter(Boolean);
+  if (rules.length === 0) return true;
+  const fileName = file.name.toLowerCase();
+  const mimeType = (file.type || '').toLowerCase();
+  return rules.some((rule) => {
+    if (rule.startsWith('.')) return fileName.endsWith(rule);
+    if (rule.endsWith('/*')) return mimeType.startsWith(rule.slice(0, -1));
+    return mimeType === rule;
+  });
+};
 
 export function FileUpload({
   accept,
   multiple = false,
   maxSizeMB = 10,
+  maxFiles,
   onFilesSelected,
   existingFiles = [],
   onRemoveExisting,
+  typeErrorMessage,
 }: FileUploadProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [dragOver, setDragOver] = useState(false);
@@ -33,13 +61,25 @@ export function FileUpload({
   const handleFiles = (fileList: FileList | null) => {
     if (!fileList || fileList.length === 0) return;
     const files = Array.from(fileList);
+    const invalidType = files.find((f) => !isFileTypeAllowed(f, accept));
+    if (invalidType) {
+      setError(typeErrorMessage ?? `"${invalidType.name}" is not a supported file type.`);
+      return;
+    }
     const tooLarge = files.find((f) => f.size > maxSizeMB * 1024 * 1024);
     if (tooLarge) {
       setError(`"${tooLarge.name}" exceeds the ${maxSizeMB}MB limit`);
       return;
     }
-    setError('');
     const next = multiple ? [...selected, ...files] : files.slice(0, 1);
+    // In single-file mode a new selection always replaces the existing/previously-selected file
+    // rather than adding to it, so only multi-file mode needs to count existingFiles toward the cap.
+    const projectedTotal = multiple ? existingFiles.length + next.length : next.length;
+    if (maxFiles && projectedTotal > maxFiles) {
+      setError(`You can upload at most ${maxFiles} file${maxFiles === 1 ? '' : 's'}`);
+      return;
+    }
+    setError('');
     setSelected(next);
     onFilesSelected(next);
   };
@@ -72,7 +112,9 @@ export function FileUpload({
       >
         <UploadCloud className="h-6 w-6 text-[var(--gray-400)]" />
         <p className="text-xs font-semibold text-[var(--foreground)]">Click to upload or drag and drop</p>
-        <p className="text-[10px] text-[var(--gray-400)]">Max {maxSizeMB}MB per file</p>
+        <p className="text-[10px] text-[var(--gray-400)]">
+          {multiple && maxFiles ? `Up to ${maxFiles} files · ` : ''}Max {maxSizeMB}MB per file
+        </p>
         <input
           ref={inputRef}
           type="file"

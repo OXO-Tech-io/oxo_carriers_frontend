@@ -55,3 +55,12 @@ export const useFormAnalyticsQuery = (id: number) =>
     queryFn: () => formService.getAnalytics(id),
     enabled: !!id,
   });
+
+/** Numeric employee ids already distributed this form - lets the Distribute picker exclude/mark
+ * recipients who already have it instead of offering them again with no indication. */
+export const useFormDistributionsQuery = (id: number | null) =>
+  useQuery({
+    queryKey: ['forms', 'distributions', id],
+    queryFn: () => formService.listDistributions(id as number),
+    enabled: !!id,
+  });

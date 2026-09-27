@@ -103,7 +103,7 @@ export const useSubmitFormResponseMutation = (formId: number) => {
       final = true,
     }: {
       answers: FormAnswerInput[];
-      files: Record<number, File>;
+      files: Record<number, File[]>;
       final?: boolean;
     }) => formService.submitResponse(formId, answers, files, final),
     onSuccess: () => {

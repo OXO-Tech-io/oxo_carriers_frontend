@@ -19,14 +19,19 @@ interface ActionsMenuProps {
 // table's `overflow-x-auto` wrapper instead of being clipped by it.
 export function ActionsMenu({ items }: ActionsMenuProps) {
   const [isOpen, setIsOpen] = useState(false);
-  const [position, setPosition] = useState({ top: 0, left: 0 });
+  const [position, setPosition] = useState({ top: 0, left: 0, openUpward: false });
   const triggerRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
 
   const openMenu = () => {
     const rect = triggerRef.current?.getBoundingClientRect();
     if (rect) {
-      setPosition({ top: rect.bottom + 4, left: rect.right });
+      // ~2.5rem per item + vertical padding - close enough to know whether the menu fits below
+      // without measuring the (not-yet-rendered) portal content itself.
+      const estimatedMenuHeight = items.length * 40 + 12;
+      const spaceBelow = window.innerHeight - rect.bottom;
+      const openUpward = spaceBelow < estimatedMenuHeight && rect.top >= estimatedMenuHeight;
+      setPosition({ top: openUpward ? rect.top - 4 : rect.bottom + 4, left: rect.right, openUpward });
     }
     setIsOpen(true);
   };
@@ -80,7 +85,12 @@ export function ActionsMenu({ items }: ActionsMenuProps) {
           <div
             ref={menuRef}
             role="menu"
-            style={{ position: 'fixed', top: position.top, left: position.left, transform: 'translateX(-100%)' }}
+            style={{
+              position: 'fixed',
+              top: position.top,
+              left: position.left,
+              transform: `translateX(-100%) ${position.openUpward ? 'translateY(-100%)' : ''}`,
+            }}
             className="z-50 min-w-[10rem] rounded-xl border border-[var(--gray-100)] bg-[var(--card-bg)] py-1.5 shadow-lg"
           >
             {items.map((item) => (

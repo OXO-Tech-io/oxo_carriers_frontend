@@ -57,6 +57,20 @@ export interface CommunicationRecipientDetail {
   isLate: boolean;
 }
 
+// OCD-525: attachments are created against the communication itself (shared
+// across every recipient), not per-recipient, so this shape lives on
+// `Communication`/`CommunicationRecipient` rather than on
+// `CommunicationRecipientDetail` (which is only the per-recipient ack-status
+// breakdown row). Deliberately narrower than the generic `Attachment` type
+// (no id/entityType/uploadedBy) to match what the backend actually returns
+// here.
+export interface CommunicationAttachment {
+  fileUrl: string;
+  fileName: string;
+  mimeType: string;
+  fileSize: number;
+}
+
 export interface Communication {
   id: number;
   title: string;
@@ -71,6 +85,7 @@ export interface Communication {
   lateCount?: number;
   pendingCount?: number;
   recipients?: CommunicationRecipientDetail[];
+  attachments?: CommunicationAttachment[];
 }
 
 export interface CommunicationRecipient {
@@ -85,6 +100,7 @@ export interface CommunicationRecipient {
   requiresAcknowledgement?: boolean;
   deadlineAt?: string | null;
   createdAt: string;
+  attachments?: CommunicationAttachment[];
 }
 
 // ─── Event Participation ────────────────────────────────────────────────────
@@ -249,6 +265,8 @@ export interface AssignedForm {
    * doesn't need a settings fan-out per form. Absent (older payloads) is treated as accepting responses. */
   acceptResponses?: boolean;
   closeAt?: string | null;
+  /** Mirrors FormSettings.allowEditAfterSubmit, flattened the same way as acceptResponses above. */
+  allowEditAfterSubmit?: boolean;
 }
 
 export type FormResponseStatus = 'in_progress' | 'submitted';
@@ -263,14 +281,24 @@ export interface FormResponse {
   completionMs: number | null;
 }
 
+export interface FormResponseAttachment {
+  id: number;
+  fileName: string;
+  fileUrl: string;
+  mimeType: string | null;
+  fileSize: number | null;
+}
+
 /** `value` is the structured answer (string/string[]/number/{row:col}...), `valueText` a flattened
- * version used for CSV/analytics/search display. */
+ * version used for CSV/analytics/search display. `attachments` is only populated for
+ * `file_upload` answers. */
 export interface FormResponseAnswer {
   id: number;
   responseId: number;
   questionId: number;
   value: unknown;
   valueText: string | null;
+  attachments: FormResponseAttachment[];
 }
 
 // Shape of `UserModel.findById`'s result as returned by GET /forms/:id/responses - camelCase,
@@ -351,6 +379,10 @@ export interface Notice {
   message: string;
   imageUrl: string | null;
   isActive: boolean;
+  /** ISO timestamp - when the notice becomes eligible to display. Required going forward. */
+  startAt: string;
+  /** ISO timestamp - when the notice stops being eligible to display, or null for no end. */
+  endAt: string | null;
   createdBy: number | null;
   updatedBy: number | null;
   createdAt: string;
@@ -373,6 +405,10 @@ export interface VaultDocument {
   attachments?: Attachment[];
   /** Only present on the admin "manage" list, showing who was individually targeted. */
   recipientEmployeeIds?: string[];
+  /** OCD-500: free-text version tag (e.g. "1.0"), required going forward on new uploads. */
+  version: string;
+  /** OCD-500: flags a document employees must acknowledge/view as required reading. */
+  isMandatoryViewing: boolean;
 }
 
 export interface PaginatedVaultDocuments {

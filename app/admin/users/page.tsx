@@ -94,7 +94,10 @@ export default function AdminUsersPage() {
     currentUser?.role === UserRole.HR_EXECUTIVE ||
     currentUser?.role === UserRole.HR_MANAGER ||
     isSuperAdmin;
-  const canManageDocumentVault = canManageNotes;
+  // OCD-496: HR Executive must not see or use Document Vault upload - unlike
+  // Employee Notes above, this icon is HR Manager/Super Admin only so it never
+  // renders (not just disabled) for HR Executive.
+  const canManageDocumentVault = currentUser?.role === UserRole.HR_MANAGER || isSuperAdmin;
   // OCD-490: Account Status changes are restricted to Administrator only -
   // HR Manager/HR Executive can no longer change a user's Active/Inactive/On
   // Hold status from this page (server also rejects it - see

@@ -197,13 +197,13 @@ export default function EditFormClient() {
           >
             {form.status}
           </span>
-          <Link href={`/admin/forms/${form.id}/settings`} className="text-sm font-semibold text-[var(--primary)] hover:underline">
+          <Link href={`/admin/forms/${form.id}/settings?from=builder`} className="text-sm font-semibold text-[var(--primary)] hover:underline">
             Settings
           </Link>
-          <Link href={`/admin/forms/${form.id}/analytics`} className="text-sm font-semibold text-[var(--primary)] hover:underline">
+          <Link href={`/admin/forms/${form.id}/analytics?from=builder`} className="text-sm font-semibold text-[var(--primary)] hover:underline">
             Analytics
           </Link>
-          <Link href={`/admin/forms/${form.id}/responses`} className="text-sm font-semibold text-[var(--primary)] hover:underline">
+          <Link href={`/admin/forms/${form.id}/responses?from=builder`} className="text-sm font-semibold text-[var(--primary)] hover:underline">
             Responses
           </Link>
           <Button variant="outline" size="sm" leftIcon={<Eye className="h-4 w-4" />} onClick={() => setPreviewOpen(true)}>
@@ -307,8 +307,8 @@ export default function EditFormClient() {
         </main>
 
         <aside className="hidden lg:block">
-          <div className="sticky top-4 space-y-4 rounded-2xl border border-[var(--gray-100)] bg-[var(--card-bg)] p-4">
-            <div>
+          <div className="sticky top-4 flex max-h-[calc(100vh-2rem)] flex-col gap-4 rounded-2xl border border-[var(--gray-100)] bg-[var(--card-bg)] p-4">
+            <div className="shrink-0">
               <label className="text-[10px] font-bold uppercase tracking-wider text-[var(--gray-400)]">Add question to</label>
               <select
                 value={targetSectionId ?? ''}
@@ -323,7 +323,12 @@ export default function EditFormClient() {
                 ))}
               </select>
             </div>
-            <QuestionTypePicker onPick={handleAddQuestion} onAddSection={handleAddSection} />
+            {/* Independent scroll area - stays put while the form content is scrolled, so reaching
+                a component near the top of a long list doesn't require scrolling the whole page
+                (and losing sight of the section currently being edited). */}
+            <div className="min-h-0 flex-1 overflow-y-auto pr-1">
+              <QuestionTypePicker onPick={handleAddQuestion} onAddSection={handleAddSection} />
+            </div>
           </div>
         </aside>
       </div>

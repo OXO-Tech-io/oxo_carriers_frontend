@@ -8,6 +8,10 @@ export interface CreateNoticeInput {
   message: string;
   isActive?: boolean;
   image?: File | null;
+  /** ISO timestamp - when the notice becomes eligible to display. Required. */
+  startAt: string;
+  /** ISO timestamp - when the notice stops being eligible to display. Required. */
+  endAt: string;
 }
 
 export type UpdateNoticeInput = Partial<CreateNoticeInput> & { removeImage?: boolean };
@@ -17,6 +21,9 @@ const toFormData = (input: CreateNoticeInput | UpdateNoticeInput): FormData => {
   if (input.title !== undefined) formData.append('title', input.title);
   if (input.message !== undefined) formData.append('message', input.message);
   if (input.isActive !== undefined) formData.append('isActive', String(input.isActive));
+  if (input.startAt !== undefined) formData.append('startAt', input.startAt);
+  // Required on create; on update, omitting it (undefined) means "leave it unchanged".
+  if ('endAt' in input) formData.append('endAt', input.endAt ?? '');
   if ('removeImage' in input && input.removeImage) formData.append('removeImage', 'true');
   if (input.image) formData.append('image', input.image);
   return formData;

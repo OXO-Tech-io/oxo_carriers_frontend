@@ -232,11 +232,13 @@ const adminNavigation: MenuItem[] = [
     requiredLevel: "write",
   },
   {
+    // OCD-526: HR Executive must not access Communications - restricted to
+    // Administrator + HR Manager only, same fixed-role-list pattern as
+    // "Leave Management" above (bypasses the generic permission-key system).
     name: "Communications",
     href: "/admin/communications",
     icon: Mail,
-    permissionKeys: ["communications"],
-    requiredLevel: "write",
+    hrManagerOnly: true,
   },
   {
     name: "Forms",

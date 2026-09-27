@@ -2,23 +2,15 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { useParams } from 'next/navigation';
+import { useParams, useSearchParams } from 'next/navigation';
 import type { ColumnDef } from '@tanstack/react-table';
 import { ArrowLeft, Download } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useFormQuery, useFormResponsesQuery } from '@/hooks/queries/use-forms-query';
 import { formService } from '@/lib/services/form.service';
 import { Button, DataTable, Modal } from '@/components/ui';
-import type { FormResponseAnswer, FormResponseWithAnswers } from '@/types/hrModules';
-
-const answerDisplay = (answer: FormResponseAnswer | undefined): string => {
-  if (!answer) return '—';
-  if (answer.valueText) return answer.valueText;
-  if (answer.value == null || answer.value === '') return '—';
-  if (Array.isArray(answer.value)) return answer.value.join(', ');
-  if (typeof answer.value === 'object') return JSON.stringify(answer.value);
-  return String(answer.value);
-};
+import { AnswerView } from '@/components/forms/AnswerView';
+import type { FormResponseWithAnswers } from '@/types/hrModules';
 
 const downloadBlob = (blob: Blob, filename: string) => {
   const url = URL.createObjectURL(blob);
@@ -34,6 +26,7 @@ const downloadBlob = (blob: Blob, filename: string) => {
 export default function FormResponsesClient() {
   const params = useParams<{ id: string }>();
   const formId = Number(params.id);
+  const fromBuilder = useSearchParams().get('from') === 'builder';
   const { isHR, isSuperAdmin } = useAuth();
   const [detail, setDetail] = useState<FormResponseWithAnswers | null>(null);
   const [exporting, setExporting] = useState<'csv' | 'xlsx' | null>(null);
@@ -117,8 +110,11 @@ export default function FormResponsesClient() {
     <div className="space-y-6 animate-fade-in">
       <div className="flex justify-between items-end flex-wrap gap-4">
         <div>
-          <Link href={`/admin/forms/${formId}/edit`} className="flex items-center gap-1.5 text-sm font-semibold text-[var(--gray-400)] hover:text-[var(--foreground)]">
-            <ArrowLeft className="h-4 w-4" /> Back to builder
+          <Link
+            href={fromBuilder ? `/admin/forms/${formId}/edit` : '/admin/forms'}
+            className="flex items-center gap-1.5 text-sm font-semibold text-[var(--gray-400)] hover:text-[var(--foreground)]"
+          >
+            <ArrowLeft className="h-4 w-4" /> {fromBuilder ? 'Back to Builder' : 'Forms'}
           </Link>
           <h1 className="mt-2 text-3xl font-bold text-[var(--foreground)]">{formQuery.data?.form.title ?? 'Responses'}</h1>
           <p className="text-[var(--gray-400)]">{responses.length} response(s)</p>
@@ -160,7 +156,9 @@ export default function FormResponsesClient() {
               {questions.map((q) => (
                 <div key={q.id} className="pt-3 first:pt-0">
                   <p className="text-xs font-semibold text-[var(--gray-400)]">{q.title || 'Untitled question'}</p>
-                  <p className="text-sm text-[var(--foreground)]">{answerDisplay(detail.answers.find((a) => a.questionId === q.id))}</p>
+                  <div className="mt-1">
+                    <AnswerView question={q} answer={detail.answers.find((a) => a.questionId === q.id)} />
+                  </div>
                 </div>
               ))}
             </div>

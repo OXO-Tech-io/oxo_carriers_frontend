@@ -25,7 +25,7 @@ export default function MyFormsPage() {
         {!assignedFormsQuery.isLoading && visible.length === 0 && (
           <p className="text-sm text-[var(--gray-400)]">No forms assigned yet.</p>
         )}
-        {visible.map(({ form, submitted, closeAt }) => {
+        {visible.map(({ form, submitted, closeAt, allowEditAfterSubmit }) => {
           const effectiveCloseAt = closeAt || form.closeAt;
           const deadlinePassed = effectiveCloseAt && new Date() > new Date(effectiveCloseAt);
 
@@ -74,11 +74,18 @@ export default function MyFormsPage() {
                   </p>
                 )}
               </div>
-              <div>
+              <div className="flex items-center gap-3">
                 {submitted ? (
-                  <Link href={`/my-forms/${form.id}`} className="text-xs font-semibold text-emerald-600 hover:underline">
-                    Submitted — view / edit
-                  </Link>
+                  <>
+                    <Link href={`/my-forms/${form.id}`} className="text-xs font-semibold text-[var(--gray-400)] hover:underline">
+                      View
+                    </Link>
+                    {allowEditAfterSubmit && (
+                      <Link href={`/my-forms/${form.id}?mode=edit`} className="text-xs font-semibold text-emerald-600 hover:underline">
+                        Edit
+                      </Link>
+                    )}
+                  </>
                 ) : (
                   <Link
                     href={`/my-forms/${form.id}`}
