@@ -108,25 +108,25 @@ export default function FacilitiesPage() {
     <div className="space-y-6 animate-fade-in">
       <div className="flex justify-between items-end flex-wrap gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-[#101828]">Facilities</h1>
-          <p className="text-[#475467]">Book workstations, meeting rooms and accommodation</p>
+          <h1 className="text-3xl font-bold text-[var(--foreground)]">Facilities</h1>
+          <p className="text-[var(--gray-400)]">Book workstations, meeting rooms and accommodation</p>
         </div>
         <button
           onClick={() => { setBookAnyPreSelectType(null); setShowBookAnyModal(true); }}
-          className="px-4 py-2.5 bg-[#465FFF] text-white rounded-xl font-bold hover:bg-[#3641F5] transition-colors"
+          className="px-4 py-2.5 bg-[var(--primary)] text-white rounded-xl font-bold hover:bg-[var(--primary-hover)] transition-colors"
         >
           Book now (any area)
         </button>
       </div>
 
-      {error && <div className="p-4 bg-red-50 text-red-700 rounded-xl animate-shake">{error}</div>}
-      {success && <div className="p-4 bg-emerald-50 text-emerald-700 rounded-xl">{success}</div>}
+      {error && <div className="p-4 bg-[var(--error-light)] text-[var(--error-text)] rounded-xl animate-shake">{error}</div>}
+      {success && <div className="p-4 bg-[var(--success-light)] text-[var(--success-text)] rounded-xl">{success}</div>}
 
-      <div className="flex space-x-1 p-1 bg-[#F2F4F7] rounded-xl w-fit">
+      <div className="flex space-x-1 p-1 bg-[var(--gray-50)] rounded-xl w-fit">
         <button
           onClick={() => setActiveTab('available')}
           className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${
-            activeTab === 'available' ? 'bg-white text-[#465FFF] shadow-sm' : 'text-[#667085] hover:text-[#344054]'
+            activeTab === 'available' ? 'bg-[var(--card-bg)] text-[var(--primary)] shadow-sm' : 'text-[var(--gray-400)] hover:text-[var(--gray-600)]'
           }`}
         >
           Available Areas
@@ -134,7 +134,7 @@ export default function FacilitiesPage() {
         <button
           onClick={() => setActiveTab('my-bookings')}
           className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${
-            activeTab === 'my-bookings' ? 'bg-white text-[#465FFF] shadow-sm' : 'text-[#667085] hover:text-[#344054]'
+            activeTab === 'my-bookings' ? 'bg-[var(--card-bg)] text-[var(--primary)] shadow-sm' : 'text-[var(--gray-400)] hover:text-[var(--gray-600)]'
           }`}
         >
           My Bookings
@@ -151,38 +151,38 @@ export default function FacilitiesPage() {
             return (
               <section key={type} className="space-y-4">
                 <div className="flex items-center justify-between flex-wrap gap-2">
-                  <h2 className="text-xl font-bold text-[#101828]">{FACILITY_TYPE_LABELS[type]}</h2>
+                  <h2 className="text-xl font-bold text-[var(--foreground)]">{FACILITY_TYPE_LABELS[type]}</h2>
                   <button
                     type="button"
                     onClick={() => { setBookAnyPreSelectType(type); setShowBookAnyModal(true); }}
-                    className="px-3 py-1.5 text-sm font-semibold text-[#465FFF] hover:bg-[#ECF3FF] rounded-lg transition-colors"
+                    className="px-3 py-1.5 text-sm font-semibold text-[var(--primary)] hover:bg-[var(--primary-light)] rounded-lg transition-colors"
                   >
                     Book now (any {FACILITY_TYPE_LABELS[type].toLowerCase()})
                   </button>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                   {list.map((f) => (
-                    <div key={f.id} className="bg-white rounded-2xl border border-[#E4E7EC] shadow-sm hover:shadow-md transition-shadow overflow-hidden group">
+                    <div key={f.id} className="bg-[var(--card-bg)] rounded-2xl border border-[var(--gray-100)] shadow-sm hover:shadow-md transition-shadow overflow-hidden group">
                       <div className="p-6">
                         <div className="flex justify-between items-start mb-4">
-                          <div className="p-3 bg-[#ECF3FF] rounded-xl text-[#465FFF]">
+                          <div className="p-3 bg-[var(--primary-light)] rounded-xl text-[var(--primary)]">
                             <BuildingOfficeIcon className="h-6 w-6" />
                           </div>
-                          <span className="px-3 py-1 bg-[#F9FAFB] text-[#344054] rounded-full text-xs font-semibold uppercase tracking-wider">
+                          <span className="px-3 py-1 bg-[var(--gray-25)] text-[var(--gray-600)] rounded-full text-xs font-semibold uppercase tracking-wider">
                             {f.type.replace('_', ' ')}
                           </span>
                         </div>
-                        <h3 className="text-xl font-bold text-[#101828] mb-1">{f.name}</h3>
-                        <p className="text-sm text-[#667085] mb-4 line-clamp-2">{f.description || 'No description provided'}</p>
+                        <h3 className="text-xl font-bold text-[var(--foreground)] mb-1">{f.name}</h3>
+                        <p className="text-sm text-[var(--gray-400)] mb-4 line-clamp-2">{f.description || 'No description provided'}</p>
                         
                         <div className="space-y-2 mb-6">
-                          <div className="flex items-center text-sm text-[#475467]">
+                          <div className="flex items-center text-sm text-[var(--gray-400)]">
                             <span className="font-semibold mr-2">Capacity:</span> {f.capacity} people
                           </div>
                           {f.facilities && (
                             <div className="flex flex-wrap gap-1">
                               {f.facilities.split(',').map((item, idx) => (
-                                <span key={idx} className="px-2 py-0.5 bg-blue-50 text-[#465FFF] text-[10px] rounded-md font-medium">
+                                <span key={idx} className="px-2 py-0.5 bg-[var(--primary-light)] text-[var(--primary)] text-[10px] rounded-md font-medium">
                                   {item.trim()}
                                 </span>
                               ))}
@@ -196,7 +196,7 @@ export default function FacilitiesPage() {
                               setSelectedFacility(f);
                               setShowBookingModal(true);
                             }}
-                            className="w-full py-3 bg-[#465FFF] text-white rounded-xl font-bold hover:bg-[#3641F5] transition-colors active:scale-[0.98] transform"
+                            className="w-full py-3 bg-[var(--primary)] text-white rounded-xl font-bold hover:bg-[var(--primary-hover)] transition-colors active:scale-[0.98] transform"
                           >
                             Book Now
                           </button>
@@ -205,7 +205,7 @@ export default function FacilitiesPage() {
                               setSelectedFacility(f);
                               setShowCalendarModal(true);
                             }}
-                            className="w-full py-2 text-[#465FFF] text-sm font-semibold hover:bg-blue-50 rounded-xl transition-colors"
+                            className="w-full py-2 text-[var(--primary)] text-sm font-semibold hover:bg-[var(--primary-light)] rounded-xl transition-colors"
                           >
                             Check existing bookings
                           </button>
@@ -219,38 +219,38 @@ export default function FacilitiesPage() {
           })}
         </div>
       ) : (
-        <div className="bg-white rounded-2xl border border-[#E4E7EC] shadow-sm overflow-hidden">
-          <table className="min-w-full divide-y divide-[#E4E7EC]">
-            <thead className="bg-[#F9FAFB]">
+        <div className="bg-[var(--card-bg)] rounded-2xl border border-[var(--gray-100)] shadow-sm overflow-hidden">
+          <table className="min-w-full divide-y divide-[var(--gray-100)]">
+            <thead className="bg-[var(--gray-25)]">
               <tr>
-                <th className="px-6 py-4 text-left text-xs font-bold text-[#344054] uppercase">Facility</th>
-                <th className="px-6 py-4 text-left text-xs font-bold text-[#344054] uppercase">Date & Time</th>
-                <th className="px-6 py-4 text-left text-xs font-bold text-[#344054] uppercase">Purpose</th>
-                <th className="px-6 py-4 text-left text-xs font-bold text-[#344054] uppercase">Status</th>
-                <th className="px-6 py-4 text-right text-xs font-bold text-[#344054] uppercase">Action</th>
+                <th className="px-6 py-4 text-left text-xs font-bold text-[var(--gray-600)] uppercase">Facility</th>
+                <th className="px-6 py-4 text-left text-xs font-bold text-[var(--gray-600)] uppercase">Date & Time</th>
+                <th className="px-6 py-4 text-left text-xs font-bold text-[var(--gray-600)] uppercase">Purpose</th>
+                <th className="px-6 py-4 text-left text-xs font-bold text-[var(--gray-600)] uppercase">Status</th>
+                <th className="px-6 py-4 text-right text-xs font-bold text-[var(--gray-600)] uppercase">Action</th>
               </tr>
             </thead>
-            <tbody className="bg-white divide-y divide-[#E4E7EC]">
+            <tbody className="bg-[var(--card-bg)] divide-y divide-[var(--gray-100)]">
               {bookings.length === 0 ? (
-                <tr><td colSpan={5} className="py-20 text-center text-[#667085]">You haven't made any bookings yet.</td></tr>
+                <tr><td colSpan={5} className="py-20 text-center text-[var(--gray-400)]">You haven't made any bookings yet.</td></tr>
               ) : (
                 bookings.map((b) => (
-                  <tr key={b.id} className="hover:bg-[#F9FAFB] transition-colors">
+                  <tr key={b.id} className="hover:bg-[var(--gray-25)] transition-colors">
                     <td className="px-6 py-4">
-                      <div className="text-sm font-semibold text-[#101828]">{b.facility_name}</div>
-                      <div className="text-xs text-[#667085] capitalize">{b.facility_type?.replace('_', ' ')}</div>
+                      <div className="text-sm font-semibold text-[var(--foreground)]">{b.facility_name}</div>
+                      <div className="text-xs text-[var(--gray-400)] capitalize">{b.facility_type?.replace('_', ' ')}</div>
                     </td>
                     <td className="px-6 py-4">
-                      <div className="text-sm text-[#344054]">{format(new Date(b.start_time), 'MMM d, yyyy')}</div>
-                      <div className="text-xs text-[#667085]">
+                      <div className="text-sm text-[var(--gray-600)]">{format(new Date(b.start_time), 'MMM d, yyyy')}</div>
+                      <div className="text-xs text-[var(--gray-400)]">
                         {format(new Date(b.start_time), 'hh:mm a')} - {format(new Date(b.end_time), 'hh:mm a')}
                       </div>
                     </td>
-                    <td className="px-6 py-4 text-sm text-[#475467]">{b.purpose}</td>
+                    <td className="px-6 py-4 text-sm text-[var(--gray-400)]">{b.purpose}</td>
                     <td className="px-6 py-4">
                       <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                        b.status === 'confirmed' ? 'bg-emerald-100 text-emerald-700' : 
-                        b.status === 'cancelled' ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-700'
+                        b.status === 'confirmed' ? 'bg-[var(--success-light)] text-[var(--success-text)]' :
+                        b.status === 'cancelled' ? 'bg-[var(--error-light)] text-[var(--error-text)]' : 'bg-[var(--gray-100)] text-[var(--gray-500)]'
                       }`}>
                         {b.status}
                       </span>

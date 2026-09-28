@@ -76,6 +76,13 @@ describe("lib/keycloak", () => {
     );
   });
 
+  it("kcLogin flags the pending session as a fresh login for OCD-455 to claim", async () => {
+    const { kcLogin, PENDING_NEW_LOGIN_KEY } = await import("@/lib/keycloak");
+    sessionStorage.removeItem(PENDING_NEW_LOGIN_KEY);
+    kcLogin();
+    expect(sessionStorage.getItem(PENDING_NEW_LOGIN_KEY)).toBe("1");
+  });
+
   it("kcLogout triggers kc.logout with a default redirect to /login/", async () => {
     const { kcLogout } = await import("@/lib/keycloak");
     kcLogout();

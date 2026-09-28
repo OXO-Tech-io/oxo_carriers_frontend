@@ -5,9 +5,32 @@ import { useEffect, useState, type ReactNode } from 'react';
 import { ToastProvider } from '@/contexts/ToastContext';
 import { queryClient } from '@/lib/queryClient';
 import { useAuthStore } from '@/store/authStore';
-import { initKeycloak } from '@/lib/keycloak';
+import { getKeycloak, initKeycloak, PENDING_NEW_LOGIN_KEY } from '@/lib/keycloak';
 import api from '@/lib/api';
 import { mapDbUserToAppUser } from '@/lib/mappers/user.mapper';
+
+/**
+ * OCD-455: if this init resolved a session that was just started via an
+ * explicit `kcLogin()` redirect (flagged in lib/keycloak.ts, never set by a
+ * silent SSO restore or a plain token refresh), tell the backend to claim it
+ * as the account's sole active session, displacing any other one. Fire-and-
+ * forget - a failure here just means single-session enforcement doesn't
+ * kick in for this login, not that the login itself failed.
+ */
+export function claimSessionIfPendingNewLogin(): void {
+  let pendingNewLogin = false;
+  try {
+    pendingNewLogin = sessionStorage.getItem(PENDING_NEW_LOGIN_KEY) === '1';
+    if (pendingNewLogin) sessionStorage.removeItem(PENDING_NEW_LOGIN_KEY);
+  } catch {
+    return;
+  }
+  if (!pendingNewLogin || !getKeycloak()?.authenticated) return;
+
+  api.post('/auth/claim-session').catch((err) => {
+    console.error('[OCD-455] Failed to claim session:', err);
+  });
+}
 
 /**
  * Initialize keycloak-js once on mount, then sync tokens into the auth store
@@ -27,6 +50,7 @@ function KeycloakBootstrap({ children }: { children: ReactNode }) {
         if (cancelled) return;
         syncFromKeycloak();
         setInitialized(true);
+        claimSessionIfPendingNewLogin();
       })
       .catch((err) => {
         console.error('[Keycloak] init failed:', err);

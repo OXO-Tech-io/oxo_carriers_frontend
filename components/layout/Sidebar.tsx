@@ -4,7 +4,14 @@ import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
 import { useAuth } from "@/hooks/useAuth";
 import { useSidebar } from "@/contexts/SidebarContext";
-import { Suspense, useEffect, useMemo, useState } from "react";
+import {
+  Suspense,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import api from "@/lib/api";
 import Image from "next/image";
 import {
@@ -310,13 +317,28 @@ function NavItems({
   const searchParams = useSearchParams();
   const currentStatus = searchParams.get("status");
 
+  // OCD-430: nested routes (e.g. "/admin/facilities/calendar" for "Booking
+  // Calendar") are string-prefixed by a sibling item's href ("/admin/facilities"
+  // for "Facility Management"), so matching each item independently highlighted
+  // both at once. Pick a single, most-specific (longest-href) match instead.
+  const activeHref = useMemo(() => {
+    let best: string | null = null;
+    for (const item of filteredNavItems) {
+      const isMatch =
+        pathname === item.href ||
+        (item.href !== "/" && pathname.startsWith(`${item.href}/`));
+      if (isMatch && (!best || item.href.length > best.length)) {
+        best = item.href;
+      }
+    }
+    return best;
+  }, [filteredNavItems, pathname]);
+
   return (
     <>
       {filteredNavItems.map((item) => {
         const hasChildren = item.children && item.children.length > 0;
-        const isParentActive =
-          pathname === item.href ||
-          (pathname.startsWith(item.href) && item.href !== "/");
+        const isParentActive = item.href === activeHref;
         const Icon = item.icon;
 
         return (
@@ -394,6 +416,35 @@ export default function Sidebar() {
   const { user, isSuperAdmin, isHRManager } = useAuth();
   const { collapsed, toggle } = useSidebar();
   const [mobileOpen, setMobileOpen] = useState(false);
+  // OCD-452: client-side navigation re-renders the nav list (permissions,
+  // active-state, etc.) and the browser can clamp `scrollTop` back to 0
+  // while that happens, losing the user's place in a long menu. Track the
+  // last scroll offset and reapply it after every render.
+  const desktopNavRef = useRef<HTMLElement>(null);
+  const desktopNavScrollPos = useRef(0);
+  const mobileNavRef = useRef<HTMLElement>(null);
+  const mobileNavScrollPos = useRef(0);
+
+  useLayoutEffect(() => {
+    if (desktopNavRef.current) {
+      desktopNavRef.current.scrollTop = desktopNavScrollPos.current;
+    }
+  });
+
+  useLayoutEffect(() => {
+    if (mobileNavRef.current) {
+      mobileNavRef.current.scrollTop = mobileNavScrollPos.current;
+    }
+  });
+
+  const handleDesktopNavScroll = (event: React.UIEvent<HTMLElement>) => {
+    desktopNavScrollPos.current = event.currentTarget.scrollTop;
+  };
+
+  const handleMobileNavScroll = (event: React.UIEvent<HTMLElement>) => {
+    mobileNavScrollPos.current = event.currentTarget.scrollTop;
+  };
+
   const [permissionLevels, setPermissionLevels] = useState<
     Record<string, AccessLevel>
   >({});
@@ -508,6 +559,8 @@ export default function Sidebar() {
 
       {/* Nav */}
       <nav
+        ref={desktopNavRef}
+        onScroll={handleDesktopNavScroll}
         className={`flex-1 overflow-y-auto py-5 transition-[padding] duration-200 ${
           collapsed ? "px-2" : "px-3"
         } scrollbar-thin`}
@@ -656,7 +709,11 @@ export default function Sidebar() {
           </p>
         </div>
 
-        <nav className="flex-1 overflow-y-auto px-3 py-5 scrollbar-thin">
+        <nav
+          ref={mobileNavRef}
+          onScroll={handleMobileNavScroll}
+          className="flex-1 overflow-y-auto px-3 py-5 scrollbar-thin"
+        >
           <div className="space-y-1">
             <Suspense
               fallback={

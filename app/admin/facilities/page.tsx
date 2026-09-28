@@ -74,61 +74,61 @@ export default function AdminFacilitiesPage() {
     <div className="space-y-6 animate-fade-in">
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-bold text-[#101828]">Facility Management</h1>
-          <p className="text-[#475467]">Manage workstations, rooms and accommodation</p>
+          <h1 className="text-3xl font-bold text-[var(--foreground)]">Facility Management</h1>
+          <p className="text-[var(--gray-400)]">Manage workstations, rooms and accommodation</p>
         </div>
         <button
           onClick={() => {
             setSelectedFacility(null);
             setShowModal(true);
           }}
-          className="inline-flex items-center space-x-2 px-4 py-2.5 bg-[#465FFF] text-white rounded-xl font-semibold hover:bg-[#3641F5] shadow-sm"
+          className="inline-flex items-center space-x-2 px-4 py-2.5 bg-[var(--primary)] text-white rounded-xl font-semibold hover:bg-[var(--primary-hover)] shadow-sm"
         >
           <PlusIcon className="h-5 w-5" />
           <span>Add Area</span>
         </button>
       </div>
 
-      {error && <div className="p-4 bg-red-50 text-red-700 rounded-lg">{error}</div>}
-      {success && <div className="p-4 bg-emerald-50 text-emerald-700 rounded-lg">{success}</div>}
+      {error && <div className="p-4 bg-[var(--error-light)] text-[var(--error-text)] rounded-lg">{error}</div>}
+      {success && <div className="p-4 bg-[var(--success-light)] text-[var(--success-text)] rounded-lg">{success}</div>}
 
-      <div className="bg-white rounded-2xl shadow-sm border border-[#E4E7EC] overflow-hidden">
-        <table className="min-w-full divide-y divide-[#E4E7EC]">
-          <thead className="bg-[#F9FAFB]">
+      <div className="bg-[var(--card-bg)] rounded-2xl shadow-sm border border-[var(--gray-100)] overflow-hidden">
+        <table className="min-w-full divide-y divide-[var(--gray-100)]">
+          <thead className="bg-[var(--gray-25)]">
             <tr>
-              <th className="px-6 py-4 text-left text-xs font-bold text-[#344054] uppercase">Name</th>
-              <th className="px-6 py-4 text-left text-xs font-bold text-[#344054] uppercase">Type</th>
-              <th className="px-6 py-4 text-left text-xs font-bold text-[#344054] uppercase">Capacity</th>
-              <th className="px-6 py-4 text-left text-xs font-bold text-[#344054] uppercase">Status</th>
-              <th className="px-6 py-4 text-right text-xs font-bold text-[#344054] uppercase">Actions</th>
+              <th className="px-6 py-4 text-left text-xs font-bold text-[var(--gray-600)] uppercase">Name</th>
+              <th className="px-6 py-4 text-left text-xs font-bold text-[var(--gray-600)] uppercase">Type</th>
+              <th className="px-6 py-4 text-left text-xs font-bold text-[var(--gray-600)] uppercase">Capacity</th>
+              <th className="px-6 py-4 text-left text-xs font-bold text-[var(--gray-600)] uppercase">Status</th>
+              <th className="px-6 py-4 text-right text-xs font-bold text-[var(--gray-600)] uppercase">Actions</th>
             </tr>
           </thead>
-          <tbody className="bg-white divide-y divide-[#E4E7EC]">
+          <tbody className="bg-[var(--card-bg)] divide-y divide-[var(--gray-100)]">
             {loading ? (
               <tr><td colSpan={5} className="py-20 text-center">Loading...</td></tr>
             ) : facilities.length === 0 ? (
-              <tr><td colSpan={5} className="py-20 text-center text-[#475467]">No facilities found.</td></tr>
+              <tr><td colSpan={5} className="py-20 text-center text-[var(--gray-400)]">No facilities found.</td></tr>
             ) : (
               facilities.map((f) => (
-                <tr key={f.id} className="hover:bg-[#F9FAFB]">
+                <tr key={f.id} className="hover:bg-[var(--gray-25)]">
                   <td className="px-6 py-4">
-                    <div className="text-sm font-semibold text-[#101828]">{f.name}</div>
-                    <div className="text-xs text-[#667085] truncate max-w-xs">{f.description}</div>
+                    <div className="text-sm font-semibold text-[var(--foreground)]">{f.name}</div>
+                    <div className="text-xs text-[var(--gray-400)] truncate max-w-xs">{f.description}</div>
                   </td>
                   <td className="px-6 py-4">
                     <span className="capitalize text-sm">{f.type.replace('_', ' ')}</span>
                   </td>
                   <td className="px-6 py-4 text-sm">{f.capacity}</td>
                   <td className="px-6 py-4">
-                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${f.is_active ? 'bg-emerald-100 text-emerald-700' : 'bg-gray-100 text-gray-700'}`}>
+                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${f.is_active ? 'bg-[var(--success-light)] text-[var(--success-text)]' : 'bg-[var(--gray-100)] text-[var(--gray-500)]'}`}>
                       {f.is_active ? 'Active' : 'Inactive'}
                     </span>
                   </td>
                   <td className="px-6 py-4 text-right space-x-2">
-                    <button onClick={() => { setSelectedFacility(f); setShowModal(true); }} className="p-2 text-[#465FFF] hover:bg-blue-50 rounded-lg">
+                    <button onClick={() => { setSelectedFacility(f); setShowModal(true); }} className="p-2 text-[var(--primary)] hover:bg-[var(--primary-light)] rounded-lg">
                       <PencilIcon className="h-5 w-5" />
                     </button>
-                    <button onClick={() => handleDelete(f.id)} className="p-2 text-red-600 hover:bg-red-50 rounded-lg">
+                    <button onClick={() => handleDelete(f.id)} className="p-2 text-red-600 hover:bg-[var(--error-light)] rounded-lg">
                       <TrashIcon className="h-5 w-5" />
                     </button>
                   </td>
