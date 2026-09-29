@@ -10,6 +10,7 @@ import type { ArchivedEmployee } from '@/types/archive';
 import type { ColumnDef } from '@tanstack/react-table';
 import { format } from 'date-fns';
 import { Archive as ArchiveIcon, Search } from 'lucide-react';
+import { DATE_FORMATS } from '@/lib/constants';
 
 // OCD-453: Administrators (and HR Manager, via the `archive` permission
 // key - see defaultRolePermissions.ts) can review deleted employee profiles
@@ -69,7 +70,7 @@ export default function ArchivePage() {
       cell: ({ getValue }) => {
         const value = getValue<string>();
         try {
-          return format(new Date(value), 'MMM dd, yyyy, h:mm a');
+          return format(new Date(value), DATE_FORMATS.MEDIUM_WITH_TIME);
         } catch {
           return value;
         }

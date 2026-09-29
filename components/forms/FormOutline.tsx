@@ -16,6 +16,14 @@ interface FormOutlineProps {
 
 const jumpTo = (anchorId: string) => document.getElementById(anchorId)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
 
+// Section/Description are layout blocks, not questions - labeling a default (untitled) one
+// "Untitled Question" in the outline misdescribes what it actually is.
+const untitledLabelFor = (type: FormQuestion['type']): string => {
+  if (type === 'section_header') return 'Untitled Section Header';
+  if (type === 'rich_text') return 'Untitled Description';
+  return 'Untitled question';
+};
+
 export function FormOutline({ sections, questions, logicRules, activeQuestionId, onActivate }: FormOutlineProps) {
   const [query, setQuery] = useState('');
 
@@ -63,7 +71,7 @@ export function FormOutline({ sections, questions, logicRules, activeQuestionId,
         }`}
       >
         <ui.icon className="h-3.5 w-3.5 shrink-0" />
-        <span className="truncate">{q.title || 'Untitled question'}</span>
+        <span className="truncate">{q.title || untitledLabelFor(q.type)}</span>
       </button>
     );
   };

@@ -9,6 +9,10 @@ export interface CreateDocumentInput {
   targetType: DocumentTargetType;
   individualEmployeeIds: number[];
   files: File[];
+  /** OCD-500: required version tag (e.g. "1.0"). */
+  version: string;
+  /** OCD-500: flags this document as required reading for employees. */
+  isMandatoryViewing: boolean;
 }
 
 export interface ListDocumentsParams {
@@ -25,6 +29,8 @@ export const documentService = {
     if (input.targetType === 'individual') {
       formData.append('individualEmployeeIds', JSON.stringify(input.individualEmployeeIds));
     }
+    formData.append('version', input.version);
+    formData.append('isMandatoryViewing', String(input.isMandatoryViewing));
     input.files.forEach((file) => formData.append('document', file));
     const res = await api.post<ApiResponse<VaultDocument>>('/document-vaults', formData, {
       headers: { 'Content-Type': 'multipart/form-data' },

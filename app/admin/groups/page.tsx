@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { ColumnDef } from '@tanstack/react-table';
 import { Trash2 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
@@ -128,6 +128,15 @@ function ManageGroupModal({ groupId, onClose }: { groupId: number | null; onClos
   const addMembersMutation = useAddGroupMembersMutation();
   const removeMemberMutation = useRemoveGroupMemberMutation();
 
+  // OCD-520: the "Add Members" selection (and any in-progress rename draft)
+  // must not carry over between groups - or between two separate "Manage"
+  // sessions on the *same* group - so reset it whenever the target group
+  // changes, in addition to the reset already done on close below.
+  useEffect(() => {
+    setNewMemberIds([]);
+    setIsEditingName(false);
+  }, [groupId]);
+
   const handleClose = () => {
     setIsEditingName(false);
     setNewMemberIds([]);
@@ -217,7 +226,14 @@ function ManageGroupModal({ groupId, onClose }: { groupId: number | null; onClos
 
           <div>
             <h4 className="text-sm font-bold text-[var(--foreground)] mb-2">Add Members</h4>
-            <EmployeeMultiSelect selectedIds={newMemberIds} onChange={setNewMemberIds} maxHeightClassName="max-h-48" />
+            <EmployeeMultiSelect
+              selectedIds={newMemberIds}
+              onChange={setNewMemberIds}
+              maxHeightClassName="max-h-48"
+              // OCD-520: don't offer employees who are already in this group - the client-side
+              // safety net regardless of whether the backend list already excludes them.
+              excludeIds={groupQuery.data.members.map((member) => member.userId)}
+            />
             <div className="flex justify-end pt-2">
               <Button size="sm" onClick={handleAddMembers} isLoading={addMembersMutation.isPending} disabled={newMemberIds.length === 0}>
                 Add Selected

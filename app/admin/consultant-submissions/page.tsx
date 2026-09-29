@@ -74,9 +74,9 @@ export default function AdminConsultantSubmissionsPage() {
 
   const getStatusBadge = (status: ConsultantSubmissionStatus) => {
     const styles = {
-      pending: 'bg-amber-100 text-amber-700',
-      approved: 'bg-emerald-100 text-emerald-700',
-      rejected: 'bg-red-100 text-red-700',
+      pending: 'bg-[var(--warning-light)] text-[var(--warning-text)]',
+      approved: 'bg-[var(--success-light)] text-[var(--success-text)]',
+      rejected: 'bg-[var(--error-light)] text-[var(--error-text)]',
     };
     return styles[status] || styles.pending;
   };
@@ -84,7 +84,7 @@ export default function AdminConsultantSubmissionsPage() {
   if (!canAccess) {
     return (
       <div className="flex items-center justify-center min-h-64">
-        <p className="text-[#475467]">Access denied.</p>
+        <p className="text-[var(--gray-400)]">Access denied.</p>
       </div>
     );
   }
@@ -92,28 +92,28 @@ export default function AdminConsultantSubmissionsPage() {
   return (
     <div className="space-y-6 animate-fade-in">
       <div>
-        <h1 className="text-3xl font-bold text-[#101828]">Consultant Work Submissions</h1>
-        <p className="mt-2 text-[#475467]">Review and approve or reject consultant work submissions</p>
+        <h1 className="text-3xl font-bold text-[var(--foreground)]">Consultant Work Submissions</h1>
+        <p className="mt-2 text-[var(--gray-400)]">Review and approve or reject consultant work submissions</p>
       </div>
 
       {error && (
-        <div className="bg-red-50 border-l-4 border-red-500 text-red-700 p-4 rounded-lg">
+        <div className="bg-[var(--error-light)] border-l-4 border-[var(--error)] text-[var(--error-text)] p-4 rounded-lg">
           <p className="text-sm font-medium">{error}</p>
         </div>
       )}
       {success && (
-        <div className="bg-emerald-50 border-l-4 border-emerald-500 text-emerald-700 p-4 rounded-lg">
+        <div className="bg-[var(--success-light)] border-l-4 border-[var(--success)] text-[var(--success-text)] p-4 rounded-lg">
           <p className="text-sm font-medium">{success}</p>
         </div>
       )}
 
       <div className="flex flex-wrap gap-4">
         <div>
-          <label className="block text-xs font-medium text-[#667085] mb-1">Status</label>
+          <label className="block text-xs font-medium text-[var(--gray-400)] mb-1">Status</label>
           <select
             value={filterStatus}
             onChange={(e) => setFilterStatus(e.target.value as ConsultantSubmissionStatus | '')}
-            className="block w-full min-w-[120px] px-3 py-2 border border-[#D0D5DD] rounded-lg text-sm bg-white focus:ring-2 focus:ring-[#465FFF] focus:border-transparent"
+            className="block w-full min-w-[120px] px-3 py-2 border border-[var(--gray-200)] rounded-lg text-sm bg-[var(--card-bg)] focus:ring-2 focus:ring-[var(--primary)] focus:border-transparent"
           >
             <option value="">All</option>
             <option value="pending">Pending</option>
@@ -125,51 +125,51 @@ export default function AdminConsultantSubmissionsPage() {
 
       {loading ? (
         <div className="flex justify-center min-h-64 items-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-4 border-[#465FFF] border-t-transparent" />
+          <div className="animate-spin rounded-full h-12 w-12 border-4 border-[var(--primary)] border-t-transparent" />
         </div>
       ) : submissions.length === 0 ? (
-        <div className="bg-white rounded-2xl shadow-sm border border-[#E4E7EC] p-12 text-center">
-          <DocumentTextIcon className="h-12 w-12 text-[#98A2B3] mx-auto mb-4" />
-          <p className="text-sm font-medium text-[#344054]">No consultant submissions found</p>
+        <div className="bg-[var(--card-bg)] rounded-2xl shadow-sm border border-[var(--gray-100)] p-12 text-center">
+          <DocumentTextIcon className="h-12 w-12 text-[var(--gray-300)] mx-auto mb-4" />
+          <p className="text-sm font-medium text-[var(--gray-600)]">No consultant submissions found</p>
         </div>
       ) : (
         <div className="space-y-4">
           {submissions.map((s) => (
             <div
               key={s.id}
-              className="bg-white rounded-2xl shadow-sm border border-[#E4E7EC] p-6"
+              className="bg-[var(--card-bg)] rounded-2xl shadow-sm border border-[var(--gray-100)] p-6"
             >
               <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
                 <div className="flex-1">
                   <div className="flex items-center space-x-3 mb-3">
-                    <div className="p-2 rounded-lg bg-[#ECF3FF]">
-                      <UserIcon className="h-5 w-5 text-[#465FFF]" />
+                    <div className="p-2 rounded-lg bg-[var(--primary-light)]">
+                      <UserIcon className="h-5 w-5 text-[var(--primary)]" />
                     </div>
                     <div>
-                      <p className="text-sm font-bold text-[#101828]">
+                      <p className="text-sm font-bold text-[var(--foreground)]">
                         {s.user?.first_name} {s.user?.last_name}
                       </p>
-                      <p className="text-xs text-[#475467]">{s.user?.email} · {s.user?.employee_id}</p>
+                      <p className="text-xs text-[var(--gray-400)]">{s.user?.email} · {s.user?.employee_id}</p>
                       {s.user?.hourly_rate != null && (
-                        <p className="text-xs text-[#667085]">Hourly rate: {s.user.hourly_rate}</p>
+                        <p className="text-xs text-[var(--gray-400)]">Hourly rate: {s.user.hourly_rate}</p>
                       )}
                     </div>
                   </div>
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
                     <div>
-                      <p className="text-xs text-[#98A2B3] mb-1">Project</p>
-                      <p className="text-sm font-semibold text-[#344054]">{s.project}</p>
+                      <p className="text-xs text-[var(--gray-300)] mb-1">Project</p>
+                      <p className="text-sm font-semibold text-[var(--gray-600)]">{s.project}</p>
                     </div>
                     <div>
-                      <p className="text-xs text-[#98A2B3] mb-1">Tech</p>
-                      <p className="text-sm font-semibold text-[#344054]">{s.tech}</p>
+                      <p className="text-xs text-[var(--gray-300)] mb-1">Tech</p>
+                      <p className="text-sm font-semibold text-[var(--gray-600)]">{s.tech}</p>
                     </div>
                     <div>
-                      <p className="text-xs text-[#98A2B3] mb-1">Total Hours</p>
-                      <p className="text-sm font-semibold text-[#344054]">{s.total_hours}</p>
+                      <p className="text-xs text-[var(--gray-300)] mb-1">Total Hours</p>
+                      <p className="text-sm font-semibold text-[var(--gray-600)]">{s.total_hours}</p>
                     </div>
                     <div>
-                      <p className="text-xs text-[#98A2B3] mb-1">Status</p>
+                      <p className="text-xs text-[var(--gray-300)] mb-1">Status</p>
                       <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold ${getStatusBadge(s.status)}`}>
                         {s.status}
                       </span>
@@ -177,8 +177,8 @@ export default function AdminConsultantSubmissionsPage() {
                   </div>
                   {s.comment && (
                     <div className="mb-4">
-                      <p className="text-xs text-[#98A2B3] mb-1">Comment</p>
-                      <p className="text-sm text-[#475467]">{s.comment}</p>
+                      <p className="text-xs text-[var(--gray-300)] mb-1">Comment</p>
+                      <p className="text-sm text-[var(--gray-400)]">{s.comment}</p>
                     </div>
                   )}
                   <div className="mb-2">
@@ -186,23 +186,23 @@ export default function AdminConsultantSubmissionsPage() {
                       href={`${API_BASE}${s.log_sheet_url}`}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="inline-flex items-center text-sm text-[#465FFF] hover:text-[#3641F5]"
+                      className="inline-flex items-center text-sm text-[var(--primary)] hover:text-[var(--primary-hover)]"
                     >
                       <DocumentArrowUpIcon className="h-4 w-4 mr-1" /> View log sheet
                     </a>
                   </div>
                   {s.resubmission_of && (
-                    <p className="text-xs text-[#667085]">Resubmission of submission #{s.resubmission_of}</p>
+                    <p className="text-xs text-[var(--gray-400)]">Resubmission of submission #{s.resubmission_of}</p>
                   )}
                   {rejectingId === s.id && (
-                    <div className="mt-4 p-4 bg-[#FEF3C7] border border-[#FCD34D] rounded-lg">
-                      <label className="block text-sm font-semibold text-[#92400E] mb-2">Rejection comment (required)</label>
+                    <div className="mt-4 p-4 bg-[var(--warning-light)] border border-[var(--warning-text)]/30 rounded-lg">
+                      <label className="block text-sm font-semibold text-[var(--warning-text)] mb-2">Rejection comment (required)</label>
                       <textarea
                         value={rejectComment}
                         onChange={(e) => setRejectComment(e.target.value)}
                         rows={3}
                         placeholder="Explain what the consultant should fix..."
-                        className="block w-full px-3 py-2 border border-[#D0D5DD] rounded-lg text-sm focus:ring-2 focus:ring-[#465FFF] focus:border-transparent"
+                        className="block w-full px-3 py-2 border border-[var(--gray-200)] rounded-lg text-sm focus:ring-2 focus:ring-[var(--primary)] focus:border-transparent"
                       />
                       <div className="flex gap-2 mt-2">
                         <button
@@ -217,7 +217,7 @@ export default function AdminConsultantSubmissionsPage() {
                             setRejectingId(null);
                             setRejectComment('');
                           }}
-                          className="px-4 py-2 text-sm font-semibold text-[#344054] border border-[#D0D5DD] rounded-lg hover:bg-[#F9FAFB]"
+                          className="px-4 py-2 text-sm font-semibold text-[var(--gray-600)] border border-[var(--gray-200)] rounded-lg hover:bg-[var(--gray-25)]"
                         >
                           Cancel
                         </button>
@@ -229,7 +229,7 @@ export default function AdminConsultantSubmissionsPage() {
                   <div className="flex flex-col gap-2 shrink-0">
                     <button
                       onClick={() => handleApprove(s.id)}
-                      className="inline-flex items-center justify-center px-4 py-2 text-sm font-semibold text-white bg-[#10B981] rounded-lg hover:bg-[#059669]"
+                      className="inline-flex items-center justify-center px-4 py-2 text-sm font-semibold text-white bg-[var(--success)] rounded-lg hover:opacity-90"
                     >
                       <CheckCircleIcon className="h-5 w-5 mr-2" /> Approve
                     </button>

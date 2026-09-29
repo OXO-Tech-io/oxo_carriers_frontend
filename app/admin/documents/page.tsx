@@ -6,8 +6,8 @@ import { Paperclip, Trash2 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useManageDocumentsQuery } from '@/hooks/queries/use-documents-query';
 import { useCreateDocumentMutation, useDeleteDocumentMutation } from '@/hooks/mutations/use-document-mutations';
-import { Modal, Button, DataTable, FileUpload, EmployeeMultiSelect, ConfirmationDialog } from '@/components/ui';
-import { resolveFileUrl } from '@/lib/constants';
+import { Modal, Button, DataTable, FileUpload, EmployeeMultiSelect, ConfirmationDialog, Badge } from '@/components/ui';
+import { resolveFileUrl, DOCUMENT_VAULT_ACCEPT, DOCUMENT_VAULT_ACCEPT_HINT, DOCUMENT_VAULT_TYPE_ERROR } from '@/lib/constants';
 import type { DocumentTargetType, VaultDocument } from '@/types/hrModules';
 
 const emptyDraft = {
@@ -16,12 +16,14 @@ const emptyDraft = {
   targetType: 'individual' as DocumentTargetType,
   individualEmployeeIds: [] as number[],
   files: [] as File[],
+  version: '',
+  isMandatoryViewing: false,
 };
 
 const PAGE_SIZE = 10;
 
 export default function AdminDocumentsPage() {
-  const { isHR, isSuperAdmin } = useAuth();
+  const { isHR, isHRManager, isSuperAdmin } = useAuth();
   const [showModal, setShowModal] = useState(false);
   const [draft, setDraft] = useState(emptyDraft);
   const [deleteTarget, setDeleteTarget] = useState<VaultDocument | null>(null);
@@ -43,8 +45,15 @@ export default function AdminDocumentsPage() {
     setDraft(emptyDraft);
   };
 
+  // OCD-496: upload is HR Manager/Super Admin only - HR Executive can still view
+  // this page (the query above is gated on isHR || isSuperAdmin) but must not see
+  // or use the upload action.
+  const canUpload = isHRManager || isSuperAdmin;
+
   const canSave =
-    draft.title.trim().length > 0 && (draft.targetType === 'all' || draft.individualEmployeeIds.length > 0);
+    draft.title.trim().length > 0 &&
+    draft.version.trim().length > 0 &&
+    (draft.targetType === 'all' || draft.individualEmployeeIds.length > 0);
 
   const handleSave = async () => {
     if (!canSave) return;
@@ -54,6 +63,8 @@ export default function AdminDocumentsPage() {
       targetType: draft.targetType,
       individualEmployeeIds: draft.individualEmployeeIds,
       files: draft.files,
+      version: draft.version.trim(),
+      isMandatoryViewing: draft.isMandatoryViewing,
     });
     closeModal();
   };
@@ -65,7 +76,17 @@ export default function AdminDocumentsPage() {
   };
 
   const columns: ColumnDef<VaultDocument, any>[] = [
-    { accessorKey: 'title', header: 'Title' },
+    {
+      accessorKey: 'title',
+      header: 'Title',
+      cell: ({ row }) => (
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="font-medium text-[var(--foreground)]">{row.original.title}</span>
+          {row.original.version && <Badge variant="gray">v{row.original.version}</Badge>}
+          {row.original.isMandatoryViewing && <Badge variant="warning">Mandatory</Badge>}
+        </div>
+      ),
+    },
     {
       accessorKey: 'description',
       header: 'Description',
@@ -76,15 +97,18 @@ export default function AdminDocumentsPage() {
     {
       id: 'target',
       header: 'Target',
+      // OCD-497: use the shared Badge component (light/dark-safe --info-*/--purple-*
+      // tokens) instead of hand-rolled bg-blue-100/text-blue-700 spans, which fell
+      // short of AA contrast in light mode.
       cell: ({ row }) =>
         row.original.targetType === 'all' ? (
-          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-blue-100 dark:bg-blue-950/30 text-blue-700 dark:text-blue-300">
+          <Badge variant="info" className="uppercase tracking-wider">
             All Employees
-          </span>
+          </Badge>
         ) : (
-          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-gray-100 dark:bg-slate-950/30 text-gray-700 dark:text-slate-300">
+          <Badge variant="purple" className="uppercase tracking-wider">
             {(row.original.recipientEmployeeIds?.length ?? 0)} employee(s)
-          </span>
+          </Badge>
         ),
     },
     {
@@ -101,7 +125,10 @@ export default function AdminDocumentsPage() {
                 href={resolveFileUrl(a.fileUrl)}
                 target="_blank"
                 rel="noreferrer"
-                className="flex items-center gap-1 text-xs font-semibold text-[var(--primary)] hover:underline"
+                // OCD-497: --primary alone is under AA contrast on the light-mode
+                // card background; --primary-hover is the darker end of the same
+                // accent family and passes AA (~5.5:1 on white).
+                className="flex items-center gap-1 text-xs font-semibold text-[var(--primary-hover)] hover:underline"
               >
                 <Paperclip className="h-3 w-3" />
                 <span className="truncate max-w-[160px]">{a.fileName}</span>
@@ -137,7 +164,7 @@ export default function AdminDocumentsPage() {
             that employee&apos;s profile.
           </p>
         </div>
-        <Button onClick={() => setShowModal(true)}>Upload Document</Button>
+        {canUpload && <Button onClick={() => setShowModal(true)}>Upload Document</Button>}
       </div>
 
       <DataTable
@@ -172,6 +199,26 @@ export default function AdminDocumentsPage() {
               className="mt-1 w-full rounded-xl border border-[var(--gray-200)] bg-[var(--card-bg)] p-2.5 text-sm text-[var(--foreground)]"
             />
           </div>
+
+          <div>
+            <label className="text-sm font-semibold text-[var(--foreground)]">Version Number</label>
+            <input
+              value={draft.version}
+              onChange={(e) => setDraft({ ...draft, version: e.target.value })}
+              placeholder="e.g. 1.0"
+              className="mt-1 w-full rounded-xl border border-[var(--gray-200)] bg-[var(--card-bg)] p-2.5 text-sm text-[var(--foreground)]"
+            />
+          </div>
+
+          <label className="flex items-center gap-2.5 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={draft.isMandatoryViewing}
+              onChange={(e) => setDraft({ ...draft, isMandatoryViewing: e.target.checked })}
+              className="h-4 w-4 rounded text-[var(--primary)] border-[var(--gray-300)] focus:ring-[var(--primary-ring)]"
+            />
+            <span className="text-sm text-[var(--foreground)]">Mark as mandatory viewing for employees</span>
+          </label>
 
           <div className="rounded-xl border border-[var(--gray-200)] bg-[var(--card-bg)] p-3.5 space-y-3">
             <p className="text-sm font-semibold text-[var(--foreground)]">Target</p>
@@ -210,8 +257,15 @@ export default function AdminDocumentsPage() {
 
           <div>
             <label className="text-sm font-semibold text-[var(--foreground)]">Files</label>
+            <p className="mt-0.5 text-xs text-[var(--gray-400)]">{DOCUMENT_VAULT_ACCEPT_HINT}</p>
             <div className="mt-1">
-              <FileUpload multiple maxSizeMB={10} onFilesSelected={(files) => setDraft({ ...draft, files })} />
+              <FileUpload
+                multiple
+                maxSizeMB={10}
+                accept={DOCUMENT_VAULT_ACCEPT}
+                typeErrorMessage={DOCUMENT_VAULT_TYPE_ERROR}
+                onFilesSelected={(files) => setDraft({ ...draft, files })}
+              />
             </div>
           </div>
 

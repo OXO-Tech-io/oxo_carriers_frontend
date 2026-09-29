@@ -9,7 +9,7 @@ import type { ColumnDef } from '@tanstack/react-table';
 import { Plus, Clock } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/contexts/ToastContext';
-import { useFormsQuery } from '@/hooks/queries/use-forms-query';
+import { useFormsQuery, useFormDistributionsQuery } from '@/hooks/queries/use-forms-query';
 import {
   useArchiveFormMutation,
   useCreateFormMutation,
@@ -37,6 +37,15 @@ const STATUS_STYLES: Record<HrForm['status'], string> = {
   archived: 'bg-[var(--gray-100)] text-[var(--gray-400)]',
 };
 
+const toDatetimeLocal = (iso?: string | null) => {
+  if (!iso) return '';
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return '';
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+};
+const nowDatetimeLocal = () => toDatetimeLocal(new Date().toISOString());
+
 export default function AdminFormsPage() {
   const { isHR, isSuperAdmin } = useAuth();
   const router = useRouter();
@@ -49,8 +58,12 @@ export default function AdminFormsPage() {
   const [groupMemberIds, setGroupMemberIds] = useState<number[]>([]);
 
   const [distributeCloseAt, setDistributeCloseAt] = useState('');
+  const [deadlineTouched, setDeadlineTouched] = useState(false);
+  const [confirmDeadlineChange, setConfirmDeadlineChange] = useState(false);
 
   const formsQuery = useFormsQuery();
+  const distributionsQuery = useFormDistributionsQuery(showDistributeModal?.id ?? null);
+  const alreadySentIds = distributionsQuery.data ?? [];
   const createMutation = useCreateFormMutation();
   const publishMutation = usePublishFormMutation();
   const unpublishMutation = useUnpublishFormMutation();
@@ -112,21 +125,40 @@ export default function AdminFormsPage() {
     setConfirmDelete(null);
   };
 
-  const handleDistribute = async () => {
-    if (!showDistributeModal || (recipientIds.length === 0 && recipientGroupIds.length === 0)) return;
-    const resolvedUserIds = [...new Set([...recipientIds, ...groupMemberIds])];
-    await distributeMutation.mutateAsync({
-      id: showDistributeModal.id,
-      userIds: resolvedUserIds,
-      groupIds: [],
-      closeAt: distributeCloseAt ? new Date(distributeCloseAt).toISOString() : null,
-    });
+  const closeDistributeModal = () => {
     setShowDistributeModal(null);
     setRecipientIds([]);
     setRecipientGroupIds([]);
     setGroupMemberIds([]);
     setDistributeCloseAt('');
+    setDeadlineTouched(false);
+    setConfirmDeadlineChange(false);
+  };
+
+  const performDistribute = async () => {
+    if (!showDistributeModal) return;
+    const resolvedUserIds = [...new Set([...recipientIds, ...groupMemberIds])];
+    await distributeMutation.mutateAsync({
+      id: showDistributeModal.id,
+      userIds: resolvedUserIds,
+      groupIds: [],
+      // Untouched (deadlineTouched===false) omits closeAt entirely so the form's existing
+      // deadline is preserved rather than cleared - see form.validator.ts#distributeFormSchema.
+      closeAt: deadlineTouched ? (distributeCloseAt ? new Date(distributeCloseAt).toISOString() : null) : undefined,
+    });
+    closeDistributeModal();
     toast.success('Form distributed');
+  };
+
+  const handleDistribute = () => {
+    if (!showDistributeModal || (recipientIds.length === 0 && recipientGroupIds.length === 0)) return;
+    // Changing or removing a deadline that's already active for a distributed form is confirmed
+    // first - setting a brand-new deadline (there was none before) needs no confirmation.
+    if (deadlineTouched && showDistributeModal.closeAt) {
+      setConfirmDeadlineChange(true);
+      return;
+    }
+    void performDistribute();
   };
 
   const columns: ColumnDef<HrForm, any>[] = [
@@ -172,7 +204,14 @@ export default function AdminFormsPage() {
           ...(form.status === 'published'
             ? [
                 { label: 'Unpublish', onClick: () => handleUnpublish(form.id) },
-                { label: 'Distribute', onClick: () => setShowDistributeModal(form) },
+                {
+                  label: 'Distribute',
+                  onClick: () => {
+                    setShowDistributeModal(form);
+                    setDistributeCloseAt(toDatetimeLocal(form.closeAt));
+                    setDeadlineTouched(false);
+                  },
+                },
               ]
             : []),
           ...(form.status !== 'archived'
@@ -234,6 +273,7 @@ export default function AdminFormsPage() {
             </label>
             <input
               type="datetime-local"
+              min={nowDatetimeLocal()}
               {...register('closeAt')}
               className="mt-1 w-full rounded-xl border border-[var(--gray-200)] bg-[var(--card-bg)] p-2.5 text-sm text-[var(--foreground)]"
             />
@@ -257,17 +297,7 @@ export default function AdminFormsPage() {
         </form>
       </Modal>
 
-      <Modal
-        isOpen={!!showDistributeModal}
-        onClose={() => {
-          setShowDistributeModal(null);
-          setRecipientIds([]);
-          setRecipientGroupIds([]);
-          setGroupMemberIds([]);
-          setDistributeCloseAt('');
-        }}
-        title={`Distribute — ${showDistributeModal?.title ?? ''}`}
-      >
+      <Modal isOpen={!!showDistributeModal} onClose={closeDistributeModal} title={`Distribute — ${showDistributeModal?.title ?? ''}`}>
         <div className="space-y-4">
           <RecipientPicker
             selectedGroupIds={recipientGroupIds}
@@ -275,6 +305,7 @@ export default function AdminFormsPage() {
             selectedUserIds={recipientIds}
             onUserIdsChange={setRecipientIds}
             onGroupMemberIdsChange={setGroupMemberIds}
+            alreadySentIds={alreadySentIds}
           />
           <div>
             <label className="text-xs font-semibold text-[var(--gray-400)] flex items-center gap-1">
@@ -283,22 +314,29 @@ export default function AdminFormsPage() {
             </label>
             <input
               type="datetime-local"
+              min={nowDatetimeLocal()}
               value={distributeCloseAt}
-              onChange={(e) => setDistributeCloseAt(e.target.value)}
+              onChange={(e) => {
+                setDistributeCloseAt(e.target.value);
+                setDeadlineTouched(true);
+              }}
               className="mt-1 w-full rounded-xl border border-[var(--gray-200)] bg-[var(--card-bg)] p-2.5 text-sm text-[var(--foreground)]"
             />
+            {showDistributeModal?.closeAt && distributeCloseAt && (
+              <button
+                type="button"
+                onClick={() => {
+                  setDistributeCloseAt('');
+                  setDeadlineTouched(true);
+                }}
+                className="mt-1 text-xs font-semibold text-red-500 hover:underline"
+              >
+                Remove deadline
+              </button>
+            )}
           </div>
           <div className="flex justify-end gap-2">
-            <Button
-              variant="ghost"
-              onClick={() => {
-                setShowDistributeModal(null);
-                setRecipientIds([]);
-                setRecipientGroupIds([]);
-                setGroupMemberIds([]);
-                setDistributeCloseAt('');
-              }}
-            >
+            <Button variant="ghost" onClick={closeDistributeModal}>
               Cancel
             </Button>
             <Button onClick={handleDistribute} isLoading={distributeMutation.isPending}>
@@ -307,6 +345,21 @@ export default function AdminFormsPage() {
           </div>
         </div>
       </Modal>
+
+      <ConfirmationDialog
+        isOpen={confirmDeadlineChange}
+        onClose={() => setConfirmDeadlineChange(false)}
+        onConfirm={() => void performDistribute()}
+        title={distributeCloseAt ? 'Update deadline?' : 'Remove deadline?'}
+        message={
+          distributeCloseAt
+            ? 'This changes the submission deadline for this form, including for employees it was already distributed to.'
+            : 'This removes the submission deadline for this form. Employees will no longer see a deadline.'
+        }
+        confirmLabel={distributeCloseAt ? 'Update deadline' : 'Remove deadline'}
+        variant="danger"
+        isLoading={distributeMutation.isPending}
+      />
 
       <ConfirmationDialog
         isOpen={!!confirmDelete}

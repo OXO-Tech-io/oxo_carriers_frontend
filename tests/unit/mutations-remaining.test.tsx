@@ -218,6 +218,8 @@ describe("remaining mutation hooks", () => {
       targetType: "individual",
       individualEmployeeIds: [1],
       files: [],
+      version: "1.0",
+      isMandatoryViewing: false,
     });
     await runMutation(useDeleteDocumentMutation, 1);
 
@@ -226,6 +228,8 @@ describe("remaining mutation hooks", () => {
       targetType: "individual",
       individualEmployeeIds: [1],
       files: [],
+      version: "1.0",
+      isMandatoryViewing: false,
     });
     expect(documentServiceMock.remove).toHaveBeenCalledWith(1);
   });

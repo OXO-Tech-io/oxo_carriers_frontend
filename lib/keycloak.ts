@@ -11,6 +11,23 @@ const KC_IDP_HINT = process.env.NEXT_PUBLIC_KEYCLOAK_IDP_HINT;
 const isBrowser = (): boolean => globalThis.window !== undefined;
 const getOrigin = (): string | undefined => globalThis.window?.location.origin;
 
+/**
+ * OCD-455: set right before an explicit, interactive `kc.login()` redirect
+ * and read back in `app/providers.tsx` once that flow completes. Marks the
+ * resulting session as one to "claim" as the account's sole active session
+ * via POST /auth/claim-sessions - distinct from a silent SSO restore or a
+ * plain token refresh, neither of which set this flag, so neither ever
+ * calls claim-sessions.
+ */
+export const PENDING_NEW_LOGIN_KEY = 'oxo_pending_new_login';
+
+/**
+ * OCD-455: set by lib/api.ts's response interceptor when the backend rejects
+ * a request because this session was superseded by a login elsewhere, and
+ * read back on the login page to explain why the user landed there.
+ */
+export const SESSION_TERMINATED_MESSAGE_KEY = 'oxo_session_terminated_message';
+
 if (isBrowser() && (!KC_URL || !KC_REALM || !KC_CLIENT_ID)) {
   throw new Error(
     'Missing NEXT_PUBLIC_KEYCLOAK_URL / NEXT_PUBLIC_KEYCLOAK_REALM / NEXT_PUBLIC_KEYCLOAK_CLIENT_ID',
@@ -99,6 +116,14 @@ export const kcLogin = (redirectUri?: string): void => {
 
   if (KC_IDP_HINT) {
     loginOptions.idpHint = KC_IDP_HINT;
+  }
+
+  try {
+    sessionStorage.setItem(PENDING_NEW_LOGIN_KEY, '1');
+  } catch {
+    // Best-effort - a private window or blocked storage just means this
+    // login won't claim the session; it'll still work, only without OCD-455
+    // enforcement kicking in for it.
   }
 
   kc.login({

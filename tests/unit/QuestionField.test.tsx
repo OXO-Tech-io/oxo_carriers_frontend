@@ -159,17 +159,23 @@ describe("QuestionField", () => {
     expect(onChange).toHaveBeenCalledWith({ row1: ["Col1", "Col2"] });
   });
 
-  it("file_upload shows the existing file name and reports a newly selected file", () => {
-    const onFileChange = vi.fn();
+  it("file_upload shows the existing file name and reports newly selected files", () => {
+    const onFilesChange = vi.fn();
     const q = baseQuestion({ type: "file_upload" });
     const { container } = render(
-      <QuestionField question={q} value={null} onChange={vi.fn()} existingFileName="resume.pdf" onFileChange={onFileChange} />,
+      <QuestionField
+        question={q}
+        value={null}
+        onChange={vi.fn()}
+        existingFiles={[{ name: "resume.pdf", url: "#" }]}
+        onFilesChange={onFilesChange}
+      />,
     );
     expect(screen.getByText("resume.pdf")).toBeInTheDocument();
     const input = container.querySelector('input[type="file"]') as HTMLInputElement;
     const file = new File(["x"], "new.pdf");
     fireEvent.change(input, { target: { files: [file] } });
-    expect(onFileChange).toHaveBeenCalledWith(file);
+    expect(onFilesChange).toHaveBeenCalledWith([file]);
   });
 
   it("disables inputs when disabled is true", () => {

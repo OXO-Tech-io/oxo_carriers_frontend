@@ -69,9 +69,9 @@ function statusLabel(status?: EmployeeStatus): string {
 }
 
 function statusBadgeClass(status?: EmployeeStatus): string {
-  if (status === EmployeeStatus.INACTIVE) return "bg-red-100 text-red-700";
-  if (status === EmployeeStatus.ON_HOLD) return "bg-amber-100 text-amber-700";
-  return "bg-emerald-100 text-emerald-700";
+  if (status === EmployeeStatus.INACTIVE) return "bg-[var(--error-light)] text-[var(--error-text)]";
+  if (status === EmployeeStatus.ON_HOLD) return "bg-[var(--warning-light)] text-[var(--warning-text)]";
+  return "bg-[var(--success-light)] text-[var(--success-text)]";
 }
 
 export default function AdminUsersPage() {
@@ -94,7 +94,10 @@ export default function AdminUsersPage() {
     currentUser?.role === UserRole.HR_EXECUTIVE ||
     currentUser?.role === UserRole.HR_MANAGER ||
     isSuperAdmin;
-  const canManageDocumentVault = canManageNotes;
+  // OCD-496: HR Executive must not see or use Document Vault upload - unlike
+  // Employee Notes above, this icon is HR Manager/Super Admin only so it never
+  // renders (not just disabled) for HR Executive.
+  const canManageDocumentVault = currentUser?.role === UserRole.HR_MANAGER || isSuperAdmin;
   // OCD-490: Account Status changes are restricted to Administrator only -
   // HR Manager/HR Executive can no longer change a user's Active/Inactive/On
   // Hold status from this page (server also rejects it - see
@@ -317,8 +320,8 @@ export default function AdminUsersPage() {
     return (
       <div className="flex items-center justify-center min-h-64">
         <div className="text-center">
-          <p className="text-lg font-semibold text-[#101828]">Access Denied</p>
-          <p className="text-[#475467]">
+          <p className="text-lg font-semibold text-[var(--foreground)]">Access Denied</p>
+          <p className="text-[var(--gray-400)]">
             You don't have permission to access this page.
           </p>
         </div>
@@ -331,10 +334,10 @@ export default function AdminUsersPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-[#101828]">
+          <h1 className="text-3xl font-bold text-[var(--foreground)]">
             {isFinance ? "Service Providers" : "Employee Management"}
           </h1>
-          <p className="mt-2 text-[#475467]">
+          <p className="mt-2 text-[var(--gray-400)]">
             {isFinance
               ? "Create and manage service provider accounts"
               : "Create and manage employee accounts"}
@@ -345,7 +348,7 @@ export default function AdminUsersPage() {
             {isFinance && (
               <button
                 onClick={() => setShowCreateServiceProviderModal(true)}
-                className="inline-flex items-center space-x-2 px-4 py-2.5 bg-[#465FFF] text-white rounded-xl font-semibold hover:bg-[#3641F5] transition-colors shadow-sm hover:shadow-md"
+                className="inline-flex items-center space-x-2 px-4 py-2.5 bg-[var(--primary)] text-white rounded-xl font-semibold hover:bg-[var(--primary-hover)] transition-colors shadow-sm hover:shadow-md"
               >
                 <PlusIcon className="h-5 w-5" />
                 <span>Create Service Provider</span>
@@ -355,14 +358,14 @@ export default function AdminUsersPage() {
               <>
                 <button
                   onClick={() => setShowCreateModal(true)}
-                  className="inline-flex items-center space-x-2 px-4 py-2.5 bg-[#465FFF] text-white rounded-xl font-semibold hover:bg-[#3641F5] transition-colors shadow-sm hover:shadow-md"
+                  className="inline-flex items-center space-x-2 px-4 py-2.5 bg-[var(--primary)] text-white rounded-xl font-semibold hover:bg-[var(--primary-hover)] transition-colors shadow-sm hover:shadow-md"
                 >
                   <PlusIcon className="h-5 w-5" />
                   <span>Create Employee</span>
                 </button>
                 <button
                   onClick={() => setShowCreateServiceProviderModal(true)}
-                  className="inline-flex items-center space-x-2 px-4 py-2.5 bg-white border border-[#D0D5DD] text-[#344054] rounded-xl font-semibold hover:bg-[#F9FAFB] transition-colors shadow-sm"
+                  className="inline-flex items-center space-x-2 px-4 py-2.5 bg-[var(--card-bg)] border border-[var(--gray-200)] text-[var(--gray-600)] rounded-xl font-semibold hover:bg-[var(--gray-25)] transition-colors shadow-sm"
                 >
                   <PlusIcon className="h-5 w-5" />
                   <span>Create Service Provider</span>
@@ -374,13 +377,13 @@ export default function AdminUsersPage() {
       </div>
 
       {/* Filters */}
-      <div className="bg-white rounded-2xl shadow-sm border border-[#E4E7EC] p-4">
+      <div className="bg-[var(--card-bg)] rounded-2xl shadow-sm border border-[var(--gray-100)] p-4">
         <div
           className={`grid grid-cols-1 gap-4 ${isHR || isSuperAdmin ? "md:grid-cols-3" : ""}`}
         >
           <div className="relative">
             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-              <MagnifyingGlassIcon className="h-5 w-5 text-[#98A2B3]" />
+              <MagnifyingGlassIcon className="h-5 w-5 text-[var(--gray-300)]" />
             </div>
             <input
               type="text"
@@ -391,7 +394,7 @@ export default function AdminUsersPage() {
               }
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="block w-full pl-10 pr-3 py-2.5 border border-[#D0D5DD] rounded-lg text-sm text-[#101828] placeholder:text-[#98A2B3] focus:outline-none focus:ring-2 focus:ring-[#465FFF] focus:border-transparent"
+              className="block w-full pl-10 pr-3 py-2.5 border border-[var(--gray-200)] rounded-lg text-sm text-[var(--foreground)] placeholder:text-[var(--gray-300)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)] focus:border-transparent"
             />
           </div>
           {(isHR || isSuperAdmin) && (
@@ -399,7 +402,7 @@ export default function AdminUsersPage() {
               <select
                 value={filterRole}
                 onChange={(e) => setFilterRole(e.target.value)}
-                className="px-3 py-2.5 border border-[#D0D5DD] rounded-lg text-sm font-medium text-[#344054] bg-white focus:outline-none focus:ring-2 focus:ring-[#465FFF] focus:border-transparent"
+                className="px-3 py-2.5 border border-[var(--gray-200)] rounded-lg text-sm font-medium text-[var(--gray-600)] bg-[var(--card-bg)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)] focus:border-transparent"
               >
                 <option value="">All Roles</option>
                 <option value={UserRole.HR_MANAGER}>HR Manager</option>
@@ -419,7 +422,7 @@ export default function AdminUsersPage() {
               <select
                 value={filterDepartment}
                 onChange={(e) => setFilterDepartment(e.target.value)}
-                className="px-3 py-2.5 border border-[#D0D5DD] rounded-lg text-sm font-medium text-[#344054] bg-white focus:outline-none focus:ring-2 focus:ring-[#465FFF] focus:border-transparent"
+                className="px-3 py-2.5 border border-[var(--gray-200)] rounded-lg text-sm font-medium text-[var(--gray-600)] bg-[var(--card-bg)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)] focus:border-transparent"
               >
                 <option value="">All Departments</option>
                 {departments.map((dept) => (
@@ -436,60 +439,60 @@ export default function AdminUsersPage() {
       {/* Users Table */}
       {loading ? (
         <div className="flex items-center justify-center min-h-64">
-          <div className="animate-spin rounded-full h-12 w-12 border-4 border-[#465FFF] border-t-transparent"></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-4 border-[var(--primary)] border-t-transparent"></div>
         </div>
       ) : (
-        <div className="bg-white rounded-2xl shadow-sm border border-[#E4E7EC] overflow-hidden">
+        <div className="bg-[var(--card-bg)] rounded-2xl shadow-sm border border-[var(--gray-100)] overflow-hidden">
           <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-[#E4E7EC]">
-              <thead className="bg-[#F9FAFB]">
+            <table className="min-w-full divide-y divide-[var(--gray-100)]">
+              <thead className="bg-[var(--gray-25)]">
                 <tr>
-                  <th className="px-6 py-4 text-left text-xs font-bold text-[#344054] uppercase tracking-wider">
+                  <th className="px-6 py-4 text-left text-xs font-bold text-[var(--gray-600)] uppercase tracking-wider">
                     {isFinance ? "Company" : "Employee"}
                   </th>
                   {!isFinance && (
                     <>
-                      <th className="px-6 py-4 text-left text-xs font-bold text-[#344054] uppercase tracking-wider">
+                      <th className="px-6 py-4 text-left text-xs font-bold text-[var(--gray-600)] uppercase tracking-wider">
                         Role
                       </th>
-                      <th className="px-6 py-4 text-left text-xs font-bold text-[#344054] uppercase tracking-wider">
+                      <th className="px-6 py-4 text-left text-xs font-bold text-[var(--gray-600)] uppercase tracking-wider">
                         Department
                       </th>
-                      <th className="px-6 py-4 text-left text-xs font-bold text-[#344054] uppercase tracking-wider">
+                      <th className="px-6 py-4 text-left text-xs font-bold text-[var(--gray-600)] uppercase tracking-wider">
                         Position
                       </th>
-                      <th className="px-6 py-4 text-left text-xs font-bold text-[#344054] uppercase tracking-wider">
+                      <th className="px-6 py-4 text-left text-xs font-bold text-[var(--gray-600)] uppercase tracking-wider">
                         Onboarding
                       </th>
-                      <th className="px-6 py-4 text-left text-xs font-bold text-[#344054] uppercase tracking-wider">
+                      <th className="px-6 py-4 text-left text-xs font-bold text-[var(--gray-600)] uppercase tracking-wider">
                         Account Status
                       </th>
                     </>
                   )}
                   {isFinance && (
-                    <th className="px-6 py-4 text-left text-xs font-bold text-[#344054] uppercase tracking-wider">
+                    <th className="px-6 py-4 text-left text-xs font-bold text-[var(--gray-600)] uppercase tracking-wider">
                       Contact
                     </th>
                   )}
                   {!isFinance && (
-                    <th className="px-6 py-4 text-right text-xs font-bold text-[#344054] uppercase tracking-wider">
+                    <th className="px-6 py-4 text-right text-xs font-bold text-[var(--gray-600)] uppercase tracking-wider">
                       Actions
                     </th>
                   )}
                 </tr>
               </thead>
-              <tbody className="bg-white divide-y divide-[#E4E7EC]">
+              <tbody className="bg-[var(--card-bg)] divide-y divide-[var(--gray-100)]">
                 {filteredItems.length === 0 ? (
                   <tr>
                     <td
                       colSpan={isFinance ? 2 : 7}
                       className="px-6 py-12 text-center"
                     >
-                      <UserGroupIcon className="h-12 w-12 text-[#98A2B3] mx-auto mb-4" />
-                      <p className="text-sm font-medium text-[#344054]">
+                      <UserGroupIcon className="h-12 w-12 text-[var(--gray-300)] mx-auto mb-4" />
+                      <p className="text-sm font-medium text-[var(--gray-600)]">
                         {isFinance ? "No vendors found" : "No employees found"}
                       </p>
-                      <p className="text-sm text-[#98A2B3] mt-1">
+                      <p className="text-sm text-[var(--gray-300)] mt-1">
                         {isFinance
                           ? "Try adjusting your search"
                           : "Try adjusting your search or filters"}
@@ -501,58 +504,58 @@ export default function AdminUsersPage() {
                     isVendor(item) ? (
                       <tr
                         key={item.id}
-                        className="hover:bg-[#F9FAFB] transition-colors"
+                        className="hover:bg-[var(--gray-25)] transition-colors"
                       >
                         <td className="px-6 py-4 whitespace-nowrap">
                           <div>
-                            <p className="text-sm font-semibold text-[#101828]">
+                            <p className="text-sm font-semibold text-[var(--foreground)]">
                               {item.company_name}
                             </p>
-                            <p className="text-xs text-[#475467]">
+                            <p className="text-xs text-[var(--gray-400)]">
                               {item.email}
                             </p>
                           </div>
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-[#475467]">
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-[var(--gray-400)]">
                           {item.contact_number || "—"}
                         </td>
                       </tr>
                     ) : (
                       <tr
                         key={item.id}
-                        className="hover:bg-[#F9FAFB] transition-colors"
+                        className="hover:bg-[var(--gray-25)] transition-colors"
                       >
                         <td className="px-6 py-4 whitespace-nowrap">
                           <div>
-                            <p className="text-sm font-semibold text-[#101828]">
+                            <p className="text-sm font-semibold text-[var(--foreground)]">
                               {item.first_name} {item.last_name}
                             </p>
-                            <p className="text-xs text-[#475467]">
+                            <p className="text-xs text-[var(--gray-400)]">
                               {item.email}
                             </p>
-                            <p className="text-xs text-[#98A2B3] mt-0.5">
+                            <p className="text-xs text-[var(--gray-300)] mt-0.5">
                               ID: {item.employee_id}
                             </p>
                           </div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
-                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-[#ECF3FF] text-[#465FFF]">
+                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-[var(--primary-light)] text-[var(--primary)]">
                             {item.role.replace("_", " ")}
                           </span>
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-[#475467]">
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-[var(--gray-400)]">
                           {item.department || "—"}
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-[#475467]">
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-[var(--gray-400)]">
                           {item.position || "—"}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           {item.requiredActions.includes("UPDATE_PASSWORD") ? (
-                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-700">
+                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-[var(--warning-light)] text-[var(--warning-text)]">
                               Password Setup Required
                             </span>
                           ) : (
-                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-100 text-emerald-700">
+                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-[var(--success-light)] text-[var(--success-text)]">
                               Active
                             </span>
                           )}
@@ -564,7 +567,7 @@ export default function AdminUsersPage() {
                               onChange={(e) =>
                                 handleStatusChange(item.id, e.target.value as EmployeeStatus)
                               }
-                              className={`text-xs font-semibold rounded-full px-2.5 py-1 border-0 focus:outline-none focus:ring-2 focus:ring-[#465FFF] cursor-pointer ${statusBadgeClass(item.status)}`}
+                              className={`text-xs font-semibold rounded-full px-2.5 py-1 border-0 focus:outline-none focus:ring-2 focus:ring-[var(--primary)] cursor-pointer ${statusBadgeClass(item.status)}`}
                             >
                               <option value={EmployeeStatus.ACTIVE}>Active</option>
                               <option value={EmployeeStatus.INACTIVE}>Inactive</option>
@@ -586,7 +589,7 @@ export default function AdminUsersPage() {
                                   setSelectedUser(item);
                                   setShowEditEmployeeModal(true);
                                 }}
-                                className="p-2 text-[#465FFF] hover:bg-[#ECF3FF] rounded-lg transition-colors"
+                                className="p-2 text-[var(--primary)] hover:bg-[var(--primary-light)] rounded-lg transition-colors"
                                 title="View / Edit Profile"
                               >
                                 <PencilSquareIcon className="h-5 w-5" />
@@ -598,7 +601,7 @@ export default function AdminUsersPage() {
                                   setSelectedUser(item);
                                   setShowNotesModal(true);
                                 }}
-                                className="p-2 text-[#465FFF] hover:bg-[#ECF3FF] rounded-lg transition-colors"
+                                className="p-2 text-[var(--primary)] hover:bg-[var(--primary-light)] rounded-lg transition-colors"
                                 title="Employee Notes"
                               >
                                 <DocumentTextIcon className="h-5 w-5" />
@@ -610,7 +613,7 @@ export default function AdminUsersPage() {
                                   setSelectedUser(item);
                                   setShowDocumentVaultModal(true);
                                 }}
-                                className="p-2 text-[#465FFF] hover:bg-[#ECF3FF] rounded-lg transition-colors"
+                                className="p-2 text-[var(--primary)] hover:bg-[var(--primary-light)] rounded-lg transition-colors"
                                 title="Document Vault"
                               >
                                 <FolderIcon className="h-5 w-5" />
@@ -621,7 +624,7 @@ export default function AdminUsersPage() {
                                 setSelectedUser(item);
                                 setShowResetModal(true);
                               }}
-                              className="p-2 text-[#465FFF] hover:bg-[#ECF3FF] rounded-lg transition-colors"
+                              className="p-2 text-[var(--primary)] hover:bg-[var(--primary-light)] rounded-lg transition-colors"
                               title="Reset Password"
                             >
                               <KeyIcon className="h-5 w-5" />
@@ -629,7 +632,7 @@ export default function AdminUsersPage() {
                             {(currentUser?.role === UserRole.HR_MANAGER || isSuperAdmin) && (
                               <button
                                 onClick={() => setDeleteTarget(item)}
-                                className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                                className="p-2 text-red-600 hover:bg-[var(--error-light)] rounded-lg transition-colors"
                                 title="Delete User"
                               >
                                 <TrashIcon className="h-5 w-5" />

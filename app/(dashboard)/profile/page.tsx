@@ -43,7 +43,7 @@ import { WorkHistoryTimeline } from '@/components/profile/WorkHistoryTimeline';
 import { ExperienceSummaryCard } from '@/components/profile/ExperienceSummaryCard';
 import { useToast } from '@/contexts/ToastContext';
 import { QUALIFICATION_LEVEL_OPTIONS, TITLE_OPTIONS, type ProfileChangeRequest } from '@/types/profile';
-import { resolveFileUrl } from '@/lib/constants';
+import { resolveFileUrl, DATE_FORMATS } from '@/lib/constants';
 import type { ColumnDef } from '@tanstack/react-table';
 
 type ProfileTab = 'personal' | 'contacts' | 'education' | 'work-history' | 'pending-changes' | 'employment' | 'documents' | 'settings';
@@ -103,7 +103,7 @@ export default function ProfilePage() {
   const formattedHireDate = () => {
     if (!displayUser?.hire_date) return 'N/A';
     try {
-      return format(new Date(displayUser.hire_date), 'MMMM dd, yyyy');
+      return format(new Date(displayUser.hire_date), DATE_FORMATS.LONG);
     } catch {
       return displayUser.hire_date;
     }
@@ -112,7 +112,7 @@ export default function ProfilePage() {
   const formattedDegreeDate = () => {
     if (!displayUser?.undergraduate_degree_completion_date) return 'Not provided';
     try {
-      return format(new Date(displayUser.undergraduate_degree_completion_date), 'MMMM dd, yyyy');
+      return format(new Date(displayUser.undergraduate_degree_completion_date), DATE_FORMATS.LONG);
     } catch {
       return displayUser.undergraduate_degree_completion_date;
     }
@@ -219,7 +219,7 @@ export default function ProfilePage() {
       cell: ({ getValue }) => {
         const v = getValue<string>();
         try {
-          return format(new Date(v), 'MMM dd, yyyy');
+          return format(new Date(v), DATE_FORMATS.MEDIUM);
         } catch {
           return v;
         }
@@ -514,7 +514,7 @@ export default function ProfilePage() {
                             ) : (
                               rec.dateAwarded && (
                                 <p className="text-[11px] font-medium text-[var(--gray-400)] mt-1">
-                                  Awarded {format(new Date(rec.dateAwarded), 'MMM yyyy')}
+                                  Awarded {format(new Date(rec.dateAwarded), DATE_FORMATS.SHORT_MONTH_YEAR)}
                                 </p>
                               )
                             )}

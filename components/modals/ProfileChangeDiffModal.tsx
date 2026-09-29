@@ -14,6 +14,7 @@ import type {
 } from '@/types/profile';
 import { QUALIFICATION_LEVEL_OPTIONS } from '@/types/profile';
 import { format } from 'date-fns';
+import { DATE_FORMATS } from '@/lib/constants';
 import { resolveFileUrl } from '@/lib/constants';
 import { Paperclip } from 'lucide-react';
 
@@ -63,7 +64,7 @@ const STATUS_STYLES: Record<ProfileChangeRequest['status'], { label: string; cla
 function formatDate(value?: string | null) {
   if (!value) return '—';
   try {
-    return format(new Date(value), 'MMM dd, yyyy');
+    return format(new Date(value), DATE_FORMATS.MEDIUM);
   } catch {
     return value;
   }

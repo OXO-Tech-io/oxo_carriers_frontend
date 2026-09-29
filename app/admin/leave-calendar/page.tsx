@@ -151,7 +151,7 @@ export default function LeaveCalendarPage() {
   if (!canAccess) {
     return (
       <div className="p-6">
-        <div className="rounded-lg bg-red-50 p-4 text-red-800">
+        <div className="rounded-lg bg-[var(--error-light)] p-4 text-[var(--error-text)]">
           You don't have permission to access this page.
         </div>
       </div>
@@ -162,8 +162,8 @@ export default function LeaveCalendarPage() {
     <div className="p-6">
       <div className="mb-6 flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-[#101828]">Leave Calendar</h1>
-          <p className="mt-1 text-sm text-[#667085]">
+          <h1 className="text-2xl font-bold text-[var(--foreground)]">Leave Calendar</h1>
+          <p className="mt-1 text-sm text-[var(--gray-400)]">
             Manage public holidays and calendar events that affect leave calculations
           </p>
         </div>
@@ -171,7 +171,7 @@ export default function LeaveCalendarPage() {
           <select
             value={selectedYear}
             onChange={(e) => setSelectedYear(parseInt(e.target.value))}
-            className="rounded-lg border border-[#D0D5DD] px-4 py-2 text-sm text-[#101828] focus:outline-none focus:ring-2 focus:ring-[#465FFF]"
+            className="rounded-lg border border-[var(--gray-200)] px-4 py-2 text-sm text-[var(--foreground)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)]"
           >
             {Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - 2 + i).map((year) => (
               <option key={year} value={year}>
@@ -181,7 +181,7 @@ export default function LeaveCalendarPage() {
           </select>
           <button
             onClick={() => setShowModal(true)}
-            className="flex items-center gap-2 rounded-lg bg-[#465FFF] px-4 py-2 text-sm font-semibold text-white hover:bg-[#3A4FCC] transition-colors"
+            className="flex items-center gap-2 rounded-lg bg-[var(--primary)] px-4 py-2 text-sm font-semibold text-white hover:bg-[var(--primary-hover)] transition-colors"
           >
             <PlusIcon className="h-5 w-5" />
             Add Holiday
@@ -190,68 +190,68 @@ export default function LeaveCalendarPage() {
       </div>
 
       {success && (
-        <div className="mb-4 rounded-lg bg-green-50 p-4 text-green-800">
+        <div className="mb-4 rounded-lg bg-[var(--success-light)] p-4 text-[var(--success-text)]">
           {success}
         </div>
       )}
 
       {error && (
-        <div className="mb-4 rounded-lg bg-red-50 p-4 text-red-800">
+        <div className="mb-4 rounded-lg bg-[var(--error-light)] p-4 text-[var(--error-text)]">
           {error}
         </div>
       )}
 
       {loading ? (
         <div className="flex items-center justify-center py-12">
-          <div className="text-[#667085]">Loading calendar entries...</div>
+          <div className="text-[var(--gray-400)]">Loading calendar entries...</div>
         </div>
       ) : entries.length === 0 ? (
-        <div className="rounded-lg border border-[#E4E7EC] bg-white p-12 text-center">
-          <CalendarIcon className="mx-auto h-12 w-12 text-[#98A2B3]" />
-          <h3 className="mt-4 text-lg font-semibold text-[#101828]">No holidays found</h3>
-          <p className="mt-2 text-sm text-[#667085]">
+        <div className="rounded-lg border border-[var(--gray-100)] bg-[var(--card-bg)] p-12 text-center">
+          <CalendarIcon className="mx-auto h-12 w-12 text-[var(--gray-300)]" />
+          <h3 className="mt-4 text-lg font-semibold text-[var(--foreground)]">No holidays found</h3>
+          <p className="mt-2 text-sm text-[var(--gray-400)]">
             Get started by adding a holiday to the calendar.
           </p>
         </div>
       ) : (
-        <div className="rounded-lg border border-[#E4E7EC] bg-white overflow-hidden">
-          <table className="min-w-full divide-y divide-[#E4E7EC]">
-            <thead className="bg-[#F9FAFB]">
+        <div className="rounded-lg border border-[var(--gray-100)] bg-[var(--card-bg)] overflow-hidden">
+          <table className="min-w-full divide-y divide-[var(--gray-100)]">
+            <thead className="bg-[var(--gray-25)]">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-[#667085]">
+                <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-[var(--gray-400)]">
                   Date
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-[#667085]">
+                <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-[var(--gray-400)]">
                   Name
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-[#667085]">
+                <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-[var(--gray-400)]">
                   Description
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-[#667085]">
+                <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-[var(--gray-400)]">
                   Type
                 </th>
-                <th className="px-6 py-3 text-right text-xs font-semibold uppercase tracking-wider text-[#667085]">
+                <th className="px-6 py-3 text-right text-xs font-semibold uppercase tracking-wider text-[var(--gray-400)]">
                   Actions
                 </th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-[#E4E7EC] bg-white">
+            <tbody className="divide-y divide-[var(--gray-100)] bg-[var(--card-bg)]">
               {entries.map((entry) => (
-                <tr key={entry.id} className="hover:bg-[#F9FAFB]">
-                  <td className="whitespace-nowrap px-6 py-4 text-sm font-medium text-[#101828]">
+                <tr key={entry.id} className="hover:bg-[var(--gray-25)]">
+                  <td className="whitespace-nowrap px-6 py-4 text-sm font-medium text-[var(--foreground)]">
                     {formatDate(entry.date)}
                   </td>
-                  <td className="px-6 py-4 text-sm text-[#101828]">{entry.name}</td>
-                  <td className="px-6 py-4 text-sm text-[#667085]">
+                  <td className="px-6 py-4 text-sm text-[var(--foreground)]">{entry.name}</td>
+                  <td className="px-6 py-4 text-sm text-[var(--gray-400)]">
                     {entry.description || '-'}
                   </td>
-                  <td className="whitespace-nowrap px-6 py-4 text-sm text-[#667085]">
+                  <td className="whitespace-nowrap px-6 py-4 text-sm text-[var(--gray-400)]">
                     {entry.is_recurring ? (
-                      <span className="inline-flex items-center rounded-full bg-blue-50 px-2.5 py-0.5 text-xs font-medium text-blue-700">
+                      <span className="inline-flex items-center rounded-full bg-[var(--info-light)] px-2.5 py-0.5 text-xs font-medium text-[var(--info-text)]">
                         Recurring
                       </span>
                     ) : (
-                      <span className="inline-flex items-center rounded-full bg-gray-50 px-2.5 py-0.5 text-xs font-medium text-gray-700">
+                      <span className="inline-flex items-center rounded-full bg-[var(--gray-100)] px-2.5 py-0.5 text-xs font-medium text-[var(--gray-500)]">
                         One-time
                       </span>
                     )}
@@ -260,7 +260,7 @@ export default function LeaveCalendarPage() {
                     <div className="flex items-center justify-end gap-2">
                       <button
                         onClick={() => handleEdit(entry)}
-                        className="text-[#465FFF] hover:text-[#3A4FCC]"
+                        className="text-[var(--primary)] hover:text-[var(--primary-hover)]"
                       >
                         <PencilIcon className="h-5 w-5" />
                       </button>

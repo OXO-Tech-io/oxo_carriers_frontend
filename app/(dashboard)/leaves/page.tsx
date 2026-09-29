@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import { format, isWeekend, isSameDay } from 'date-fns';
 import DateRangePicker from '@/components/DateRangePicker';
+import { DATE_FORMATS } from '@/lib/constants';
 import { LeaveStatusBadge } from '@/components/leaves/LeaveStatusBadge';
 
 import { BottomSheet } from '@/components/ui/BottomSheet';
@@ -60,8 +61,8 @@ export default function LeavesPage() {
   const { yearStart, yearEnd } = useMemo(() => {
     const y = new Date().getFullYear();
     return {
-      yearStart: format(new Date(y, 0, 1), 'yyyy-MM-dd'),
-      yearEnd: format(new Date(y, 11, 31), 'yyyy-MM-dd'),
+      yearStart: format(new Date(y, 0, 1), DATE_FORMATS.ISO_DATE),
+      yearEnd: format(new Date(y, 11, 31), DATE_FORMATS.ISO_DATE),
     };
   }, []);
 
@@ -180,12 +181,12 @@ export default function LeavesPage() {
     setStartDatePicker(start);
     setEndDatePicker(end);
     if (start) {
-      setFormData(prev => ({ ...prev, start_date: format(start, 'yyyy-MM-dd') }));
+      setFormData(prev => ({ ...prev, start_date: format(start, DATE_FORMATS.ISO_DATE) }));
     }
     if (end) {
-      setFormData(prev => ({ ...prev, end_date: format(end, 'yyyy-MM-dd') }));
+      setFormData(prev => ({ ...prev, end_date: format(end, DATE_FORMATS.ISO_DATE) }));
     } else if (start && formData.is_half_day) {
-      setFormData(prev => ({ ...prev, end_date: format(start, 'yyyy-MM-dd') }));
+      setFormData(prev => ({ ...prev, end_date: format(start, DATE_FORMATS.ISO_DATE) }));
     }
   };
 
@@ -593,7 +594,7 @@ export default function LeavesPage() {
                             )}
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-[var(--gray-500)]">
-                            {format(new Date(request.start_date), 'MMM dd, yyyy')} - {format(new Date(request.end_date), 'MMM dd, yyyy')}
+                            {format(new Date(request.start_date), DATE_FORMATS.MEDIUM)} - {format(new Date(request.end_date), DATE_FORMATS.MEDIUM)}
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-[var(--foreground)]">
                             {request.total_days === 0.5 ? '0.5 day' : `${request.total_days} days`}
@@ -602,7 +603,7 @@ export default function LeavesPage() {
                             <LeaveStatusBadge status={request.status} />
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-xs font-medium text-[var(--gray-400)]">
-                            {format(new Date(request.created_at), 'MMM dd, yyyy')}
+                            {format(new Date(request.created_at), DATE_FORMATS.MEDIUM)}
                           </td>
                         </tr>
                       ))

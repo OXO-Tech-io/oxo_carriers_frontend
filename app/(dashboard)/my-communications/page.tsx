@@ -1,11 +1,17 @@
 'use client';
 
 import { useState } from 'react';
-import { Clock, CheckCircle2, AlertCircle } from 'lucide-react';
+import { Clock, CheckCircle2, AlertCircle, Image as ImageIcon, FileText } from 'lucide-react';
 import { useMyCommunicationsQuery } from '@/hooks/queries/use-communications-query';
 import { useRespondCommunicationMutation } from '@/hooks/mutations/use-communication-mutations';
-import { Button, Modal } from '@/components/ui';
+import { Button, Modal, Badge } from '@/components/ui';
+import { resolveFileUrl } from '@/lib/constants';
 import type { CommunicationRecipient } from '@/types/hrModules';
+
+// OCD-525: pick a rough type icon for an attachment - image vs. everything else
+// (Word/PDF/Excel/CSV), consistent with the Paperclip-only convention used
+// elsewhere (e.g. Document Vault) but a little more informative here.
+const attachmentIcon = (mimeType: string) => (mimeType?.startsWith('image/') ? ImageIcon : FileText);
 
 export default function MyCommunicationsPage() {
   const communicationsQuery = useMyCommunicationsQuery();
@@ -40,28 +46,28 @@ export default function MyCommunicationsPage() {
             if (isAcknowledged) {
               if (isLate) {
                 statusBadge = (
-                  <span className="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300">
-                    <Clock className="h-3 w-3" /> Acknowledged (Late)
-                  </span>
+                  <Badge variant="warning" icon={<Clock className="h-3 w-3" />}>
+                    Acknowledged (Late)
+                  </Badge>
                 );
               } else {
                 statusBadge = (
-                  <span className="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300">
-                    <CheckCircle2 className="h-3 w-3" /> Acknowledged (On-Time)
-                  </span>
+                  <Badge variant="success" icon={<CheckCircle2 className="h-3 w-3" />}>
+                    Acknowledged (On-Time)
+                  </Badge>
                 );
               }
             } else if (deadlinePassed) {
               statusBadge = (
-                <span className="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold bg-rose-100 text-rose-800 dark:bg-rose-950/60 dark:text-rose-300">
-                  <AlertCircle className="h-3 w-3" /> Overdue
-                </span>
+                <Badge variant="error" icon={<AlertCircle className="h-3 w-3" />}>
+                  Overdue
+                </Badge>
               );
             } else {
               statusBadge = (
-                <span className="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold bg-blue-100 text-blue-800 dark:bg-blue-950/60 dark:text-blue-300">
-                  <Clock className="h-3 w-3" /> Action Required
-                </span>
+                <Badge variant="info" icon={<Clock className="h-3 w-3" />}>
+                  Action Required
+                </Badge>
               );
             }
           }
@@ -93,14 +99,35 @@ export default function MyCommunicationsPage() {
                 {statusBadge}
               </div>
 
-              <p className="text-sm text-[var(--foreground)] whitespace-pre-wrap leading-relaxed bg-gray-50/50 dark:bg-gray-900/40 p-3.5 rounded-xl border border-gray-100 dark:border-gray-800">
+              <p className="text-sm text-[var(--foreground)] whitespace-pre-wrap break-words leading-relaxed bg-gray-50/50 dark:bg-gray-900/40 p-3.5 rounded-xl border border-gray-100 dark:border-gray-800">
                 {item.body}
               </p>
+
+              {/* OCD-525: attachments uploaded with this communication */}
+              {item.attachments && item.attachments.length > 0 && (
+                <div className="flex flex-wrap gap-2">
+                  {item.attachments.map((attachment, index) => {
+                    const Icon = attachmentIcon(attachment.mimeType);
+                    return (
+                      <a
+                        key={`${attachment.fileUrl}-${index}`}
+                        href={resolveFileUrl(attachment.fileUrl)}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="flex items-center gap-1.5 rounded-lg border border-[var(--gray-100)] bg-[var(--gray-25)] px-2.5 py-1.5 text-xs font-semibold text-[var(--primary)] hover:underline"
+                      >
+                        <Icon className="h-3.5 w-3.5 shrink-0" />
+                        <span className="truncate max-w-[200px]">{attachment.fileName}</span>
+                      </a>
+                    );
+                  })}
+                </div>
+              )}
 
               {isAcknowledged ? (
                 <div className="text-xs text-[var(--gray-400)] pt-1 flex items-center justify-between">
                   <span>Acknowledged at: {new Date(item.respondedAt!).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' })}</span>
-                  {item.responseText && <span className="italic">Your Note: "{item.responseText}"</span>}
+                  {item.responseText && <span className="italic break-words">Your Note: "{item.responseText}"</span>}
                 </div>
               ) : item.requiresAcknowledgement ? (
                 <div className="flex items-center justify-between pt-2 border-t border-[var(--gray-100)]">

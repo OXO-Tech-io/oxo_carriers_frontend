@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useParams } from 'next/navigation';
+import { useParams, useSearchParams } from 'next/navigation';
 import { ArrowLeft, Loader2 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useFormAnalyticsQuery, useFormQuery } from '@/hooks/queries/use-forms-query';
@@ -48,9 +48,12 @@ function DistributionBars({ items }: { items: { label: string; count: number }[]
 function TrendChart({ trend }: { trend: { date: string; count: number }[] }) {
   const max = Math.max(1, ...trend.map((t) => t.count));
   return (
-    <div className="flex h-32 items-end gap-1.5">
+    // Each column needs an explicit height for the bar's percentage height to resolve against -
+    // `items-end` on the row alone doesn't give the (auto-height) column a height, so every bar
+    // silently computed to 0% and never rendered.
+    <div className="flex h-32 gap-1.5">
       {trend.map((t) => (
-        <div key={t.date} className="flex flex-1 flex-col items-center gap-1">
+        <div key={t.date} className="flex h-full flex-1 flex-col items-center justify-end gap-1">
           <div
             className="w-full rounded-t bg-[var(--primary)]"
             style={{ height: `${Math.max(2, (t.count / max) * 100)}%` }}
@@ -66,6 +69,7 @@ function TrendChart({ trend }: { trend: { date: string; count: number }[] }) {
 export default function FormAnalyticsClient() {
   const params = useParams<{ id: string }>();
   const formId = Number(params.id);
+  const fromBuilder = useSearchParams().get('from') === 'builder';
   const { isHR, isSuperAdmin } = useAuth();
 
   const formQuery = useFormQuery(formId);
@@ -88,8 +92,11 @@ export default function FormAnalyticsClient() {
   return (
     <div className="space-y-6 animate-fade-in">
       <div>
-        <Link href={`/admin/forms/${formId}/edit`} className="flex items-center gap-1.5 text-sm font-semibold text-[var(--gray-400)] hover:text-[var(--foreground)]">
-          <ArrowLeft className="h-4 w-4" /> Back to builder
+        <Link
+          href={fromBuilder ? `/admin/forms/${formId}/edit` : '/admin/forms'}
+          className="flex items-center gap-1.5 text-sm font-semibold text-[var(--gray-400)] hover:text-[var(--foreground)]"
+        >
+          <ArrowLeft className="h-4 w-4" /> {fromBuilder ? 'Back to Builder' : 'Forms'}
         </Link>
         <h1 className="mt-2 text-3xl font-bold text-[var(--foreground)]">Analytics</h1>
         <p className="text-[var(--gray-400)]">{formQuery.data?.form.title}</p>

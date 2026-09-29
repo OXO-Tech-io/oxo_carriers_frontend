@@ -13,7 +13,7 @@ import type { FormQuestion } from '@/types/hrModules';
 //   checkboxes                                                                          -> string[]
 //   multiple_choice_grid                                                                -> Record<row, col>
 //   checkbox_grid                                                                       -> Record<row, col[]>
-//   file_upload                                                                         -> handled via `file`/`onFileChange`, not `value`
+//   file_upload                                                                         -> handled via `files`/`onFilesChange`, not `value`
 
 const inputClass =
   'mt-1 w-full rounded-xl border border-[var(--gray-200)] bg-[var(--card-bg)] p-2.5 text-sm text-[var(--foreground)] transition-colors focus:outline-none focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary-ring)] disabled:opacity-60';
@@ -27,9 +27,9 @@ interface QuestionFieldProps {
   question: FormQuestion;
   value: unknown;
   onChange: (value: unknown) => void;
-  file?: File | null;
-  existingFileName?: string | null;
-  onFileChange?: (file: File | null) => void;
+  files?: File[];
+  existingFiles?: { name: string; url: string }[];
+  onFilesChange?: (files: File[]) => void;
   disabled?: boolean;
 }
 
@@ -43,7 +43,7 @@ const str = (config: Record<string, unknown>, key: string, fallback: string): st
 };
 const bool = (config: Record<string, unknown>, key: string): boolean => config[key] === true;
 
-export function QuestionField({ question, value, onChange, file, existingFileName, onFileChange, disabled = false }: QuestionFieldProps) {
+export function QuestionField({ question, value, onChange, files, existingFiles, onFilesChange, disabled = false }: QuestionFieldProps) {
   const { type, config, options } = question;
 
   switch (type) {
@@ -346,16 +346,27 @@ export function QuestionField({ question, value, onChange, file, existingFileNam
       );
     }
 
-    case 'file_upload':
+    case 'file_upload': {
+      const maxFiles = num(config, 'maxFiles', 1);
+      const maxSizeMb = num(config, 'maxSizeMb', 10);
+      const allowedExts = Array.isArray(config['allowedMimeTypes']) ? (config['allowedMimeTypes'] as string[]) : [];
+      const accept = allowedExts.length ? allowedExts.map((e) => `.${e.trim().replace(/^\./, '')}`).join(',') : undefined;
       return (
         <div className="mt-1">
           <FileUpload
-            existingFiles={existingFileName ? [{ name: existingFileName, url: '#' }] : []}
-            onFilesSelected={(selected) => onFileChange?.(selected[0] ?? null)}
+            accept={accept}
+            multiple={maxFiles > 1}
+            maxSizeMB={maxSizeMb}
+            maxFiles={maxFiles}
+            existingFiles={existingFiles ?? []}
+            onFilesSelected={(selected) => onFilesChange?.(selected)}
           />
-          {file && !existingFileName && <p className="mt-1 text-xs text-[var(--gray-400)]">Selected: {file.name}</p>}
+          {allowedExts.length > 0 && (
+            <p className="mt-1 text-[10px] text-[var(--gray-400)]">Allowed types: {allowedExts.join(', ')}</p>
+          )}
         </div>
       );
+    }
 
     default:
       return null;

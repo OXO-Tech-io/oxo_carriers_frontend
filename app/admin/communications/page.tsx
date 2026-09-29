@@ -1,17 +1,35 @@
 'use client';
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import type { ColumnDef } from '@tanstack/react-table';
-import { Download, Eye, Clock, CheckCircle2, AlertCircle, Calendar, Trash2 } from 'lucide-react';
+import {
+  Download,
+  Eye,
+  Clock,
+  CheckCircle2,
+  AlertCircle,
+  Calendar,
+  Trash2,
+  Image as ImageIcon,
+  FileText,
+} from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useCommunicationsQuery } from '@/hooks/queries/use-communications-query';
 import { useCreateCommunicationMutation, useDeleteCommunicationMutation } from '@/hooks/mutations/use-communication-mutations';
 import { communicationService } from '@/lib/services/communication.service';
-import { Modal, Button, DataTable, FileUpload, RecipientPicker } from '@/components/ui';
+import { Modal, Button, DataTable, FileUpload, RecipientPicker, Badge, ConfirmationDialog } from '@/components/ui';
+import { resolveFileUrl } from '@/lib/constants';
 import type { Communication } from '@/types/hrModules';
 
+// OCD-525: pick a rough type icon for an attachment - image vs. everything else
+// (Word/PDF/Excel/CSV).
+const attachmentIcon = (mimeType: string) => (mimeType?.startsWith('image/') ? ImageIcon : FileText);
+
+const ATTACHMENT_ACCEPT =
+  'image/jpeg,image/png,image/jpg,image/gif,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,text/csv';
+
 export default function AdminCommunicationsPage() {
-  const { isHR, isHRManager, isSuperAdmin } = useAuth();
+  const { isHRManager, isSuperAdmin } = useAuth();
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [title, setTitle] = useState('');
   const [body, setBody] = useState('');
@@ -22,24 +40,61 @@ export default function AdminCommunicationsPage() {
   const [groupMemberIds, setGroupMemberIds] = useState<number[]>([]);
   const [files, setFiles] = useState<File[]>([]);
   const [selectedCommunication, setSelectedCommunication] = useState<Communication | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<number | null>(null);
+  // OCD-523: per-field "has the user interacted with this yet" flags, plus a
+  // submit-attempt flag - inline errors show once a field is touched (blur,
+  // or any change for the recipients picker, which has no blur of its own)
+  // or once a Send click has failed validation, not on every keystroke.
+  const [touched, setTouched] = useState({ title: false, body: false, deadline: false, recipients: false });
+  const [submitAttempted, setSubmitAttempted] = useState(false);
 
   const communicationsQuery = useCommunicationsQuery();
   const createMutation = useCreateCommunicationMutation();
   const deleteMutation = useDeleteCommunicationMutation();
 
-  if (!isHR && !isSuperAdmin) {
+  // OCD-515: pinned once per mount rather than recomputed on every render, so
+  // the `min` attribute (and the "in the past" check) don't creep forward
+  // while the modal sits open.
+  const nowLocal = useMemo(() => new Date().toISOString().slice(0, 16), []);
+
+  if (!isHRManager && !isSuperAdmin) {
     return <p className="text-sm text-[var(--gray-400)]">You do not have access to this page.</p>;
   }
 
-  const handleDelete = async (id: number) => {
-    if (!isSuperAdmin) return;
-    if (window.confirm('Are you sure you want to delete this communication? This action cannot be undone.')) {
-      await deleteMutation.mutateAsync(id);
-    }
+  const trimmedTitle = title.trim();
+  const trimmedBody = body.trim();
+  const hasRecipients = recipientIds.length > 0 || recipientGroupIds.length > 0;
+  const deadlineMissing = requiresAcknowledgement && deadlineAt === '';
+  const deadlineInPast = requiresAcknowledgement && deadlineAt !== '' && deadlineAt < nowLocal;
+  const canSend = trimmedTitle.length > 0 && trimmedBody.length > 0 && hasRecipients && !deadlineMissing && !deadlineInPast;
+
+  const markTouched = (field: keyof typeof touched) => setTouched((prev) => ({ ...prev, [field]: true }));
+
+  const closeCreateModal = () => {
+    setShowCreateModal(false);
+    setSubmitAttempted(false);
+    setTouched({ title: false, body: false, deadline: false, recipients: false });
+  };
+
+  const handleDelete = async () => {
+    if (!isSuperAdmin || !deleteTarget) return;
+    await deleteMutation.mutateAsync(deleteTarget);
+    setDeleteTarget(null);
+  };
+
+  const handleGroupIdsChange = (ids: number[]) => {
+    setRecipientGroupIds(ids);
+    markTouched('recipients');
+  };
+
+  const handleUserIdsChange = (ids: number[]) => {
+    setRecipientIds(ids);
+    markTouched('recipients');
   };
 
   const handleCreate = async () => {
-    if (!title.trim() || !body.trim() || (recipientIds.length === 0 && recipientGroupIds.length === 0)) return;
+    setSubmitAttempted(true);
+    if (!canSend) return;
     const resolvedUserIds = [...new Set([...recipientIds, ...groupMemberIds])];
     await createMutation.mutateAsync({
       title,
@@ -58,6 +113,8 @@ export default function AdminCommunicationsPage() {
     setRecipientGroupIds([]);
     setGroupMemberIds([]);
     setFiles([]);
+    setSubmitAttempted(false);
+    setTouched({ title: false, body: false, deadline: false, recipients: false });
     setShowCreateModal(false);
   };
 
@@ -84,15 +141,9 @@ export default function AdminCommunicationsPage() {
       accessorKey: 'requiresAcknowledgement',
       header: 'Ack Required',
       cell: ({ row }) => (
-        <span
-          className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium ${
-            row.original.requiresAcknowledgement
-              ? 'bg-blue-50 text-blue-700 dark:bg-blue-950/40 dark:text-blue-400'
-              : 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400'
-          }`}
-        >
+        <Badge variant={row.original.requiresAcknowledgement ? 'info' : 'gray'}>
           {row.original.requiresAcknowledgement ? 'Yes' : 'No'}
-        </span>
+        </Badge>
       ),
     },
     {
@@ -163,8 +214,7 @@ export default function AdminCommunicationsPage() {
               variant="ghost"
               className="text-rose-600 hover:text-rose-700 hover:bg-rose-50 dark:hover:bg-rose-950/40"
               leftIcon={<Trash2 className="h-3.5 w-3.5 text-rose-500" />}
-              onClick={() => handleDelete(row.original.id)}
-              isLoading={deleteMutation.isPending}
+              onClick={() => setDeleteTarget(row.original.id)}
             >
               Delete
             </Button>
@@ -194,26 +244,38 @@ export default function AdminCommunicationsPage() {
       <DataTable columns={columns} data={communicationsQuery.data ?? []} isLoading={communicationsQuery.isLoading} />
 
       {/* New Communication Modal */}
-      <Modal isOpen={showCreateModal} onClose={() => setShowCreateModal(false)} title="New Communication" size="lg">
+      <Modal isOpen={showCreateModal} onClose={closeCreateModal} title="New Communication" size="lg">
         <div className="space-y-4">
           <div>
-            <label className="text-sm font-semibold text-[var(--foreground)]">Subject</label>
+            <label className="text-sm font-semibold text-[var(--foreground)]">
+              Subject <span className="text-red-500">*</span>
+            </label>
             <input
               value={title}
               onChange={(e) => setTitle(e.target.value)}
+              onBlur={() => markTouched('title')}
               placeholder="e.g. Updated Office Health & Safety Guidelines"
               className="mt-1 w-full rounded-xl border border-[var(--gray-200)] bg-[var(--card-bg)] p-2.5 text-sm text-[var(--foreground)]"
             />
+            {(touched.title || submitAttempted) && trimmedTitle.length === 0 && (
+              <p className="mt-1 text-xs text-red-500">Subject is required.</p>
+            )}
           </div>
           <div>
-            <label className="text-sm font-semibold text-[var(--foreground)]">Message</label>
+            <label className="text-sm font-semibold text-[var(--foreground)]">
+              Message <span className="text-red-500">*</span>
+            </label>
             <textarea
               value={body}
               onChange={(e) => setBody(e.target.value)}
+              onBlur={() => markTouched('body')}
               rows={4}
               placeholder="Write your communication message here..."
               className="mt-1 w-full rounded-xl border border-[var(--gray-200)] bg-[var(--card-bg)] p-2.5 text-sm text-[var(--foreground)]"
             />
+            {(touched.body || submitAttempted) && trimmedBody.length === 0 && (
+              <p className="mt-1 text-xs text-red-500">Message is required.</p>
+            )}
           </div>
 
           <div className="rounded-xl border border-[var(--gray-200)] bg-[var(--card-bg)] p-3.5 space-y-3">
@@ -234,14 +296,24 @@ export default function AdminCommunicationsPage() {
               <div className="pt-2 animate-fade-in">
                 <label className="text-xs font-medium text-[var(--gray-400)] flex items-center gap-1.5 mb-1">
                   <Calendar className="h-3.5 w-3.5 text-amber-500" />
-                  Acknowledgement Deadline (Optional)
+                  Acknowledgement Deadline <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="datetime-local"
                   value={deadlineAt}
+                  min={nowLocal}
                   onChange={(e) => setDeadlineAt(e.target.value)}
+                  onBlur={() => markTouched('deadline')}
                   className="w-full rounded-lg border border-[var(--gray-200)] bg-[var(--card-bg)] p-2 text-sm text-[var(--foreground)]"
                 />
+                {(touched.deadline || submitAttempted) && deadlineMissing && (
+                  <p className="mt-1 text-xs text-red-500">
+                    Acknowledgement deadline is required when recipient acknowledgement is enabled.
+                  </p>
+                )}
+                {(touched.deadline || submitAttempted) && !deadlineMissing && deadlineInPast && (
+                  <p className="mt-1 text-xs text-red-500">Acknowledgement deadline cannot be in the past.</p>
+                )}
               </div>
             )}
           </div>
@@ -249,26 +321,39 @@ export default function AdminCommunicationsPage() {
           <div>
             <label className="text-sm font-semibold text-[var(--foreground)]">Attachments</label>
             <div className="mt-1">
-              <FileUpload multiple onFilesSelected={setFiles} />
+              <FileUpload
+                multiple
+                onFilesSelected={setFiles}
+                accept={ATTACHMENT_ACCEPT}
+                typeErrorMessage="Unsupported file type. Please upload a JPG, PNG, Word, PDF, or spreadsheet file."
+              />
+              <p className="mt-1.5 text-xs text-[var(--gray-400)]">
+                Supported file types: JPG, PNG, GIF, PDF, Word (.doc/.docx), and Excel/CSV spreadsheets.
+              </p>
             </div>
           </div>
           <div>
-            <label className="text-sm font-semibold text-[var(--foreground)]">Recipients</label>
+            <label className="text-sm font-semibold text-[var(--foreground)]">
+              Recipients <span className="text-red-500">*</span>
+            </label>
             <div className="mt-1">
               <RecipientPicker
                 selectedGroupIds={recipientGroupIds}
-                onGroupIdsChange={setRecipientGroupIds}
+                onGroupIdsChange={handleGroupIdsChange}
                 selectedUserIds={recipientIds}
-                onUserIdsChange={setRecipientIds}
+                onUserIdsChange={handleUserIdsChange}
                 onGroupMemberIdsChange={setGroupMemberIds}
               />
             </div>
+            {(touched.recipients || submitAttempted) && !hasRecipients && (
+              <p className="mt-1 text-xs text-red-500">Select at least one group or individual recipient.</p>
+            )}
           </div>
           <div className="flex justify-end gap-2 pt-2">
-            <Button variant="ghost" onClick={() => setShowCreateModal(false)}>
+            <Button variant="ghost" onClick={closeCreateModal}>
               Cancel
             </Button>
-            <Button onClick={handleCreate} isLoading={createMutation.isPending}>
+            <Button onClick={handleCreate} isLoading={createMutation.isPending} disabled={!canSend}>
               Send
             </Button>
           </div>
@@ -299,9 +384,29 @@ export default function AdminCommunicationsPage() {
                   </span>
                 )}
               </p>
-              <p className="text-sm text-[var(--foreground)] whitespace-pre-wrap bg-gray-50 dark:bg-gray-900/50 p-3 rounded-lg border border-gray-100 dark:border-gray-800">
+              <p className="text-sm text-[var(--foreground)] whitespace-pre-wrap break-words bg-gray-50 dark:bg-gray-900/50 p-3 rounded-lg border border-gray-100 dark:border-gray-800">
                 {selectedCommunication.body}
               </p>
+              {/* OCD-525: attachments uploaded with this communication */}
+              {selectedCommunication.attachments && selectedCommunication.attachments.length > 0 && (
+                <div className="flex flex-wrap gap-2 pt-1">
+                  {selectedCommunication.attachments.map((attachment, index) => {
+                    const Icon = attachmentIcon(attachment.mimeType);
+                    return (
+                      <a
+                        key={`${attachment.fileUrl}-${index}`}
+                        href={resolveFileUrl(attachment.fileUrl)}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="flex items-center gap-1.5 rounded-lg border border-[var(--gray-100)] bg-[var(--gray-25)] px-2.5 py-1.5 text-xs font-semibold text-[var(--primary)] hover:underline"
+                      >
+                        <Icon className="h-3.5 w-3.5 shrink-0" />
+                        <span className="truncate max-w-[200px]">{attachment.fileName}</span>
+                      </a>
+                    );
+                  })}
+                </div>
+              )}
             </div>
 
             {selectedCommunication.requiresAcknowledgement && (
@@ -332,38 +437,34 @@ export default function AdminCommunicationsPage() {
                   const deadlinePassed =
                     selectedCommunication.deadlineAt && new Date() > new Date(selectedCommunication.deadlineAt);
 
-                  let statusBadge = (
-                    <span className="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold bg-gray-100 text-gray-600">
-                      Delivered
-                    </span>
-                  );
+                  let statusBadge = <Badge variant="gray">Delivered</Badge>;
 
                   if (selectedCommunication.requiresAcknowledgement) {
                     if (r.isAcknowledged) {
                       if (r.isLate) {
                         statusBadge = (
-                          <span className="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300">
-                            <Clock className="h-3 w-3" /> Acknowledged (Late)
-                          </span>
+                          <Badge variant="warning" icon={<Clock className="h-3 w-3" />}>
+                            Acknowledged (Late)
+                          </Badge>
                         );
                       } else {
                         statusBadge = (
-                          <span className="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300">
-                            <CheckCircle2 className="h-3 w-3" /> Acknowledged (On-Time)
-                          </span>
+                          <Badge variant="success" icon={<CheckCircle2 className="h-3 w-3" />}>
+                            Acknowledged (On-Time)
+                          </Badge>
                         );
                       }
                     } else if (deadlinePassed) {
                       statusBadge = (
-                        <span className="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold bg-rose-100 text-rose-800 dark:bg-rose-950/60 dark:text-rose-300">
-                          <AlertCircle className="h-3 w-3" /> Overdue (Unacknowledged)
-                        </span>
+                        <Badge variant="error" icon={<AlertCircle className="h-3 w-3" />}>
+                          Overdue (Unacknowledged)
+                        </Badge>
                       );
                     } else {
                       statusBadge = (
-                        <span className="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold bg-blue-100 text-blue-800 dark:bg-blue-950/60 dark:text-blue-300">
-                          <Clock className="h-3 w-3" /> Pending Acknowledgement
-                        </span>
+                        <Badge variant="info" icon={<Clock className="h-3 w-3" />}>
+                          Pending Acknowledgement
+                        </Badge>
                       );
                     }
                   }
@@ -374,7 +475,7 @@ export default function AdminCommunicationsPage() {
                         <p className="font-semibold text-[var(--foreground)]">{r.name}</p>
                         <p className="text-[var(--gray-400)]">{r.email}</p>
                         {r.responseText && (
-                          <p className="mt-1 italic text-[var(--gray-400)]">Note: "{r.responseText}"</p>
+                          <p className="mt-1 italic text-[var(--gray-400)] break-words">Note: "{r.responseText}"</p>
                         )}
                       </div>
                       <div className="text-right space-y-1">
@@ -399,6 +500,18 @@ export default function AdminCommunicationsPage() {
           </div>
         )}
       </Modal>
+
+      <ConfirmationDialog
+        isOpen={!!deleteTarget}
+        onClose={() => setDeleteTarget(null)}
+        onConfirm={handleDelete}
+        title="Delete Communication"
+        message="Are you sure you want to delete this communication? This action cannot be undone."
+        confirmLabel="Delete"
+        cancelLabel="Cancel"
+        variant="danger"
+        isLoading={deleteMutation.isPending}
+      />
     </div>
   );
 }

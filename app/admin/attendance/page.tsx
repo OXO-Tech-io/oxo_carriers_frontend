@@ -9,11 +9,12 @@ import api from '@/lib/api';
 import { useAllAttendanceQuery } from '@/hooks/queries/use-attendance-query';
 import { Card, DataTable } from '@/components/ui';
 import type { AttendanceHistoryDayForEmployee } from '@/types/attendance';
+import { DATE_FORMATS } from '@/lib/constants';
 
 const todayIso = () => new Date().toISOString().slice(0, 10);
 
 function formatTime(iso: string | null): string {
-  return iso ? format(new Date(iso), 'h:mm a') : '--:--';
+  return iso ? format(new Date(iso), DATE_FORMATS.TIME_12H_NO_PAD) : '--:--';
 }
 
 function formatDuration(totalSeconds: number): string {
@@ -134,7 +135,7 @@ export default function AdminAttendancePage() {
       {
         accessorKey: 'date',
         header: 'Date',
-        cell: ({ row }) => format(new Date(`${row.original.date}T00:00:00`), 'MMM d, yyyy'),
+        cell: ({ row }) => format(new Date(`${row.original.date}T00:00:00`), DATE_FORMATS.COMPACT),
       },
       {
         header: 'First Clock In',
@@ -214,7 +215,7 @@ export default function AdminAttendancePage() {
       <div>
         <h2 className="text-lg font-bold text-[var(--foreground)]">Summary</h2>
         <p className="mb-3 text-xs text-[var(--gray-400)]">
-          Total worked hours per employee for {from === to ? format(new Date(`${from}T00:00:00`), 'MMM d, yyyy') : `${from} to ${to}`}.
+          Total worked hours per employee for {from === to ? format(new Date(`${from}T00:00:00`), DATE_FORMATS.COMPACT) : `${from} to ${to}`}.
         </p>
         {attendanceQuery.isLoading ? (
           <p className="text-sm text-[var(--gray-400)]">Loading...</p>

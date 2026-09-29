@@ -6,6 +6,7 @@ import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
 import { format, isWeekend, isSameDay, startOfDay, endOfDay } from 'date-fns';
 import api from '@/lib/api';
+import { DATE_FORMATS } from '@/lib/constants';
 
 interface LeaveCalendarEntry {
   id: number;
@@ -88,7 +89,7 @@ export default function DateRangePicker({
       const end = new Date(currentYear + 1, 11, 31);
       
       const response = await api.get(
-        `/leave-calendars/range?startDate=${format(start, 'yyyy-MM-dd')}&endDate=${format(end, 'yyyy-MM-dd')}`
+        `/leave-calendars/range?startDate=${format(start, DATE_FORMATS.ISO_DATE)}&endDate=${format(end, DATE_FORMATS.ISO_DATE)}`
       );
       setHolidays(response.data.data || []);
     } catch (err) {
@@ -332,7 +333,7 @@ export default function DateRangePicker({
       {startDate && endDate && (
         <div className="mt-2 text-sm text-[var(--foreground)]">
           Selected Range: <span className="font-semibold">
-            {format(startDate, 'MMM d, yyyy')} - {format(endDate, 'MMM d, yyyy')}
+            {format(startDate, DATE_FORMATS.COMPACT)} - {format(endDate, DATE_FORMATS.COMPACT)}
           </span>
         </div>
       )}

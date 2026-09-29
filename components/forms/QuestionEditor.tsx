@@ -28,6 +28,22 @@ const num = (config: Record<string, unknown>, key: string, fallback: number): nu
   const v = config[key];
   return typeof v === 'number' ? v : fallback;
 };
+// Clamps a manually-typed number to >= min, instead of just relying on the <input min> attribute
+// (which some browsers only enforce via the spinner buttons, not free keyboard entry).
+const clampMin = (raw: string, min: number): number => {
+  const parsed = Number(raw);
+  return Math.max(min, Number.isNaN(parsed) ? min : parsed);
+};
+
+const FILE_TYPE_CATEGORIES: { label: string; exts: string[] }[] = [
+  { label: 'PDF', exts: ['pdf'] },
+  { label: 'Word (DOC, DOCX)', exts: ['doc', 'docx'] },
+  { label: 'Excel (XLSX)', exts: ['xlsx'] },
+  { label: 'PNG', exts: ['png'] },
+  { label: 'JPG', exts: ['jpg', 'jpeg'] },
+  { label: 'CSV', exts: ['csv'] },
+  { label: 'ZIP', exts: ['zip'] },
+];
 const str = (config: Record<string, unknown>, key: string, fallback: string): string => {
   const v = config[key];
   return typeof v === 'string' ? v : fallback;
@@ -281,7 +297,13 @@ export function QuestionEditor({
           />
           <label className="flex items-center gap-1.5 text-xs font-medium text-[var(--gray-400)]">
             Max length
-            <input type="number" min={0} value={num(question.config, 'maxLength', 0)} onChange={(e) => setConfig({ maxLength: Number(e.target.value) || undefined })} className={smallInput} />
+            <input
+              type="number"
+              min={0}
+              value={num(question.config, 'maxLength', 0)}
+              onChange={(e) => setConfig({ maxLength: clampMin(e.target.value, 0) || undefined })}
+              className={smallInput}
+            />
           </label>
         </div>
       )}
@@ -325,21 +347,51 @@ export function QuestionEditor({
       )}
 
       {ui.configKind === 'file' && (
-        <div className="flex flex-wrap items-center gap-3">
-          <input
-            value={(question.config['allowedMimeTypes'] as string[] | undefined)?.join(', ') ?? ''}
-            onChange={(e) => setConfig({ allowedMimeTypes: e.target.value.split(',').map((s) => s.trim()).filter(Boolean) })}
-            placeholder="Allowed types: pdf, doc, docx, png, jpg, xlsx, csv, zip"
-            className={`${fieldInput} flex-1 min-w-[220px]`}
-          />
-          <label className="flex items-center gap-1.5 text-xs font-medium text-[var(--gray-400)]">
-            Max size (MB)
-            <input type="number" min={1} value={num(question.config, 'maxSizeMb', 10)} onChange={(e) => setConfig({ maxSizeMb: Number(e.target.value) })} className={smallInput} />
-          </label>
-          <label className="flex items-center gap-1.5 text-xs font-medium text-[var(--gray-400)]">
-            Max files
-            <input type="number" min={1} value={num(question.config, 'maxFiles', 1)} onChange={(e) => setConfig({ maxFiles: Number(e.target.value) })} className={smallInput} />
-          </label>
+        <div className="space-y-2">
+          <div>
+            <p className="mb-1 text-[10px] font-bold uppercase tracking-wider text-[var(--gray-400)]">Allowed file types</p>
+            <div className="flex flex-wrap gap-3">
+              {FILE_TYPE_CATEGORIES.map((cat) => {
+                const current = (question.config['allowedMimeTypes'] as string[] | undefined) ?? [];
+                const checked = cat.exts.every((ext) => current.includes(ext));
+                return (
+                  <label key={cat.label} className="flex items-center gap-1.5 text-xs font-medium text-[var(--gray-400)]">
+                    <input
+                      type="checkbox"
+                      checked={checked}
+                      onChange={(e) => {
+                        const withoutCat = current.filter((ext) => !cat.exts.includes(ext));
+                        setConfig({ allowedMimeTypes: e.target.checked ? [...withoutCat, ...cat.exts] : withoutCat });
+                      }}
+                    />
+                    {cat.label}
+                  </label>
+                );
+              })}
+            </div>
+          </div>
+          <div className="flex flex-wrap items-center gap-3">
+            <label className="flex items-center gap-1.5 text-xs font-medium text-[var(--gray-400)]">
+              Max size (MB)
+              <input
+                type="number"
+                min={1}
+                value={num(question.config, 'maxSizeMb', 10)}
+                onChange={(e) => setConfig({ maxSizeMb: clampMin(e.target.value, 1) })}
+                className={smallInput}
+              />
+            </label>
+            <label className="flex items-center gap-1.5 text-xs font-medium text-[var(--gray-400)]">
+              Max files
+              <input
+                type="number"
+                min={1}
+                value={num(question.config, 'maxFiles', 1)}
+                onChange={(e) => setConfig({ maxFiles: clampMin(e.target.value, 1) })}
+                className={smallInput}
+              />
+            </label>
+          </div>
         </div>
       )}
 

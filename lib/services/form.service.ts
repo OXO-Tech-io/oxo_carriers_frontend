@@ -245,16 +245,23 @@ export const formService = {
   submitResponse: async (
     id: number,
     answers: FormAnswerInput[],
-    files: Record<number, File>,
+    files: Record<number, File[]>,
     final = true,
   ): Promise<void> => {
     const formData = new FormData();
     formData.append('answers', JSON.stringify(answers));
     formData.append('final', String(final));
-    Object.entries(files).forEach(([questionId, file]) => formData.append(`question_${questionId}`, file));
+    Object.entries(files).forEach(([questionId, questionFiles]) =>
+      questionFiles.forEach((file) => formData.append(`question_${questionId}`, file)),
+    );
     await api.post(`/forms/${id}/responses`, formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
     });
+  },
+
+  listDistributions: async (id: number): Promise<number[]> => {
+    const res = await api.get<ApiResponse<number[]>>(`/forms/${id}/distributions`);
+    return extractData(res);
   },
 
   listResponses: async (id: number): Promise<FormResponseWithAnswers[]> => {

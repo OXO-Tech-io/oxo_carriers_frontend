@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useGroupsQuery, useGroupQuery } from '@/hooks/queries/use-groups-query';
 import { EmployeeMultiSelect } from './EmployeeMultiSelect';
 
@@ -10,6 +10,8 @@ interface RecipientPickerProps {
   selectedUserIds: number[];
   onUserIdsChange: (ids: number[]) => void;
   onGroupMemberIdsChange: (ids: number[]) => void;
+  /** Employees who already have this send/form - shown but disabled instead of selectable again. */
+  alreadySentIds?: number[];
 }
 
 // Lets a sender pick groups and/or individual employees for the same
@@ -25,6 +27,7 @@ export function RecipientPicker({
   selectedUserIds,
   onUserIdsChange,
   onGroupMemberIdsChange,
+  alreadySentIds = [],
 }: RecipientPickerProps) {
   const groupsQuery = useGroupsQuery();
   const groups = groupsQuery.data ?? [];
@@ -44,15 +47,25 @@ export function RecipientPicker({
     }
   };
 
+  // Keyed by VALUE (not the array's own identity, which callers routinely pass as a fresh literal
+  // every render - e.g. `data ?? []`) so this Set - and everything downstream that depends on it -
+  // only changes identity when the actual id list changes. Without this, a child effect keyed off
+  // alreadySentSet would re-fire every render, call back up into this component's own state, and
+  // loop forever.
+  const alreadySentKey = [...alreadySentIds].sort((a, b) => a - b).join(',');
+  const alreadySentSet = useMemo(() => new Set(alreadySentIds), [alreadySentKey]);
+
   useEffect(() => {
     const union = new Set<number>();
     for (const ids of Object.values(resolvedByGroup)) {
-      ids.forEach((id) => union.add(id));
+      ids.forEach((id) => {
+        if (!alreadySentSet.has(id)) union.add(id);
+      });
     }
     onGroupMemberIdsChange([...union]);
     // onGroupMemberIdsChange intentionally excluded - callers pass an inline setter
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [resolvedByGroup]);
+  }, [resolvedByGroup, alreadySentSet]);
 
   return (
     <div className="space-y-4">
@@ -80,6 +93,7 @@ export function RecipientPicker({
               {selectedGroupIds.includes(group.id) && (
                 <GroupMembersChecklist
                   groupId={group.id}
+                  alreadySentIds={alreadySentSet}
                   onResolvedChange={(ids) => setResolvedByGroup((prev) => ({ ...prev, [group.id]: ids }))}
                 />
               )}
@@ -93,7 +107,12 @@ export function RecipientPicker({
 
       <div>
         <p className="text-xs font-bold text-[var(--gray-400)] uppercase tracking-wider mb-2">Individuals</p>
-        <EmployeeMultiSelect selectedIds={selectedUserIds} onChange={onUserIdsChange} maxHeightClassName="max-h-40" />
+        <EmployeeMultiSelect
+          selectedIds={selectedUserIds}
+          onChange={onUserIdsChange}
+          maxHeightClassName="max-h-40"
+          disabledIds={alreadySentIds}
+        />
       </div>
     </div>
   );
@@ -101,9 +120,11 @@ export function RecipientPicker({
 
 function GroupMembersChecklist({
   groupId,
+  alreadySentIds,
   onResolvedChange,
 }: {
   groupId: number;
+  alreadySentIds: Set<number>;
   onResolvedChange: (userIds: number[]) => void;
 }) {
   const groupQuery = useGroupQuery(groupId);
@@ -111,9 +132,11 @@ function GroupMembersChecklist({
   const [excludedIds, setExcludedIds] = useState<Set<number>>(new Set());
 
   useEffect(() => {
-    onResolvedChange(members.filter((member) => !excludedIds.has(member.userId)).map((member) => member.userId));
+    onResolvedChange(
+      members.filter((member) => !excludedIds.has(member.userId) && !alreadySentIds.has(member.userId)).map((member) => member.userId),
+    );
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [members, excludedIds]);
+  }, [members, excludedIds, alreadySentIds]);
 
   const toggleMember = (userId: number) => {
     setExcludedIds((prev) => {
@@ -130,23 +153,30 @@ function GroupMembersChecklist({
       {!groupQuery.isLoading && members.length === 0 && (
         <p className="text-xs text-[var(--gray-400)] px-2 py-1">No members in this group</p>
       )}
-      {members.map((member) => (
-        <label
-          key={member.id}
-          className="flex items-center gap-2 px-2 py-1 rounded-lg hover:bg-[var(--gray-25)] cursor-pointer"
-        >
-          <input
-            type="checkbox"
-            checked={!excludedIds.has(member.userId)}
-            onChange={() => toggleMember(member.userId)}
-            className="h-3.5 w-3.5 rounded border-[var(--gray-300)] text-[var(--primary)] focus:ring-[var(--primary-ring)]"
-          />
-          <span className="text-xs text-[var(--foreground)]">
-            {member.firstName} {member.lastName}
-            <span className="text-[var(--gray-400)]"> · {member.email}</span>
-          </span>
-        </label>
-      ))}
+      {members.map((member) => {
+        const alreadySent = alreadySentIds.has(member.userId);
+        return (
+          <label
+            key={member.id}
+            className={`flex items-center gap-2 px-2 py-1 rounded-lg ${
+              alreadySent ? 'cursor-not-allowed opacity-50' : 'hover:bg-[var(--gray-25)] cursor-pointer'
+            }`}
+          >
+            <input
+              type="checkbox"
+              checked={!excludedIds.has(member.userId) && !alreadySent}
+              disabled={alreadySent}
+              onChange={() => toggleMember(member.userId)}
+              className="h-3.5 w-3.5 rounded border-[var(--gray-300)] text-[var(--primary)] focus:ring-[var(--primary-ring)]"
+            />
+            <span className="text-xs text-[var(--foreground)]">
+              {member.firstName} {member.lastName}
+              <span className="text-[var(--gray-400)]"> · {member.email}</span>
+              {alreadySent && <span className="ml-1.5 text-[10px] font-semibold uppercase tracking-wide text-emerald-600">Already sent</span>}
+            </span>
+          </label>
+        );
+      })}
     </div>
   );
 }

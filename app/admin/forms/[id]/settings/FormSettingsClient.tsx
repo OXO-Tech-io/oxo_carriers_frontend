@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { useParams } from 'next/navigation';
+import { useParams, useSearchParams } from 'next/navigation';
 import { ArrowLeft, Loader2 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/contexts/ToastContext';
@@ -26,7 +26,7 @@ function ToggleRow({ label, hint, checked, onChange, disabled }: { label: string
         onClick={onChange}
         className={`relative h-6 w-11 shrink-0 rounded-full transition-colors ${checked ? 'bg-[var(--primary)]' : 'bg-[var(--gray-200)]'} disabled:opacity-50`}
       >
-        <span className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform ${checked ? 'translate-x-5' : 'translate-x-0.5'}`} />
+        <span className={`absolute left-0.5 top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform ${checked ? 'translate-x-5' : 'translate-x-0'}`} />
       </button>
     </div>
   );
@@ -39,10 +39,12 @@ const toDatetimeLocal = (iso?: string | null) => {
   const pad = (n: number) => String(n).padStart(2, '0');
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 };
+const nowDatetimeLocal = () => toDatetimeLocal(new Date().toISOString());
 
 export default function FormSettingsClient() {
   const params = useParams<{ id: string }>();
   const formId = Number(params.id);
+  const fromBuilder = useSearchParams().get('from') === 'builder';
   const { isHR, isSuperAdmin } = useAuth();
   const toast = useToast();
 
@@ -102,8 +104,11 @@ export default function FormSettingsClient() {
   return (
     <div className="max-w-2xl space-y-6 animate-fade-in">
       <div>
-        <Link href={`/admin/forms/${formId}/edit`} className="flex items-center gap-1.5 text-sm font-semibold text-[var(--gray-400)] hover:text-[var(--foreground)]">
-          <ArrowLeft className="h-4 w-4" /> Back to builder
+        <Link
+          href={fromBuilder ? `/admin/forms/${formId}/edit` : '/admin/forms'}
+          className="flex items-center gap-1.5 text-sm font-semibold text-[var(--gray-400)] hover:text-[var(--foreground)]"
+        >
+          <ArrowLeft className="h-4 w-4" /> {fromBuilder ? 'Back to Builder' : 'Forms'}
         </Link>
         <h1 className="mt-2 text-3xl font-bold text-[var(--foreground)]">Settings</h1>
         <p className="text-[var(--gray-400)]">{formQuery.data?.form.title}</p>
@@ -132,6 +137,7 @@ export default function FormSettingsClient() {
             </label>
             <input
               type="datetime-local"
+              min={nowDatetimeLocal()}
               value={toDatetimeLocal(settings.closeAt)}
               onChange={(e) => patchSettings({ closeAt: e.target.value ? new Date(e.target.value).toISOString() : null })}
               className="mt-1 w-full rounded-lg border border-[var(--gray-200)] bg-[var(--card-bg)] p-2 text-sm text-[var(--foreground)]"
@@ -197,8 +203,12 @@ export default function FormSettingsClient() {
           <label className="text-xs font-semibold text-[var(--gray-400)]">Header image</label>
           <div className="mt-1">
             <FileUpload
+              // Remounts whenever the saved image changes, so the widget's own "just selected"
+              // state (which nothing else clears) doesn't keep showing the file the user just
+              // uploaded alongside the newly-persisted existingFiles entry for the same image.
+              key={theme.headerImageUrl ?? 'no-header-image'}
               accept="image/*"
-              existingFiles={theme.headerImageUrl ? [{ name: 'Header image', url: theme.headerImageUrl }] : []}
+              existingFiles={theme.headerImageUrl ? [{ name: theme.headerImageUrl.split('/').pop() || 'Header image', url: theme.headerImageUrl }] : []}
               onRemoveExisting={() => patchTheme({ headerImageUrl: null })}
               onFilesSelected={(files) => {
                 const file = files[0] ?? null;

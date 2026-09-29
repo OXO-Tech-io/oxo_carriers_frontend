@@ -117,6 +117,26 @@ describe("Sidebar", () => {
     await waitFor(() => expect(screen.queryByText("Dashboard")).not.toBeInTheDocument());
   });
 
+  it("highlights only the most specific matching item when one item's href is a prefix of another's (OCD-430)", async () => {
+    useAuthMock.mockReturnValue({ user: { id: 1, first_name: "A", last_name: "B", role: "super_admin" }, isSuperAdmin: true });
+    usePathnameMock.mockReturnValue("/admin/facilities/calendar");
+
+    render(<Sidebar />);
+    await act(() => Promise.resolve());
+
+    const bookingCalendarLinks = screen.getAllByRole("link", { name: "Booking Calendar" });
+    const facilityManagementLinks = screen.getAllByRole("link", { name: "Facility Management" });
+
+    expect(bookingCalendarLinks.length).toBeGreaterThan(0);
+    expect(facilityManagementLinks.length).toBeGreaterThan(0);
+    bookingCalendarLinks.forEach((link) =>
+      expect(link.className).toContain("bg-[var(--sidebar-active-bg)]"),
+    );
+    facilityManagementLinks.forEach((link) =>
+      expect(link.className).not.toContain("bg-[var(--sidebar-active-bg)]"),
+    );
+  });
+
   it("calls toggle() from the collapse button", async () => {
     useAuthMock.mockReturnValue({ user: { id: 1, first_name: "A", last_name: "B", role: "super_admin" }, isSuperAdmin: true });
     render(<Sidebar />);

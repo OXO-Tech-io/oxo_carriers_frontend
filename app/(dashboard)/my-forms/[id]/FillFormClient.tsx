@@ -1,55 +1,87 @@
 'use client';
 
-import { useRouter, useParams } from 'next/navigation';
-import { useEffect, useMemo, useRef, useState } from 'react';
-import { useFormQuery, useFormSettingsQuery, useMyFormResponseQuery } from '@/hooks/queries/use-forms-query';
+import { useRouter, useParams, useSearchParams } from 'next/navigation';
+import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
+import { useFormQuery, useFormSettingsQuery, useFormThemeQuery, useMyFormResponseQuery } from '@/hooks/queries/use-forms-query';
 import { useSubmitFormResponseMutation } from '@/hooks/mutations/use-form-mutations';
-import { Button } from '@/components/ui';
+import { Button, ConfirmationDialog } from '@/components/ui';
 import { Clock } from 'lucide-react';
 import { QuestionField } from '@/components/forms/QuestionField';
+import { AnswerView } from '@/components/forms/AnswerView';
 import { isQuestionVisible } from '@/lib/formLogic';
-import type { FormQuestion, FormResponseAnswer } from '@/types/hrModules';
+import { resolveFileUrl } from '@/lib/constants';
+import { FORM_RESPONSE_STATUS, type FormQuestion, type FormResponseAnswer } from '@/types/hrModules';
 
 const AUTOSAVE_DEBOUNCE_MS = 1500;
 
+// Free-text question types validated against a maxLength - distinct from
+// 'checkboxes' (min/maxSelections) and 'number' (min/max), which have their
+// own validation shapes below.
+const TEXT_TYPES = new Set<FormQuestion['type']>(['short_answer', 'paragraph']);
+
 const isAnswerable = (q: FormQuestion) => q.type !== 'section_header' && q.type !== 'rich_text';
 
-const isEmpty = (q: FormQuestion, value: unknown, file: File | undefined): boolean => {
-  if (q.type === 'file_upload') return !file;
+const isEmpty = (q: FormQuestion, value: unknown, files: File[] | undefined, hasExistingFile: boolean): boolean => {
+  if (q.type === 'file_upload') return !hasExistingFile && !(files && files.length > 0);
   if (Array.isArray(value)) return value.length === 0;
   if (value != null && typeof value === 'object') return Object.keys(value).length === 0;
   return value === undefined || value === null || value === '';
 };
 
-const answerDisplay = (answer: FormResponseAnswer | undefined): string => {
-  if (!answer) return '—';
-  if (answer.valueText) return answer.valueText;
-  if (answer.value == null || answer.value === '') return '—';
-  if (Array.isArray(answer.value)) return answer.value.join(', ');
-  if (typeof answer.value === 'object') return JSON.stringify(answer.value);
-  return String(answer.value);
-};
-
 export default function FillFormClient() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const formId = Number(params.id);
+  const wantsEdit = searchParams.get('mode') === 'edit';
 
   const formQuery = useFormQuery(formId);
   const settingsQuery = useFormSettingsQuery(formId);
+  const themeQuery = useFormThemeQuery(formId);
   const myResponseQuery = useMyFormResponseQuery(formId);
   const submitMutation = useSubmitFormResponseMutation(formId);
 
   const [values, setValues] = useState<Record<number, unknown>>({});
-  const [files, setFiles] = useState<Record<number, File>>({});
+  const [files, setFiles] = useState<Record<number, File[]>>({});
   const [errors, setErrors] = useState<Record<number, string>>({});
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const [showCancelConfirm, setShowCancelConfirm] = useState(false);
 
   const autosaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const hasAnswered = useRef(false);
+  const seededFromResponse = useRef(false);
 
   const questions = useMemo(() => [...(formQuery.data?.questions ?? [])].sort((a, b) => a.orderIndex - b.orderIndex), [formQuery.data]);
   const sections = useMemo(() => [...(formQuery.data?.sections ?? [])].sort((a, b) => a.orderIndex - b.orderIndex), [formQuery.data]);
+
+  const myResponse = myResponseQuery.data?.response ?? null;
+  const allowEditAfterSubmit = myResponseQuery.data?.allowEditAfterSubmit ?? false;
+  const isEditingExisting = myResponse?.status === FORM_RESPONSE_STATUS.SUBMITTED && allowEditAfterSubmit && wantsEdit;
+
+  // Seed the editable form with the recipient's previously submitted answers when they've chosen
+  // to Edit (not just View) a response — once only, so it never clobbers in-progress edits on a
+  // background refetch.
+  useEffect(() => {
+    if (!isEditingExisting || seededFromResponse.current) return;
+    const answers = myResponseQuery.data?.answers ?? [];
+    if (!answers.length) return;
+    seededFromResponse.current = true;
+    const seededValues: Record<number, unknown> = {};
+    for (const a of answers) {
+      if (a.value !== null && a.value !== undefined) seededValues[a.questionId] = a.value;
+    }
+    setValues(seededValues);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isEditingExisting, myResponseQuery.data]);
+
+  const existingAttachmentsByQuestion = useMemo(() => {
+    const map = new Map<number, { name: string; url: string }[]>();
+    for (const a of myResponseQuery.data?.answers ?? []) {
+      if (a.attachments?.length)
+        map.set(a.questionId, a.attachments.map((att) => ({ name: att.fileName, url: resolveFileUrl(att.fileUrl) })));
+    }
+    return map;
+  }, [myResponseQuery.data]);
 
   const visibleIds = useMemo(() => {
     const logicRules = formQuery.data?.logicRules ?? [];
@@ -95,8 +127,7 @@ export default function FillFormClient() {
   }
 
   const { form } = formQuery.data;
-  const myResponse = myResponseQuery.data?.response ?? null;
-  const alreadySubmittedLocked = myResponse?.status === 'submitted' && !myResponseQuery.data?.allowEditAfterSubmit;
+  const alreadySubmittedLocked = myResponse?.status === FORM_RESPONSE_STATUS.SUBMITTED && !isEditingExisting;
 
   if (alreadySubmittedLocked) {
     const answers = myResponseQuery.data?.answers ?? [];
@@ -107,12 +138,18 @@ export default function FillFormClient() {
       return (
         <div key={q.id} className="rounded-2xl border border-[var(--gray-100)] bg-[var(--card-bg)] p-5 shadow-sm sm:p-6">
           <p className="text-sm font-semibold text-[var(--foreground)]">{q.title || 'Untitled question'}</p>
-          <p className="mt-1 text-sm text-[var(--gray-400)]">{answerDisplay(answers.find((a) => a.questionId === q.id))}</p>
+          <div className="mt-1">
+            <AnswerView question={q} answer={answers.find((a) => a.questionId === q.id)} />
+          </div>
         </div>
       );
     };
+    const primaryColor = themeQuery.data?.primaryColor;
     return (
-      <div className="mx-auto max-w-2xl animate-fade-in space-y-4 pb-10">
+      <div
+        className="mx-auto max-w-2xl animate-fade-in space-y-4 pb-10"
+        style={primaryColor ? ({ '--primary': primaryColor, '--primary-light': `${primaryColor}1a` } as CSSProperties) : undefined}
+      >
         <div className="overflow-hidden rounded-2xl border border-[var(--gray-100)] bg-[var(--card-bg)] shadow-sm">
           <div className="h-2.5 bg-emerald-500" />
           <div className="space-y-2 p-6">
@@ -135,10 +172,13 @@ export default function FillFormClient() {
           </div>
         ))}
 
-        <div className="flex justify-start pt-2">
+        <div className="flex justify-start gap-2 pt-2">
           <Button variant="outline" onClick={() => router.push('/my-forms')}>
             Back to My Forms
           </Button>
+          {allowEditAfterSubmit && (
+            <Button onClick={() => router.push(`/my-forms/${formId}?mode=edit`)}>Edit response</Button>
+          )}
         </div>
       </div>
     );
@@ -155,11 +195,11 @@ export default function FillFormClient() {
     });
   };
 
-  const setFile = (id: number, file: File | null) => {
+  const setQuestionFiles = (id: number, selected: File[]) => {
     hasAnswered.current = true;
     setFiles((prev) => {
       const next = { ...prev };
-      if (file) next[id] = file;
+      if (selected.length) next[id] = selected;
       else delete next[id];
       return next;
     });
@@ -174,8 +214,42 @@ export default function FillFormClient() {
   const validate = (): boolean => {
     const nextErrors: Record<number, string> = {};
     questions.forEach((q) => {
-      if (!isAnswerable(q) || !visibleIds.has(q.id) || !q.required) return;
-      if (isEmpty(q, values[q.id], files[q.id])) nextErrors[q.id] = 'This question is required.';
+      if (!isAnswerable(q) || !visibleIds.has(q.id)) return;
+      const value = values[q.id];
+      const hasExistingFile = existingAttachmentsByQuestion.has(q.id) && !files[q.id];
+      const empty = isEmpty(q, value, files[q.id], hasExistingFile);
+      if (q.required && empty) {
+        nextErrors[q.id] = 'This question is required.';
+        return;
+      }
+      if (empty) return;
+
+      const config = q.config;
+      if (q.type === 'number') {
+        const n = Number(value);
+        const min = typeof config['min'] === 'number' ? (config['min'] as number) : undefined;
+        const max = typeof config['max'] === 'number' ? (config['max'] as number) : undefined;
+        if (Number.isNaN(n) || (min !== undefined && n < min) || (max !== undefined && n > max)) {
+          nextErrors[q.id] = `Must be between ${min ?? '-∞'} and ${max ?? '∞'}.`;
+        }
+      } else if (q.type === 'checkboxes') {
+        const selections = Array.isArray(value) ? value : [];
+        const minSelections =
+          typeof config['minSelections'] === 'number' && (config['minSelections'] as number) > 0 ? (config['minSelections'] as number) : undefined;
+        const maxSelections =
+          typeof config['maxSelections'] === 'number' && (config['maxSelections'] as number) > 0 ? (config['maxSelections'] as number) : undefined;
+        if (minSelections && selections.length < minSelections) {
+          nextErrors[q.id] = `Select at least ${minSelections}.`;
+        } else if (maxSelections && selections.length > maxSelections) {
+          nextErrors[q.id] = `Select at most ${maxSelections}.`;
+        }
+      } else if (TEXT_TYPES.has(q.type)) {
+        const maxLength =
+          typeof config['maxLength'] === 'number' && (config['maxLength'] as number) > 0 ? (config['maxLength'] as number) : undefined;
+        if (maxLength && String(value).length > maxLength) {
+          nextErrors[q.id] = `Must be ${maxLength} characters or fewer.`;
+        }
+      }
     });
     setErrors(nextErrors);
     return Object.keys(nextErrors).length === 0;
@@ -194,6 +268,14 @@ export default function FillFormClient() {
     } catch {
       setSubmitError('Could not submit this form. It may be closed or you may have already submitted a response.');
     }
+  };
+
+  const handleCancelEdit = () => {
+    if (hasAnswered.current) {
+      setShowCancelConfirm(true);
+      return;
+    }
+    router.push(`/my-forms/${formId}`);
   };
 
   const renderQuestion = (q: FormQuestion) => {
@@ -228,8 +310,9 @@ export default function FillFormClient() {
           question={q}
           value={values[q.id]}
           onChange={(value) => setValue(q.id, value)}
-          file={files[q.id]}
-          onFileChange={(file) => setFile(q.id, file)}
+          files={files[q.id]}
+          existingFiles={files[q.id] ? [] : (existingAttachmentsByQuestion.get(q.id) ?? [])}
+          onFilesChange={(selected) => setQuestionFiles(q.id, selected)}
         />
         {q.helpText && <p className="mt-1 text-xs text-[var(--gray-400)]">{q.helpText}</p>}
         {errors[q.id] && <p className="mt-1 text-xs font-medium text-red-500">{errors[q.id]}</p>}
@@ -240,8 +323,17 @@ export default function FillFormClient() {
   const ungrouped = questions.filter((q) => q.sectionId == null);
   const hasRequired = questions.some((q) => isAnswerable(q) && q.required);
 
+  const primaryColor = themeQuery.data?.primaryColor;
+
   return (
-    <div className="mx-auto max-w-2xl animate-fade-in space-y-4 pb-10">
+    <div
+      className="mx-auto max-w-2xl animate-fade-in space-y-4 pb-10"
+      style={primaryColor ? ({ '--primary': primaryColor, '--primary-light': `${primaryColor}1a` } as CSSProperties) : undefined}
+    >
+      {themeQuery.data?.headerImageUrl && (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={themeQuery.data.headerImageUrl} alt="" className="h-32 w-full rounded-2xl object-cover" />
+      )}
       <div className="overflow-hidden rounded-2xl border border-[var(--gray-100)] bg-[var(--card-bg)] shadow-sm">
         <div className="h-2.5 bg-[var(--primary)]" />
         <div className="space-y-2 p-6">
@@ -274,11 +366,26 @@ export default function FillFormClient() {
         <p className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-600">{submitError}</p>
       )}
 
-      <div className="flex justify-end pt-2">
+      <div className="flex justify-end gap-2 pt-2">
+        {isEditingExisting && (
+          <Button variant="outline" onClick={handleCancelEdit}>
+            Cancel
+          </Button>
+        )}
         <Button onClick={handleSubmit} isLoading={submitMutation.isPending}>
           Submit
         </Button>
       </div>
+
+      <ConfirmationDialog
+        isOpen={showCancelConfirm}
+        onClose={() => setShowCancelConfirm(false)}
+        onConfirm={() => router.push(`/my-forms/${formId}`)}
+        title="Discard changes?"
+        message="You have unsaved changes to this response. Leaving now will discard them."
+        confirmLabel="Discard changes"
+        variant="danger"
+      />
     </div>
   );
 }

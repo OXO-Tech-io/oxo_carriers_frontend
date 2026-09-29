@@ -2,6 +2,17 @@
 
 /* ── OXO Carriers Theme: "Stratify" — soft, borderless, pill-shaped ── */
 :root {
+  /* OCD-410: native form controls (select, text/number/date inputs,
+     checkboxes, scrollbars, …) that don't set an explicit background/color
+     are painted by the browser using its UA "light" defaults regardless of
+     our CSS variables. `color: var(--foreground)` still cascades into them
+     from `body`, so in dark mode they rendered near-white text on the
+     browser's default white field background — unreadable. `color-scheme`
+     tells the browser which UA palette to use for exactly those
+     unstyled-control defaults, kept in sync with the `.dark` class below
+     (same mechanism already used for date/time input icons further down). */
+  color-scheme: light;
+
   /* Page background & text */
   --background: #F5F7FB;
   --foreground: #12142B;
@@ -72,6 +83,8 @@
 }
 
 .dark {
+  color-scheme: dark;
+
   --background: #0B0D17;
   --foreground: #F1F3F9;
   --card-bg: #151827;

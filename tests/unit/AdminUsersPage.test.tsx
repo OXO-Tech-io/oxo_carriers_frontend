@@ -148,6 +148,27 @@ describe("AdminUsersPage", () => {
     expect(screen.queryByTitle("Delete User")).not.toBeInTheDocument();
   });
 
+  // OCD-496: HR Executive must not see or use Document Vault upload - the row
+  // icon that opens DocumentVaultModal is absent entirely for them, not just
+  // present-but-disabled.
+  it("hides the Document Vault icon for HR executives", async () => {
+    mockAuth(UserRole.HR_EXECUTIVE);
+    render(<AdminUsersPage />);
+    await screen.findByText("Jane Doe");
+    expect(screen.queryByTitle("Document Vault")).not.toBeInTheDocument();
+  });
+
+  it("shows the Document Vault icon for HR Manager and Super Admin", async () => {
+    mockAuth(UserRole.HR_MANAGER);
+    render(<AdminUsersPage />);
+    await screen.findByText("Jane Doe");
+    expect(screen.getByTitle("Document Vault")).toBeInTheDocument();
+
+    mockAuth(UserRole.SUPER_ADMIN);
+    render(<AdminUsersPage />);
+    expect((await screen.findAllByTitle("Document Vault")).length).toBeGreaterThan(0);
+  });
+
   it("changing the status dropdown patches the new status and shows a toast (Super Admin only)", async () => {
     mockAuth(UserRole.SUPER_ADMIN);
     apiMock.patch.mockResolvedValue({});

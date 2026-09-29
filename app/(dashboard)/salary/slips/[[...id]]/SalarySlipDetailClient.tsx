@@ -5,6 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
 import api from '@/lib/api';
 import { format } from 'date-fns';
+import { DATE_FORMATS } from '@/lib/constants';
 import { ArrowLeft, Download } from 'lucide-react';
 import Image from 'next/image';
 import { Button } from '@/components/ui/Button';
@@ -198,7 +199,7 @@ export default function SalarySlipDetailClient() {
           {/* Pay Slip Month */}
           <div style={{ textAlign: 'center', paddingTop: '0pt', paddingBottom: '8pt', lineHeight: 1.158 }}>
             <p style={{ margin: 0, fontFamily: 'Garamond, serif', fontWeight: 700, fontSize: '12pt', color: '#000000' }}>
-              Pay slip for the month of {format(new Date(salary.month_year), 'MMMM yyyy')}
+              Pay slip for the month of {format(new Date(salary.month_year), DATE_FORMATS.MONTH_YEAR)}
             </p>
           </div>
 
