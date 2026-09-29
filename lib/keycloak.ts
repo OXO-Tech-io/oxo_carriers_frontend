@@ -15,9 +15,9 @@ const getOrigin = (): string | undefined => globalThis.window?.location.origin;
  * OCD-455: set right before an explicit, interactive `kc.login()` redirect
  * and read back in `app/providers.tsx` once that flow completes. Marks the
  * resulting session as one to "claim" as the account's sole active session
- * via POST /auth/claim-session - distinct from a silent SSO restore or a
+ * via POST /auth/claim-sessions - distinct from a silent SSO restore or a
  * plain token refresh, neither of which set this flag, so neither ever
- * calls claim-session.
+ * calls claim-sessions.
  */
 export const PENDING_NEW_LOGIN_KEY = 'oxo_pending_new_login';
 

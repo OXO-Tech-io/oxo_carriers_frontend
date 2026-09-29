@@ -28,7 +28,7 @@ describe("providers/claimSessionIfPendingNewLogin (OCD-455)", () => {
     const { claimSessionIfPendingNewLogin } = await import("@/app/providers");
     claimSessionIfPendingNewLogin();
 
-    expect(apiPostMock).toHaveBeenCalledWith("/auth/claim-session");
+    expect(apiPostMock).toHaveBeenCalledWith("/auth/claim-sessions");
     expect(sessionStorage.getItem(PENDING_NEW_LOGIN_KEY)).toBeNull();
   });
 

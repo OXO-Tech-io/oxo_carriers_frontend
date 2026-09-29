@@ -27,7 +27,7 @@ export function claimSessionIfPendingNewLogin(): void {
   }
   if (!pendingNewLogin || !getKeycloak()?.authenticated) return;
 
-  api.post('/auth/claim-session').catch((err) => {
+  api.post('/auth/claim-sessions').catch((err) => {
     console.error('[OCD-455] Failed to claim session:', err);
   });
 }
