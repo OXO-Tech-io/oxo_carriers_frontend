@@ -13,7 +13,7 @@ import {
 } from '@/hooks/mutations/use-notice-mutations';
 import { Modal, Button, Badge, DataTable, ConfirmationDialog, type BadgeVariant } from '@/components/ui';
 import { FileUpload } from '@/components/ui/FileUpload';
-import { resolveFileUrl as resolveImageUrl } from '@/lib/constants';
+import { resolveFileUrl as resolveImageUrl, DATE_FORMATS } from '@/lib/constants';
 import type { Notice } from '@/types/hrModules';
 
 const TITLE_MAX_LENGTH = 100;
@@ -69,7 +69,7 @@ const scheduleLabels: Record<ScheduleStatus, { label: string; variant: BadgeVari
 const formatScheduleDate = (iso: string | null | undefined) => {
   if (!iso) return null;
   const date = new Date(iso);
-  return Number.isNaN(date.getTime()) ? null : format(date, 'MMM d, yyyy h:mm a');
+  return Number.isNaN(date.getTime()) ? null : format(date, DATE_FORMATS.COMPACT_WITH_TIME);
 };
 
 export default function AdminNoticesPage() {

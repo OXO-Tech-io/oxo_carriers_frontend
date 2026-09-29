@@ -36,4 +36,30 @@ export const DATE_FORMATS = {
   SHORT: 'MMM dd',
   /** e.g. "Mar 05, 2026" */
   MEDIUM: 'MMM dd, yyyy',
+  /** e.g. "Mar 5, 2026" - no leading zero on the day */
+  COMPACT: 'MMM d, yyyy',
+  /** e.g. "Mar 05, 2026, 3:45 PM" */
+  MEDIUM_WITH_TIME: 'MMM dd, yyyy, h:mm a',
+  /** e.g. "Mar 5, 2026 3:45 PM" */
+  COMPACT_WITH_TIME: 'MMM d, yyyy h:mm a',
+  /** e.g. "March 05, 2026" */
+  LONG: 'MMMM dd, yyyy',
+  /** e.g. "March 2026" */
+  MONTH_YEAR: 'MMMM yyyy',
+  /** e.g. "Mar 2026" */
+  SHORT_MONTH_YEAR: 'MMM yyyy',
+  /** ISO date, e.g. "2026-03-05" - API params / date input values */
+  ISO_DATE: 'yyyy-MM-dd',
+  /** datetime-local input value, e.g. "2026-03-05T15:45" */
+  DATETIME_LOCAL_INPUT: "yyyy-MM-dd'T'HH:mm",
+  /** Day of month only, e.g. "5" - calendar grid cells */
+  DAY_ONLY: 'd',
+  /** Weekday abbreviation, e.g. "Mon" */
+  WEEKDAY_SHORT: 'EEE',
+  /** 24-hour time, e.g. "15:45" */
+  TIME_24H: 'HH:mm',
+  /** 12-hour time with leading zero, e.g. "03:45 PM" */
+  TIME_12H: 'hh:mm a',
+  /** 12-hour time without leading zero, e.g. "3:45 PM" */
+  TIME_12H_NO_PAD: 'h:mm a',
 } as const;

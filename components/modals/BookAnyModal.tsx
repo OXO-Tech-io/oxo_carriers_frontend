@@ -8,6 +8,7 @@ import api from '@/lib/api';
 import { Facility, FacilityType } from '@/types';
 import { format } from 'date-fns';
 import { BuildingOfficeIcon } from '@heroicons/react/24/outline';
+import { DATE_FORMATS } from '@/lib/constants';
 
 const step2Schema = z.object({
   start_time: z.string().min(1, 'Start time is required'),
@@ -62,8 +63,8 @@ export default function BookAnyModal({
   const step2Form = useForm<Step2Values>({
     resolver: zodResolver(step2Schema) as any,
     defaultValues: {
-      start_time: format(new Date(), "yyyy-MM-dd'T'HH:mm"),
-      end_time: format(new Date(Date.now() + 60 * 60 * 1000), "yyyy-MM-dd'T'HH:mm"),
+      start_time: format(new Date(), DATE_FORMATS.DATETIME_LOCAL_INPUT),
+      end_time: format(new Date(Date.now() + 60 * 60 * 1000), DATE_FORMATS.DATETIME_LOCAL_INPUT),
     },
   });
 

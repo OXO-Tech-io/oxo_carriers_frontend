@@ -10,9 +10,14 @@ import { QuestionField } from '@/components/forms/QuestionField';
 import { AnswerView } from '@/components/forms/AnswerView';
 import { isQuestionVisible } from '@/lib/formLogic';
 import { resolveFileUrl } from '@/lib/constants';
-import type { FormQuestion, FormResponseAnswer } from '@/types/hrModules';
+import { FORM_RESPONSE_STATUS, type FormQuestion, type FormResponseAnswer } from '@/types/hrModules';
 
 const AUTOSAVE_DEBOUNCE_MS = 1500;
+
+// Free-text question types validated against a maxLength - distinct from
+// 'checkboxes' (min/maxSelections) and 'number' (min/max), which have their
+// own validation shapes below.
+const TEXT_TYPES = new Set<FormQuestion['type']>(['short_answer', 'paragraph']);
 
 const isAnswerable = (q: FormQuestion) => q.type !== 'section_header' && q.type !== 'rich_text';
 
@@ -51,7 +56,7 @@ export default function FillFormClient() {
 
   const myResponse = myResponseQuery.data?.response ?? null;
   const allowEditAfterSubmit = myResponseQuery.data?.allowEditAfterSubmit ?? false;
-  const isEditingExisting = myResponse?.status === 'submitted' && allowEditAfterSubmit && wantsEdit;
+  const isEditingExisting = myResponse?.status === FORM_RESPONSE_STATUS.SUBMITTED && allowEditAfterSubmit && wantsEdit;
 
   // Seed the editable form with the recipient's previously submitted answers when they've chosen
   // to Edit (not just View) a response — once only, so it never clobbers in-progress edits on a
@@ -122,7 +127,7 @@ export default function FillFormClient() {
   }
 
   const { form } = formQuery.data;
-  const alreadySubmittedLocked = myResponse?.status === 'submitted' && !isEditingExisting;
+  const alreadySubmittedLocked = myResponse?.status === FORM_RESPONSE_STATUS.SUBMITTED && !isEditingExisting;
 
   if (alreadySubmittedLocked) {
     const answers = myResponseQuery.data?.answers ?? [];
@@ -238,7 +243,7 @@ export default function FillFormClient() {
         } else if (maxSelections && selections.length > maxSelections) {
           nextErrors[q.id] = `Select at most ${maxSelections}.`;
         }
-      } else if (q.type === 'short_answer' || q.type === 'paragraph') {
+      } else if (TEXT_TYPES.has(q.type)) {
         const maxLength =
           typeof config['maxLength'] === 'number' && (config['maxLength'] as number) > 0 ? (config['maxLength'] as number) : undefined;
         if (maxLength && String(value).length > maxLength) {

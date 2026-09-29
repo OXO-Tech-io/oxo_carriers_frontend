@@ -12,6 +12,7 @@ import {
 } from '@heroicons/react/24/outline';
 import { Facility, FacilityBooking } from '@/types';
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, addMonths, subMonths, isToday } from 'date-fns';
+import { DATE_FORMATS } from '@/lib/constants';
 
 export default function AdminBookingCalendarPage() {
   const { isHR, isSuperAdmin } = useAuth();
@@ -93,7 +94,7 @@ export default function AdminBookingCalendarPage() {
               <ChevronLeftIcon className="h-4 w-4 text-[var(--gray-400)]" />
             </button>
             <span className="text-sm font-bold text-[var(--foreground)] min-w-[120px] text-center">
-              {format(currentMonth, 'MMMM yyyy')}
+              {format(currentMonth, DATE_FORMATS.MONTH_YEAR)}
             </span>
             <button
               onClick={() => setCurrentMonth(addMonths(currentMonth, 1))}
@@ -134,7 +135,7 @@ export default function AdminBookingCalendarPage() {
                   <div key={day.toISOString()} className={`border-b border-r border-[var(--gray-100)] p-2 min-h-[120px] hover:bg-[var(--gray-25)] transition-colors ${isToday(day) ? 'bg-[var(--primary-light)]/30' : ''}`}>
                     <div className="flex justify-between items-start mb-2">
                       <span className={`text-sm font-bold h-7 w-7 flex items-center justify-center rounded-full ${isToday(day) ? 'bg-[var(--primary)] text-white' : 'text-[var(--gray-400)]'}`}>
-                        {format(day, 'd')}
+                        {format(day, DATE_FORMATS.DAY_ONLY)}
                       </span>
                     </div>
                     <div className="space-y-1">
@@ -146,7 +147,7 @@ export default function AdminBookingCalendarPage() {
                         >
                           <div className="flex items-center space-x-1 mb-0.5">
                             <span className="w-1.5 h-1.5 rounded-full bg-[var(--primary)]"></span>
-                            <span className="font-bold text-[var(--foreground)]">{format(new Date(b.start_time), 'HH:mm')}</span>
+                            <span className="font-bold text-[var(--foreground)]">{format(new Date(b.start_time), DATE_FORMATS.TIME_24H)}</span>
                           </div>
                           <div className="text-[var(--gray-600)] truncate font-medium">{b.facility_name}</div>
                           <div className="text-[var(--gray-400)] truncate italic">by {b.first_name}</div>
@@ -198,7 +199,7 @@ export default function AdminBookingCalendarPage() {
                   <div className="flex flex-wrap gap-x-4 gap-y-1 mt-1">
                     <div className="flex items-center text-sm text-[var(--gray-400)]">
                       <CalendarIcon className="h-4 w-4 mr-1 text-[var(--gray-300)]" />
-                      {format(new Date(b.start_time), 'MMM d, yyyy')} ({format(new Date(b.start_time), 'hh:mm a')} - {format(new Date(b.end_time), 'hh:mm a')})
+                      {format(new Date(b.start_time), DATE_FORMATS.COMPACT)} ({format(new Date(b.start_time), DATE_FORMATS.TIME_12H)} - {format(new Date(b.end_time), DATE_FORMATS.TIME_12H)})
                     </div>
                     <div className="flex items-center text-sm text-[var(--gray-400)]">
                       <UserIcon className="h-4 w-4 mr-1 text-[var(--gray-300)]" />

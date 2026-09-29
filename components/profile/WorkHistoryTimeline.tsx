@@ -3,11 +3,12 @@
 import { Briefcase, Pencil, Trash2 } from 'lucide-react';
 import { format } from 'date-fns';
 import type { EmployeeWorkHistory } from '@/types/profile';
+import { DATE_FORMATS } from '@/lib/constants';
 
 function formatRange(startDate: string, endDate: string | null) {
   const start = (() => {
     try {
-      return format(new Date(startDate), 'MMM yyyy');
+      return format(new Date(startDate), DATE_FORMATS.SHORT_MONTH_YEAR);
     } catch {
       return startDate;
     }
@@ -15,7 +16,7 @@ function formatRange(startDate: string, endDate: string | null) {
   if (!endDate) return `${start} – Present`;
   const end = (() => {
     try {
-      return format(new Date(endDate), 'MMM yyyy');
+      return format(new Date(endDate), DATE_FORMATS.SHORT_MONTH_YEAR);
     } catch {
       return endDate;
     }

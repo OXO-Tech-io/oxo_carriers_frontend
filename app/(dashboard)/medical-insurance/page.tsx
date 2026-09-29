@@ -19,6 +19,7 @@ import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { ConfirmationDialog } from '@/components/ui';
 import { format } from 'date-fns';
+import { DATE_FORMATS } from '@/lib/constants';
 import { API_FILE_BASE_URL as API_BASE } from '@/lib/constants';
 
 type ClaimType = 'IN' | 'OPD';
@@ -565,7 +566,7 @@ export default function MedicalInsurancePage() {
                                   </div>
                                 </td>
                                 <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-[var(--gray-400)]">
-                                  {format(new Date(claim.created_at), 'MMM dd, yyyy')}
+                                  {format(new Date(claim.created_at), DATE_FORMATS.MEDIUM)}
                                 </td>
                                 <td className="px-6 py-4 text-sm font-medium">
                                   <div className="flex flex-col gap-2">
@@ -674,7 +675,7 @@ export default function MedicalInsurancePage() {
                           <div>
                             <p className="text-[10px] font-semibold text-[var(--gray-400)]">Date Submitted</p>
                             <p className="font-semibold text-[var(--gray-600)]">
-                              {format(new Date(claim.created_at), 'MMM dd, yyyy')}
+                              {format(new Date(claim.created_at), DATE_FORMATS.MEDIUM)}
                             </p>
                           </div>
                         </div>

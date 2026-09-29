@@ -4,11 +4,12 @@ import { Modal } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
 import type { ArchivedEmployee } from '@/types/archive';
 import { format } from 'date-fns';
+import { DATE_FORMATS } from '@/lib/constants';
 
 function formatDate(value?: string | null) {
   if (!value) return '—';
   try {
-    return format(new Date(value), 'MMM dd, yyyy');
+    return format(new Date(value), DATE_FORMATS.MEDIUM);
   } catch {
     return value;
   }
@@ -17,7 +18,7 @@ function formatDate(value?: string | null) {
 function formatDateTime(value?: string | null) {
   if (!value) return '—';
   try {
-    return format(new Date(value), 'MMM dd, yyyy, h:mm a');
+    return format(new Date(value), DATE_FORMATS.MEDIUM_WITH_TIME);
   } catch {
     return value;
   }

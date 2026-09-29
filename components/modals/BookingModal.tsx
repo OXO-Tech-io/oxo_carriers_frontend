@@ -5,6 +5,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Facility } from '@/types';
 import { format } from 'date-fns';
+import { DATE_FORMATS } from '@/lib/constants';
 
 const bookingSchema = z.object({
   facility_id: z.number(),
@@ -37,8 +38,8 @@ export default function BookingModal({
     resolver: zodResolver(bookingSchema) as any,
     defaultValues: {
       facility_id: facility?.id,
-      start_time: format(new Date(), "yyyy-MM-dd'T'HH:mm"),
-      end_time: format(new Date(new Date().getTime() + 60 * 60 * 1000), "yyyy-MM-dd'T'HH:mm"),
+      start_time: format(new Date(), DATE_FORMATS.DATETIME_LOCAL_INPUT),
+      end_time: format(new Date(new Date().getTime() + 60 * 60 * 1000), DATE_FORMATS.DATETIME_LOCAL_INPUT),
     },
   });
 

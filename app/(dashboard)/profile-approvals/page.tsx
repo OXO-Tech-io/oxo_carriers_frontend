@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { format } from 'date-fns';
+import { DATE_FORMATS } from '@/lib/constants';
 import type { ColumnDef } from '@tanstack/react-table';
 import { useAuth } from '@/hooks/useAuth';
 import { Card } from '@/components/ui/Card';
@@ -174,7 +175,7 @@ export default function ProfileApprovalsPage() {
       cell: ({ getValue }) => {
         const v = getValue<string>();
         try {
-          return format(new Date(v), 'MMM dd, yyyy');
+          return format(new Date(v), DATE_FORMATS.MEDIUM);
         } catch {
           return v;
         }

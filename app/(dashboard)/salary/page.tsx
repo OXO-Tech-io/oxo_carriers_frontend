@@ -18,6 +18,7 @@ import {
   ChevronRight
 } from 'lucide-react';
 import { format } from 'date-fns';
+import { DATE_FORMATS } from '@/lib/constants';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 
@@ -293,7 +294,7 @@ export default function SalaryPage() {
                                   <Calendar className="h-4 w-4" />
                                 </div>
                                 <span className="text-sm font-bold text-[var(--foreground)]">
-                                  {format(new Date(salary.month_year), 'MMMM yyyy')}
+                                  {format(new Date(salary.month_year), DATE_FORMATS.MONTH_YEAR)}
                                 </span>
                               </div>
                             </td>
@@ -379,7 +380,7 @@ export default function SalaryPage() {
                           <Calendar className="h-4 w-4" />
                         </div>
                         <span className="text-sm font-bold text-[var(--foreground)]">
-                          {format(new Date(salary.month_year), 'MMMM yyyy')}
+                          {format(new Date(salary.month_year), DATE_FORMATS.MONTH_YEAR)}
                         </span>
                       </div>
                       <span

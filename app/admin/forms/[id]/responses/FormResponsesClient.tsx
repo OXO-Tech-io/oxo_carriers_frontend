@@ -10,7 +10,7 @@ import { useFormQuery, useFormResponsesQuery } from '@/hooks/queries/use-forms-q
 import { formService } from '@/lib/services/form.service';
 import { Button, DataTable, Modal } from '@/components/ui';
 import { AnswerView } from '@/components/forms/AnswerView';
-import type { FormResponseWithAnswers } from '@/types/hrModules';
+import { FORM_RESPONSE_STATUS, type FormResponseWithAnswers } from '@/types/hrModules';
 
 const downloadBlob = (blob: Blob, filename: string) => {
   const url = URL.createObjectURL(blob);
@@ -148,7 +148,7 @@ export default function FormResponsesClient() {
         {detail && (
           <div className="space-y-4">
             <p className="text-xs text-[var(--gray-400)]">
-              {detail.response.status === 'submitted' && detail.response.submittedAt
+              {detail.response.status === FORM_RESPONSE_STATUS.SUBMITTED && detail.response.submittedAt
                 ? `Submitted ${new Date(detail.response.submittedAt).toLocaleString()}${isLate(detail.response.submittedAt) ? ' (Late)' : ''}`
                 : 'In progress'}
             </p>

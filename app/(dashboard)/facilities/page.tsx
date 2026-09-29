@@ -14,6 +14,7 @@ import BookingModal from '@/components/modals/BookingModal';
 import BookAnyModal from '@/components/modals/BookAnyModal';
 import FacilityCalendarModal from '@/components/modals/FacilityCalendarModal';
 import { format } from 'date-fns';
+import { DATE_FORMATS } from '@/lib/constants';
 
 const FACILITY_TYPE_ORDER: FacilityType[] = [
   FacilityType.WORKSTATION,
@@ -241,9 +242,9 @@ export default function FacilitiesPage() {
                       <div className="text-xs text-[var(--gray-400)] capitalize">{b.facility_type?.replace('_', ' ')}</div>
                     </td>
                     <td className="px-6 py-4">
-                      <div className="text-sm text-[var(--gray-600)]">{format(new Date(b.start_time), 'MMM d, yyyy')}</div>
+                      <div className="text-sm text-[var(--gray-600)]">{format(new Date(b.start_time), DATE_FORMATS.COMPACT)}</div>
                       <div className="text-xs text-[var(--gray-400)]">
-                        {format(new Date(b.start_time), 'hh:mm a')} - {format(new Date(b.end_time), 'hh:mm a')}
+                        {format(new Date(b.start_time), DATE_FORMATS.TIME_12H)} - {format(new Date(b.end_time), DATE_FORMATS.TIME_12H)}
                       </div>
                     </td>
                     <td className="px-6 py-4 text-sm text-[var(--gray-400)]">{b.purpose}</td>

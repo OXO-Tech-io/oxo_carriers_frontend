@@ -269,7 +269,12 @@ export interface AssignedForm {
   allowEditAfterSubmit?: boolean;
 }
 
-export type FormResponseStatus = 'in_progress' | 'submitted';
+export const FORM_RESPONSE_STATUS = {
+  IN_PROGRESS: 'in_progress',
+  SUBMITTED: 'submitted',
+} as const;
+
+export type FormResponseStatus = (typeof FORM_RESPONSE_STATUS)[keyof typeof FORM_RESPONSE_STATUS];
 
 export interface FormResponse {
   id: number;

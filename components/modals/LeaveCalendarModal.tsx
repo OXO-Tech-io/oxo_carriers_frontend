@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { XMarkIcon } from '@heroicons/react/24/outline';
 import { format } from 'date-fns';
 import DateRangePicker from '@/components/DateRangePicker';
+import { DATE_FORMATS } from '@/lib/constants';
 
 interface LeaveCalendarEntry {
   id: number;
@@ -74,7 +75,7 @@ export default function LeaveCalendarModal({
     setSelectedEndDate(end);
     if (start) {
       // For single date selection (holidays are typically single dates)
-      setFormData({ ...formData, date: format(start, 'yyyy-MM-dd') });
+      setFormData({ ...formData, date: format(start, DATE_FORMATS.ISO_DATE) });
     }
   };
 

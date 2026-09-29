@@ -11,6 +11,7 @@ import {
 } from '@heroicons/react/24/outline';
 import { Facility, FacilityBooking } from '@/types';
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, addMonths, subMonths, isToday } from 'date-fns';
+import { DATE_FORMATS } from '@/lib/constants';
 
 interface FacilityCalendarModalProps {
   isOpen: boolean;
@@ -86,7 +87,7 @@ export default function FacilityCalendarModal({ isOpen, onClose, facility }: Fac
                   <ChevronLeftIcon className="h-4 w-4 text-[#667085]" />
                 </button>
                 <h4 className="text-lg font-bold text-[#101828] min-w-[150px] text-center">
-                  {format(currentMonth, 'MMMM yyyy')}
+                  {format(currentMonth, DATE_FORMATS.MONTH_YEAR)}
                 </h4>
                 <button
                   onClick={() => setCurrentMonth(addMonths(currentMonth, 1))}
@@ -136,7 +137,7 @@ export default function FacilityCalendarModal({ isOpen, onClose, facility }: Fac
                         >
                           <div className="flex justify-start mb-1">
                             <span className={`text-[10px] font-bold h-6 w-6 flex items-center justify-center rounded-full ${isToday(day) ? 'bg-[#465FFF] text-white' : 'text-[#667085]'}`}>
-                              {format(day, 'd')}
+                              {format(day, DATE_FORMATS.DAY_ONLY)}
                             </span>
                           </div>
                           <div className="space-y-0.5 max-h-[60px] overflow-y-auto custom-scrollbar">
@@ -144,9 +145,9 @@ export default function FacilityCalendarModal({ isOpen, onClose, facility }: Fac
                               <div 
                                 key={b.id} 
                                 className="text-[9px] px-1.5 py-0.5 rounded bg-[#ECF3FF] border border-[#DDE9FF] text-[#465FFF] truncate font-medium"
-                                title={`${format(new Date(b.start_time), 'hh:mm a')} - ${format(new Date(b.end_time), 'hh:mm a')}`}
+                                title={`${format(new Date(b.start_time), DATE_FORMATS.TIME_12H)} - ${format(new Date(b.end_time), DATE_FORMATS.TIME_12H)}`}
                               >
-                                {format(new Date(b.start_time), 'HH:mm')} - {format(new Date(b.end_time), 'HH:mm')}
+                                {format(new Date(b.start_time), DATE_FORMATS.TIME_24H)} - {format(new Date(b.end_time), DATE_FORMATS.TIME_24H)}
                               </div>
                             ))}
                           </div>

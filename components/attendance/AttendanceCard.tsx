@@ -9,6 +9,7 @@ import { useToast } from '@/contexts/ToastContext';
 import { useAttendanceHistoryQuery } from '@/hooks/queries/use-attendance-query';
 import { useClockInMutation, useClockOutMutation } from '@/hooks/mutations/use-attendance-mutations';
 import type { AttendanceHistoryDay } from '@/types/attendance';
+import { DATE_FORMATS } from '@/lib/constants';
 
 const HISTORY_DAYS = 5;
 
@@ -36,7 +37,7 @@ function formatDuration(totalSeconds: number): string {
 }
 
 function formatTime(iso: string | null): string {
-  return iso ? format(new Date(iso), 'h:mm a') : '--:--';
+  return iso ? format(new Date(iso), DATE_FORMATS.TIME_12H_NO_PAD) : '--:--';
 }
 
 function errorMessage(err: unknown, fallback: string): string {
@@ -45,8 +46,8 @@ function errorMessage(err: unknown, fallback: string): string {
 
 export function AttendanceCard() {
   const toast = useToast();
-  const todayIso = format(new Date(), 'yyyy-MM-dd');
-  const historyStartIso = format(subDays(new Date(), HISTORY_DAYS - 1), 'yyyy-MM-dd');
+  const todayIso = format(new Date(), DATE_FORMATS.ISO_DATE);
+  const historyStartIso = format(subDays(new Date(), HISTORY_DAYS - 1), DATE_FORMATS.ISO_DATE);
   // historyQuery's range already covers today (the most recent day, sorted
   // first) - fetching it separately as todayQuery used to was a second,
   // fully redundant network round trip on every load.
@@ -198,7 +199,7 @@ function AttendanceHistoryChart({ days, loading }: { days: AttendanceHistoryDay[
 
   const chronological = [...days].reverse();
   const maxSeconds = Math.max(...chronological.map((d) => d.totalDurationSec), 1);
-  const todayKey = format(new Date(), 'yyyy-MM-dd');
+  const todayKey = format(new Date(), DATE_FORMATS.ISO_DATE);
 
   return (
     <div className="flex items-end gap-2">
@@ -229,7 +230,7 @@ function AttendanceHistoryChart({ days, loading }: { days: AttendanceHistoryDay[
               />
             </div>
             <span className="text-[10px] font-bold text-[var(--gray-400)]">
-              {format(new Date(`${day.date}T00:00:00`), 'EEE')}
+              {format(new Date(`${day.date}T00:00:00`), DATE_FORMATS.WEEKDAY_SHORT)}
             </span>
           </div>
         );
