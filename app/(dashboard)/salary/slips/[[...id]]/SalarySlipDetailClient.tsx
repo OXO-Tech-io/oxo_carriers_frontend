@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import api from '@/lib/api';
 import { format } from 'date-fns';
-import { DATE_FORMATS } from '@/lib/constants';
+import { DATE_FORMATS, SALARY_COMPONENTS, SALARY_COMPONENT_TYPES } from '@/lib/constants';
 import { ArrowLeft, Download } from 'lucide-react';
 import Image from 'next/image';
 import { Button } from '@/components/ui/Button';
@@ -140,19 +140,19 @@ export default function SalarySlipDetailClient() {
     );
   }
 
-  const earnings = details.filter(d => d.type === 'earning');
-  const deductions = details.filter(d => d.type === 'deduction');
+  const earnings = details.filter(d => d.type === SALARY_COMPONENT_TYPES.EARNING);
+  const deductions = details.filter(d => d.type === SALARY_COMPONENT_TYPES.DEDUCTION);
   
   // Extract specific salary components
-  const fullSalary = details.find(d => d.component_name === 'Full Salary')?.amount || 0;
-  const localSalary = Number(details.find(d => d.component_name === 'Local Salary')?.amount || salary.local_salary || 0);
-  const oxoInternationalSalary = Number(details.find(d => d.component_name === 'OXO International Salary')?.amount || salary.oxo_international_salary || 0);
-  const epfDeduction = Number(details.find(d => d.component_name === 'Provident Fund' && d.type === 'deduction')?.amount || 0);
+  const fullSalary = details.find(d => d.component_name === SALARY_COMPONENTS.FULL_SALARY)?.amount || 0;
+  const localSalary = Number(details.find(d => d.component_name === SALARY_COMPONENTS.LOCAL_SALARY)?.amount || salary.local_salary || 0);
+  const oxoInternationalSalary = Number(details.find(d => d.component_name === SALARY_COMPONENTS.OXO_INTERNATIONAL_SALARY)?.amount || salary.oxo_international_salary || 0);
+  const epfDeduction = Number(details.find(d => d.component_name === SALARY_COMPONENTS.PROVIDENT_FUND && d.type === SALARY_COMPONENT_TYPES.DEDUCTION)?.amount || 0);
   const allowances = Number(
-    details.find(d => d.component_name === 'Allowances' && d.type === 'earning')?.amount ||
+    details.find(d => d.component_name === SALARY_COMPONENTS.ALLOWANCES && d.type === SALARY_COMPONENT_TYPES.EARNING)?.amount ||
       Math.max(Number(salary.total_earnings || 0) - Number(salary.basic_salary || 0), 0)
   );
-  const salaryAdvanceDeductions = Number(details.find(d => d.component_name === 'Salary Advance/Deductions' && d.type === 'deduction')?.amount || 0);
+  const salaryAdvanceDeductions = Number(details.find(d => d.component_name === SALARY_COMPONENTS.SALARY_ADVANCE_DEDUCTIONS && d.type === SALARY_COMPONENT_TYPES.DEDUCTION)?.amount || 0);
   
   // Calculate local and foreign earnings/deductions
   const localEarnings = localSalary + allowances; // Local salary + allowances

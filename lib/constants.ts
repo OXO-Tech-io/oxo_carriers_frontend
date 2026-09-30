@@ -64,3 +64,19 @@ export const DATE_FORMATS = {
   /** 12-hour time without leading zero, e.g. "3:45 PM" */
   TIME_12H_NO_PAD: 'h:mm a',
 } as const;
+
+/** Salary component names (tbl salary details `component_name`) the salary pages look up. */
+export const SALARY_COMPONENTS = {
+  FULL_SALARY: 'Full Salary',
+  LOCAL_SALARY: 'Local Salary',
+  OXO_INTERNATIONAL_SALARY: 'OXO International Salary',
+  PROVIDENT_FUND: 'Provident Fund',
+  ALLOWANCES: 'Allowances',
+  SALARY_ADVANCE_DEDUCTIONS: 'Salary Advance/Deductions',
+} as const;
+
+/** Salary component `type` values. */
+export const SALARY_COMPONENT_TYPES = {
+  EARNING: 'earning',
+  DEDUCTION: 'deduction',
+} as const;
