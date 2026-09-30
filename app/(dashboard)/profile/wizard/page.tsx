@@ -49,6 +49,7 @@ const STEPS: StepDefinition[] = [
   { key: STEP.WELFARE, label: 'Welfare' },
   { key: STEP.EDUCATION, label: 'Education' },
   { key: STEP.WORK_HISTORY, label: 'Work History' },
+  { key: STEP.SUPPORTING_INFO, label: 'Supporting Information' },
 ];
 
 // Fields validated (via RHF trigger) before "Next"/final submit advances
@@ -113,6 +114,9 @@ const STEP_FIELD_NAMES: (keyof WizardFormValues)[][] = [
   // deliberately omitted here too.
   ['education', 'primarySchoolAttended', 'secondarySchoolAttended'],
   ['workHistory'],
+  // Supporting Information (reason + documents) is optional and lives outside
+  // the RHF form, so there is nothing to validate on that step.
+  [],
 ];
 
 export default function ProfileWizardPage() {
@@ -234,7 +238,7 @@ function ProfileWizardForm({
   };
 
   const handleFinalSubmit = async () => {
-    // "Submit for Approval" on the last step (Work History) never went
+    // "Submit for Approval" on the last step (Supporting Information) never went
     // through goNext's trigger() call, so its own fields were never
     // actually validated before this ran. Mirrors CreateUserModal.tsx's
     // equivalent trigger before its own final submit.
@@ -289,42 +293,42 @@ function ProfileWizardForm({
           {currentKey === STEP.WORK_HISTORY && <StepWorkHistory form={employeeForm} />}
         </StepPanel>
 
-        {/* OCD-478: optional Reason for Change + supporting documents,
-            shown only on the final step, right before "Submit for Approval". */}
-        {isLastStep && (
-          <div className="mt-8 pt-6 border-t border-[var(--gray-100)] space-y-4">
-            <div>
-              <h3 className="text-sm font-bold text-[var(--foreground)]">Supporting Information (Optional)</h3>
-              <p className="text-xs text-[var(--gray-400)] font-medium mt-1">
-                Give HR context for these changes and attach any supporting documents (e.g. NIC copy, address proof,
-                marriage certificate, educational certificate).
-              </p>
-            </div>
-            <div>
-              <label className="block text-[10px] font-bold text-[var(--gray-400)] uppercase tracking-wider mb-2">
-                Reason for Change
-              </label>
-              <textarea
-                value={reasonForChange}
-                onChange={(e) => setReasonForChange(e.target.value)}
-                rows={3}
-                placeholder="Explain why you're requesting these changes..."
-                className="w-full rounded-xl border border-[var(--gray-200)] bg-[var(--card-bg)] p-3 text-sm text-[var(--foreground)] focus:outline-none focus:ring-2 focus:ring-[var(--primary-ring)]"
-              />
-            </div>
-            <div>
-              <label className="block text-[10px] font-bold text-[var(--gray-400)] uppercase tracking-wider mb-2">
-                Supporting Documents
-              </label>
-              <FileUpload
-                multiple
-                accept={SUPPORTING_DOCUMENT_ACCEPT}
-                maxSizeMB={SUPPORTING_DOCUMENT_MAX_SIZE_MB}
-                onFilesSelected={setChangeDocuments}
-              />
-            </div>
+        {/* OCD-478: optional Reason for Change + supporting documents, now its
+            own final step. Kept mounted (just hidden on other steps) so the
+            FileUpload's selected-file list stays in sync with changeDocuments
+            when the user navigates back and forth. */}
+        <div className={currentKey === STEP.SUPPORTING_INFO ? 'space-y-4' : 'hidden'}>
+          <div>
+            <h3 className="text-sm font-bold text-[var(--foreground)]">Supporting Information (Optional)</h3>
+            <p className="text-xs text-[var(--gray-400)] font-medium mt-1">
+              Give HR context for these changes and attach any supporting documents (e.g. NIC copy, address proof,
+              marriage certificate, educational certificate).
+            </p>
           </div>
-        )}
+          <div>
+            <label className="block text-[10px] font-bold text-[var(--gray-400)] uppercase tracking-wider mb-2">
+              Reason for Change
+            </label>
+            <textarea
+              value={reasonForChange}
+              onChange={(e) => setReasonForChange(e.target.value)}
+              rows={3}
+              placeholder="Explain why you're requesting these changes..."
+              className="w-full rounded-xl border border-[var(--gray-200)] bg-[var(--card-bg)] p-3 text-sm text-[var(--foreground)] focus:outline-none focus:ring-2 focus:ring-[var(--primary-ring)]"
+            />
+          </div>
+          <div>
+            <label className="block text-[10px] font-bold text-[var(--gray-400)] uppercase tracking-wider mb-2">
+              Supporting Documents
+            </label>
+            <FileUpload
+              multiple
+              accept={SUPPORTING_DOCUMENT_ACCEPT}
+              maxSizeMB={SUPPORTING_DOCUMENT_MAX_SIZE_MB}
+              onFilesSelected={setChangeDocuments}
+            />
+          </div>
+        </div>
 
         <div className="flex items-center justify-between mt-8 pt-6 border-t border-[var(--gray-100)]">
           <Button type="button" variant="outline" onClick={goBack} disabled={stepIndex === 0}>

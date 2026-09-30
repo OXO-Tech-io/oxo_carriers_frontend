@@ -31,13 +31,17 @@ describe("EmployeeNotesModal", () => {
     vi.clearAllMocks();
   });
 
-  it("HR executives only see the add-note form, with a note about visibility", () => {
-    useAuthMock.mockReturnValue({ isHRManager: false, isSuperAdmin: false });
-    useEmployeeNotesQueryMock.mockReturnValue({ data: undefined, isLoading: false });
+  it("HR executives see the note history but cannot edit, even their own notes", () => {
+    useAuthMock.mockReturnValue({ user: { id: 7, role: "hr_executive" }, isHRManager: false, isHRExecutive: true, isSuperAdmin: false });
+    useEmployeeNotesQueryMock.mockReturnValue({
+      data: [{ ...note, authorUserId: 7, authorName: "Me", authorRole: "hr_executive" }],
+      isLoading: false,
+    });
     render(<EmployeeNotesModal isOpen onClose={vi.fn()} employeeId={1} employeeName="Jane Doe" />);
     expect(screen.getByText("Notes — Jane Doe")).toBeInTheDocument();
-    expect(screen.queryByText("Note History")).not.toBeInTheDocument();
-    expect(screen.getByText(/only HR Manager can review note history/)).toBeInTheDocument();
+    expect(screen.getByText("Note History")).toBeInTheDocument();
+    expect(screen.getByText("Great performance this quarter")).toBeInTheDocument();
+    expect(screen.queryByText("Edit")).not.toBeInTheDocument();
   });
 
   it("HR managers see the full note history", () => {

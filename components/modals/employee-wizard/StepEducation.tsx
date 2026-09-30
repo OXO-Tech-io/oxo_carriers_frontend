@@ -16,10 +16,16 @@ export default function StepEducation({ form }: Readonly<StepProps>) {
     control,
     watch,
     trigger,
+    setValue,
+    clearErrors,
     formState: { errors },
   } = form;
   const { fields, append, remove } = useFieldArray({ control, name: "education" });
   const educationValues = watch("education");
+  // The employee-level completion date only applies while at least one
+  // qualification is still being pursued; otherwise each qualification's own
+  // Date Awarded is what counts.
+  const anyOngoing = (educationValues ?? []).some((e) => e?.isOngoing);
 
   return (
     <div className="space-y-4">
@@ -47,10 +53,21 @@ export default function StepEducation({ form }: Readonly<StepProps>) {
       {/* OCD-477: parity with the "Undergraduate Degree Completion Date"
           card on My Profile's Education tab - a single employee-level field,
           separate from the repeatable qualifications below. */}
-      <Field label="Undergraduate Degree Completion Date" error={errors.undergraduateDegreeCompletionDate?.message}>
+      <Field
+        label="Undergraduate Degree Completion Date"
+        required={anyOngoing}
+        hint={anyOngoing ? undefined : "Enabled when a qualification is marked as currently pursuing"}
+        error={errors.undergraduateDegreeCompletionDate?.message}
+      >
         <input
           type="date"
-          {...register("undergraduateDegreeCompletionDate")}
+          disabled={!anyOngoing}
+          {...register("undergraduateDegreeCompletionDate", {
+            validate: (value) => {
+              const ongoing = (form.getValues("education") ?? []).some((e) => e?.isOngoing);
+              return !ongoing || !!value || "Expected completion date is required while a qualification is being pursued";
+            },
+          })}
           className={inputClass}
         />
       </Field>
@@ -152,7 +169,18 @@ export default function StepEducation({ form }: Readonly<StepProps>) {
                   <input
                     type="checkbox"
                     {...register(`education.${index}.isOngoing`, {
-                      onChange: () => trigger(`education.${index}.dateAwarded`),
+                      onChange: (e) => {
+                        if (e.target.checked) {
+                          setValue(`education.${index}.dateAwarded`, "");
+                          clearErrors(`education.${index}.dateAwarded`);
+                        }
+                        const stillOngoing = (form.getValues("education") ?? []).some((q) => q?.isOngoing);
+                        if (!stillOngoing) {
+                          setValue("undergraduateDegreeCompletionDate", "");
+                          clearErrors("undergraduateDegreeCompletionDate");
+                        }
+                        trigger(`education.${index}.dateAwarded`);
+                      },
                     })}
                     className="h-4 w-4 rounded"
                   />

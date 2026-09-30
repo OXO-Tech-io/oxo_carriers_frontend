@@ -15,6 +15,7 @@ export const PROFILE_WIZARD_STEP_KEYS = {
   WELFARE: 'welfare',
   EDUCATION: 'education',
   WORK_HISTORY: 'workHistory',
+  SUPPORTING_INFO: 'supportingInfo',
 } as const;
 
 // Supporting-document uploads (e.g. NIC copy, address proof, certificates).

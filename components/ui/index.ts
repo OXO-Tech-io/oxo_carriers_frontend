@@ -12,5 +12,7 @@ export { FileUpload } from './FileUpload';
 export { DataTable } from './DataTable';
 export { EmployeeMultiSelect } from './EmployeeMultiSelect';
 export { RecipientPicker } from './RecipientPicker';
+export { StepSlider } from './StepSlider';
+export type { StepSliderOption } from './StepSlider';
 export { ActionsMenu } from './ActionsMenu';
 export type { ActionsMenuItem } from './ActionsMenu';

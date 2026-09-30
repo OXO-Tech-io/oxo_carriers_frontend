@@ -27,6 +27,7 @@ import { EmployeeNotesModal } from "@/components/modals/EmployeeNotesModal";
 import { DocumentVaultModal } from "@/components/modals/DocumentVaultModal";
 import EditEmployeeModal from "@/components/modals/EditEmployeeModal";
 import { ConfirmationDialog } from "@/components/ui/ConfirmationDialog";
+import { StepSlider, type StepSliderOption } from "@/components/ui/StepSlider";
 import { mapDbUserToAppUser } from "@/lib/mappers/user.mapper";
 
 // GET /users is driven by the local employee table, cross-referenced against
@@ -73,6 +74,29 @@ function statusBadgeClass(status?: EmployeeStatus): string {
   if (status === EmployeeStatus.ON_HOLD) return "bg-[var(--warning-light)] text-[var(--warning-text)]";
   return "bg-[var(--success-light)] text-[var(--success-text)]";
 }
+
+// Track order runs from fully enabled to fully disabled, so the slider reads
+// as a ramp (green -> amber -> red).
+const STATUS_STEPS: StepSliderOption<EmployeeStatus>[] = [
+  {
+    value: EmployeeStatus.ACTIVE,
+    label: "Active",
+    color: "var(--success)",
+    labelClass: "text-[var(--success-text)]",
+  },
+  {
+    value: EmployeeStatus.ON_HOLD,
+    label: "On Hold",
+    color: "var(--warning)",
+    labelClass: "text-[var(--warning-text)]",
+  },
+  {
+    value: EmployeeStatus.INACTIVE,
+    label: "Inactive",
+    color: "var(--error)",
+    labelClass: "text-[var(--error-text)]",
+  },
+];
 
 export default function AdminUsersPage() {
   const { user: currentUser, isHR, isFinance, isSuperAdmin } = useAuth();
@@ -562,17 +586,12 @@ export default function AdminUsersPage() {
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           {canManageStatus && currentUser?.id !== item.id ? (
-                            <select
+                            <StepSlider
+                              ariaLabel={`Account status for ${item.first_name} ${item.last_name}`}
+                              options={STATUS_STEPS}
                               value={item.status ?? EmployeeStatus.ACTIVE}
-                              onChange={(e) =>
-                                handleStatusChange(item.id, e.target.value as EmployeeStatus)
-                              }
-                              className={`text-xs font-semibold rounded-full px-2.5 py-1 border-0 focus:outline-none focus:ring-2 focus:ring-[var(--primary)] cursor-pointer ${statusBadgeClass(item.status)}`}
-                            >
-                              <option value={EmployeeStatus.ACTIVE}>Active</option>
-                              <option value={EmployeeStatus.INACTIVE}>Inactive</option>
-                              <option value={EmployeeStatus.ON_HOLD}>On Hold</option>
-                            </select>
+                              onChange={(status) => handleStatusChange(item.id, status)}
+                            />
                           ) : (
                             <span
                               className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${statusBadgeClass(item.status)}`}

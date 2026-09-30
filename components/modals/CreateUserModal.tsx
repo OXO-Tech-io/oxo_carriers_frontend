@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useForm, type UseFormReturn } from "react-hook-form";
+import api from "@/lib/api";
 import { UserRole } from "@/types";
 import type { UserTitle } from "@/types/profile";
 import { ConfirmationDialog } from "@/components/ui/ConfirmationDialog";
@@ -235,7 +236,7 @@ function stepFieldNames(stepKey: string, role: UserRole): (keyof EmployeeWizardV
     case "welfare":
       return ["weddingAnniversaryDate", "hobbies", "communityActivities", "professionalMemberships", "linkedinProfile", "additionalNotes"];
     case "education":
-      return ["education", "primarySchoolAttended", "secondarySchoolAttended"];
+      return ["education", "primarySchoolAttended", "secondarySchoolAttended", "undergraduateDegreeCompletionDate"];
     case "workHistory":
       return ["workHistory"];
     default:
@@ -282,11 +283,46 @@ export default function CreateUserModal({
     setMaxStepIndex(0);
   };
 
+  const hasDuplicate = async (stepKey: string): Promise<boolean> => {
+    const check =
+      stepKey === "basic"
+        ? {
+            field: "email" as const,
+            url: "/users/email-availability",
+            param: "email",
+            message: "Email address already exists. Please use a different email address.",
+          }
+        : stepKey === "statutory"
+          ? {
+              field: "nationalId" as const,
+              url: "/users/nic-availability",
+              param: "nationalId",
+              message: "An employee profile with this NIC number already exists.",
+            }
+          : null;
+    if (!check) return false;
+    const value = String(form.getValues(check.field) || "").trim();
+    if (!value) return false;
+    try {
+      const res = await api.get(check.url, { params: { [check.param]: value } });
+      if (!res.data?.exists) return false;
+      form.setError(check.field, { type: "manual", message: check.message });
+      return true;
+    } catch {
+      // Non-blocking - the server-side check at submission is the real gate.
+      return false;
+    }
+  };
+
   const goNext = async () => {
     const currentKey = steps[stepIndex].key;
     const fieldNames = stepFieldNames(currentKey, role);
     const valid = fieldNames.length === 0 ? true : await form.trigger(fieldNames as any);
     if (!valid) return;
+    // form.trigger() above clears the "manual" duplicate errors the step
+    // components set from their debounced availability checks, so re-check
+    // here and block "Next" if the value is already taken.
+    if (await hasDuplicate(currentKey)) return;
     let nextIndex = stepIndex + 1;
     if (nextIndex === dependentsIndex && !isMarried) nextIndex += 1;
     nextIndex = Math.min(nextIndex, steps.length - 1);

@@ -169,15 +169,16 @@ describe("AdminUsersPage", () => {
     expect((await screen.findAllByTitle("Document Vault")).length).toBeGreaterThan(0);
   });
 
-  it("changing the status dropdown patches the new status and shows a toast (Super Admin only)", async () => {
+  it("moving the status slider patches the new status and shows a toast (Super Admin only)", async () => {
     mockAuth(UserRole.SUPER_ADMIN);
     apiMock.patch.mockResolvedValue({});
     render(<AdminUsersPage />);
 
     await screen.findByText("Jane Doe");
     const row = screen.getByText("Jane Doe").closest("tr")!;
-    const statusSelect = within(row).getByRole("combobox");
-    fireEvent.change(statusSelect, { target: { value: "inactive" } });
+    const statusSlider = within(row).getByRole("slider", { name: "Account status for Jane Doe" });
+    expect(statusSlider).toHaveAttribute("aria-valuetext", "Active");
+    fireEvent.keyDown(statusSlider, { key: "End" });
 
     await waitFor(() =>
       expect(apiMock.patch).toHaveBeenCalledWith("/users/10/statuses", { status: "inactive" }),
@@ -188,12 +189,28 @@ describe("AdminUsersPage", () => {
     );
   });
 
-  it("shows Account Status as a read-only badge (no dropdown) for HR Manager and HR Executive", async () => {
+  it("puts the slider back on the current status when the update fails", async () => {
+    mockAuth(UserRole.SUPER_ADMIN);
+    apiMock.patch.mockRejectedValue({ response: { data: { message: "Nope" } } });
+    render(<AdminUsersPage />);
+
+    await screen.findByText("Jane Doe");
+    const row = screen.getByText("Jane Doe").closest("tr")!;
+    const statusSlider = within(row).getByRole("slider");
+    fireEvent.keyDown(statusSlider, { key: "End" });
+
+    await waitFor(() => expect(toastMock.error).toHaveBeenCalledWith("Failed to update status", "Nope"));
+    await waitFor(() => expect(statusSlider).toHaveAttribute("aria-valuetext", "Active"));
+  });
+
+  it("shows Account Status as a read-only badge (no slider) for HR Manager and HR Executive", async () => {
     mockAuth(UserRole.HR_MANAGER);
     render(<AdminUsersPage />);
 
     await screen.findByText("Jane Doe");
     const row = screen.getByText("Jane Doe").closest("tr")!;
-    expect(within(row).queryByRole("combobox")).not.toBeInTheDocument();
+    expect(within(row).queryByRole("slider")).not.toBeInTheDocument();
+    // Onboarding badge + the read-only Account Status badge.
+    expect(within(row).getAllByText("Active")).toHaveLength(2);
   });
 });

@@ -109,6 +109,7 @@ export const defaultEmployeeWizardValues: EmployeeWizardValues = {
 // allowance from the following year onward.
 export function calculateLeaveEntitlement(hireDate: string): {
   firstYear: number;
+  firstYearCasualMonths: number;
   secondYearOnwards: number;
   quarter: string;
   remainingMonths: number;
@@ -119,8 +120,14 @@ export function calculateLeaveEntitlement(hireDate: string): {
   const month = date.getMonth() + 1; // 1-12
   const hireMonth = date.getMonth(); // 0-11
 
-  const remainingMonths = 12 - hireMonth;
-  const firstYear = Math.round(remainingMonths * 0.5 * 10) / 10;
+  // Annual leave: nothing is granted in the year of joining.
+  const firstYear = 0;
+
+  // Casual leave accrues 0.5 day per completed month up to 31 Dec of the hire year.
+  const yearEnd = new Date(date.getFullYear(), 11, 31);
+  let remainingMonths = yearEnd.getMonth() - hireMonth;
+  if (yearEnd.getDate() < date.getDate()) remainingMonths -= 1;
+  remainingMonths = Math.max(0, remainingMonths);
 
   let secondYearOnwards: number;
   let quarter: string;
@@ -139,5 +146,5 @@ export function calculateLeaveEntitlement(hireDate: string): {
     quarter = "Q4 (Oct-Dec)";
   }
 
-  return { firstYear, secondYearOnwards, quarter, remainingMonths };
+  return { firstYear, firstYearCasualMonths: remainingMonths, secondYearOnwards, quarter, remainingMonths };
 }
