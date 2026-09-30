@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeAll, beforeEach } from "vitest";
 
 const { apiPostMock, getKeycloakMock, PENDING_NEW_LOGIN_KEY } = vi.hoisted(() => ({
   apiPostMock: vi.fn(),
@@ -15,6 +15,13 @@ vi.mock("@/lib/keycloak", () => ({
 vi.mock("@/lib/mappers/user.mapper", () => ({ mapDbUserToAppUser: vi.fn() }));
 
 describe("providers/claimSessionIfPendingNewLogin (OCD-455)", () => {
+  // The first import of app/providers transforms a large module graph, which can
+  // exceed the default 5s test timeout when the whole suite runs in parallel.
+  // Warm it up here so the tests below only measure the function itself.
+  beforeAll(async () => {
+    await import("@/app/providers");
+  }, 60_000);
+
   beforeEach(() => {
     vi.clearAllMocks();
     sessionStorage.clear();
