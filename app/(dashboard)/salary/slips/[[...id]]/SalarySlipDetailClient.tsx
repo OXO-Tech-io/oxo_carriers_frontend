@@ -2,10 +2,9 @@
 
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { useAuth } from '@/hooks/useAuth';
 import api from '@/lib/api';
 import { format } from 'date-fns';
-import { DATE_FORMATS } from '@/lib/constants';
+import { DATE_FORMATS, SALARY_COMPONENTS, SALARY_COMPONENT_TYPES } from '@/lib/constants';
 import { ArrowLeft, Download } from 'lucide-react';
 import Image from 'next/image';
 import { Button } from '@/components/ui/Button';
@@ -28,11 +27,23 @@ interface SalarySlipDetail {
   component_type?: string;
 }
 
+interface SlipEmployee {
+  employee_id?: string;
+  first_name?: string;
+  last_name?: string;
+  position?: string;
+  bank_name?: string;
+  bank_branch?: string;
+  account_number?: string;
+}
+
 interface Salary {
   id: number;
   user_id: number;
   month_year: string;
   basic_salary: number;
+  local_salary?: number | string;
+  oxo_international_salary?: number | string;
   total_earnings: number;
   total_deductions: number;
   net_salary: number;
@@ -44,9 +55,10 @@ interface Salary {
 export default function SalarySlipDetailClient() {
   const params = useParams();
   const router = useRouter();
-  const { user } = useAuth();
   const [salary, setSalary] = useState<Salary | null>(null);
   const [details, setDetails] = useState<SalarySlipDetail[]>([]);
+  // The slip's owner - not the logged-in user (OCD-574/575).
+  const [slipEmployee, setSlipEmployee] = useState<SlipEmployee | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
@@ -67,6 +79,7 @@ export default function SalarySlipDetailClient() {
       const response = await api.get(`/salaries/${salaryId}`);
       setSalary(response.data.salary);
       setDetails(response.data.details || []);
+      setSlipEmployee(response.data.employee || null);
       setError('');
     } catch (err: any) {
       setError(err.response?.data?.message || 'Failed to fetch salary slip');
@@ -127,16 +140,19 @@ export default function SalarySlipDetailClient() {
     );
   }
 
-  const earnings = details.filter(d => d.type === 'earning');
-  const deductions = details.filter(d => d.type === 'deduction');
+  const earnings = details.filter(d => d.type === SALARY_COMPONENT_TYPES.EARNING);
+  const deductions = details.filter(d => d.type === SALARY_COMPONENT_TYPES.DEDUCTION);
   
   // Extract specific salary components
-  const fullSalary = details.find(d => d.component_name === 'Full Salary')?.amount || 0;
-  const localSalary = Number(details.find(d => d.component_name === 'Local Salary')?.amount || 0);
-  const oxoInternationalSalary = details.find(d => d.component_name === 'OXO International Salary')?.amount || 0;
-  const epfDeduction = Number(details.find(d => d.component_name === 'Provident Fund' && d.type === 'deduction')?.amount || 0);
-  const allowances = Number(details.find(d => d.component_name === 'Allowances' && d.type === 'earning')?.amount || 0);
-  const salaryAdvanceDeductions = Number(details.find(d => d.component_name === 'Salary Advance/Deductions' && d.type === 'deduction')?.amount || 0);
+  const fullSalary = details.find(d => d.component_name === SALARY_COMPONENTS.FULL_SALARY)?.amount || 0;
+  const localSalary = Number(details.find(d => d.component_name === SALARY_COMPONENTS.LOCAL_SALARY)?.amount || salary.local_salary || 0);
+  const oxoInternationalSalary = Number(details.find(d => d.component_name === SALARY_COMPONENTS.OXO_INTERNATIONAL_SALARY)?.amount || salary.oxo_international_salary || 0);
+  const epfDeduction = Number(details.find(d => d.component_name === SALARY_COMPONENTS.PROVIDENT_FUND && d.type === SALARY_COMPONENT_TYPES.DEDUCTION)?.amount || 0);
+  const allowances = Number(
+    details.find(d => d.component_name === SALARY_COMPONENTS.ALLOWANCES && d.type === SALARY_COMPONENT_TYPES.EARNING)?.amount ||
+      Math.max(Number(salary.total_earnings || 0) - Number(salary.basic_salary || 0), 0)
+  );
+  const salaryAdvanceDeductions = Number(details.find(d => d.component_name === SALARY_COMPONENTS.SALARY_ADVANCE_DEDUCTIONS && d.type === SALARY_COMPONENT_TYPES.DEDUCTION)?.amount || 0);
   
   // Calculate local and foreign earnings/deductions
   const localEarnings = localSalary + allowances; // Local salary + allowances
@@ -209,27 +225,27 @@ export default function SalarySlipDetailClient() {
               <tr style={{ height: '0pt' }}>
                 <td style={{ border: '1pt solid #000000', padding: '6pt 8pt', width: '50%', verticalAlign: 'top' }}>
                   <p style={{ margin: 0, lineHeight: 1.4, textAlign: 'left' }}>
-                    <span style={{ fontFamily: 'Garamond, serif', fontWeight: 700, fontSize: '11pt', color: '#000000' }}>Employee ID : {user?.employee_id}</span>
+                    <span style={{ fontFamily: 'Garamond, serif', fontWeight: 700, fontSize: '11pt', color: '#000000' }}>Employee ID : {slipEmployee?.employee_id}</span>
                   </p>
                   <p style={{ margin: 0, lineHeight: 1.4, textAlign: 'left' }}>
-                    <span style={{ fontFamily: 'Garamond, serif', fontWeight: 700, fontSize: '11pt', color: '#000000' }}>Employee Name : {user?.first_name} {user?.last_name}</span>
+                    <span style={{ fontFamily: 'Garamond, serif', fontWeight: 700, fontSize: '11pt', color: '#000000' }}>Employee Name : {slipEmployee?.first_name} {slipEmployee?.last_name}</span>
                   </p>
                   <p style={{ margin: 0, lineHeight: 1.4, textAlign: 'left' }}>
-                    <span style={{ fontFamily: 'Garamond, serif', fontWeight: 700, fontSize: '11pt', color: '#000000' }}>Designation : {user?.position || 'N/A'}</span>
+                    <span style={{ fontFamily: 'Garamond, serif', fontWeight: 700, fontSize: '11pt', color: '#000000' }}>Designation : {slipEmployee?.position || 'N/A'}</span>
                   </p>
                 </td>
                 <td style={{ border: '1pt solid #000000', padding: '6pt 8pt', width: '50%', verticalAlign: 'top' }}>
                   <p style={{ margin: 0, lineHeight: 1.4, textAlign: 'left' }}>
                     <span style={{ fontFamily: 'Garamond, serif', fontWeight: 700, fontSize: '11pt', color: '#000000' }}>Bank :</span>
-                    <span>&nbsp;</span>
+                    <span style={{ fontFamily: 'Garamond, serif', fontSize: '11pt' }}>&nbsp;{slipEmployee?.bank_name}</span>
                   </p>
                   <p style={{ margin: 0, lineHeight: 1.4, textAlign: 'left' }}>
                     <span style={{ fontFamily: 'Garamond, serif', fontWeight: 700, fontSize: '11pt', color: '#000000' }}>Branch :</span>
-                    <span style={{ fontFamily: 'Calibri, sans-serif', fontSize: '11pt' }}>&nbsp;</span>
+                    <span style={{ fontFamily: 'Garamond, serif', fontSize: '11pt' }}>&nbsp;{slipEmployee?.bank_branch}</span>
                   </p>
                   <p style={{ margin: 0, lineHeight: 1.4, textAlign: 'left' }}>
                     <span style={{ fontFamily: 'Garamond, serif', fontWeight: 700, fontSize: '11pt', color: '#000000' }}>Account No :</span>
-                    <span style={{ fontFamily: 'Calibri, sans-serif', fontSize: '11pt' }}>&nbsp;</span>
+                    <span style={{ fontFamily: 'Garamond, serif', fontSize: '11pt' }}>&nbsp;{slipEmployee?.account_number}</span>
                   </p>
                 </td>
               </tr>

@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeAll, beforeEach } from "vitest";
 
 const { apiPostMock, getKeycloakMock, PENDING_NEW_LOGIN_KEY } = vi.hoisted(() => ({
   apiPostMock: vi.fn(),
@@ -15,6 +15,13 @@ vi.mock("@/lib/keycloak", () => ({
 vi.mock("@/lib/mappers/user.mapper", () => ({ mapDbUserToAppUser: vi.fn() }));
 
 describe("providers/claimSessionIfPendingNewLogin (OCD-455)", () => {
+  // The first import of app/providers transforms a large module graph, which can
+  // exceed the default 5s test timeout when the whole suite runs in parallel.
+  // Warm it up here so the tests below only measure the function itself.
+  beforeAll(async () => {
+    await import("@/app/providers");
+  }, 60_000);
+
   beforeEach(() => {
     vi.clearAllMocks();
     sessionStorage.clear();
@@ -26,17 +33,37 @@ describe("providers/claimSessionIfPendingNewLogin (OCD-455)", () => {
     apiPostMock.mockResolvedValue({ data: { success: true } });
 
     const { claimSessionIfPendingNewLogin } = await import("@/app/providers");
-    claimSessionIfPendingNewLogin();
+    await claimSessionIfPendingNewLogin();
 
     expect(apiPostMock).toHaveBeenCalledWith("/auth/claim-sessions");
     expect(sessionStorage.getItem(PENDING_NEW_LOGIN_KEY)).toBeNull();
+  });
+
+  it("resolves only after the claim request finishes, and never rejects if it fails", async () => {
+    sessionStorage.setItem(PENDING_NEW_LOGIN_KEY, "1");
+    getKeycloakMock.mockReturnValue({ authenticated: true });
+    let finish!: () => void;
+    apiPostMock.mockReturnValue(new Promise<void>((resolve) => (finish = resolve)));
+
+    const { claimSessionIfPendingNewLogin } = await import("@/app/providers");
+    let done = false;
+    const pending = claimSessionIfPendingNewLogin().then(() => (done = true));
+    await Promise.resolve();
+    expect(done).toBe(false);
+    finish();
+    await pending;
+    expect(done).toBe(true);
+
+    sessionStorage.setItem(PENDING_NEW_LOGIN_KEY, "1");
+    apiPostMock.mockRejectedValue(new Error("boom"));
+    await expect(claimSessionIfPendingNewLogin()).resolves.toBeUndefined();
   });
 
   it("does nothing when there is no pending-new-login flag (silent SSO restore / token refresh)", async () => {
     getKeycloakMock.mockReturnValue({ authenticated: true });
 
     const { claimSessionIfPendingNewLogin } = await import("@/app/providers");
-    claimSessionIfPendingNewLogin();
+    await claimSessionIfPendingNewLogin();
 
     expect(apiPostMock).not.toHaveBeenCalled();
   });
@@ -46,7 +73,7 @@ describe("providers/claimSessionIfPendingNewLogin (OCD-455)", () => {
     getKeycloakMock.mockReturnValue({ authenticated: false });
 
     const { claimSessionIfPendingNewLogin } = await import("@/app/providers");
-    claimSessionIfPendingNewLogin();
+    await claimSessionIfPendingNewLogin();
 
     expect(apiPostMock).not.toHaveBeenCalled();
     expect(sessionStorage.getItem(PENDING_NEW_LOGIN_KEY)).toBeNull();

@@ -66,11 +66,18 @@ const getPaymentStatusLabel = (status: PaymentStatus) =>
 const selectClass =
   'block w-full px-3 py-2 border border-[var(--gray-100)] rounded-lg text-sm bg-[var(--card-bg)] text-[var(--foreground)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)]';
 const inputClass = selectClass;
+// OCD-584: latest selectable payment date (today, browser-local), as YYYY-MM-DD.
+const todayISO = () => new Date().toLocaleDateString('en-CA');
 const labelClass = 'block text-xs font-semibold text-[var(--gray-400)] mb-1';
 
 export default function AdminMedicalInsurancePage() {
   const { isHR, isFinance, isSuperAdmin } = useAuth();
   const canAccess = isHR || isFinance || isSuperAdmin;
+  // OCD-582/583: HR reviews claims (approve/reject); Finance only sees approved
+  // claims and records their payments. Super Admin can do both.
+  const canReview = isHR || isSuperAdmin;
+  const canProcessPayment = isFinance || isSuperAdmin;
+  const financeOnly = isFinance && !isHR && !isSuperAdmin;
   const [claims, setClaims] = useState<MedicalClaim[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -100,7 +107,8 @@ export default function AdminMedicalInsurancePage() {
       setLoading(true);
       setError('');
       const params = new URLSearchParams();
-      if (filterStatus) params.append('status', filterStatus);
+      if (financeOnly) params.append('status', 'approved');
+      else if (filterStatus) params.append('status', filterStatus);
       if (filterType) params.append('type', filterType);
       const qs = params.toString();
       const res = await api.get(`/medical-insurance-claims${qs ? `?${qs}` : ''}`);
@@ -169,6 +177,10 @@ export default function AdminMedicalInsurancePage() {
   };
 
   const handleRecordPayment = async (id: number) => {
+    if (paymentForm.payment_date && paymentForm.payment_date > todayISO()) {
+      setError('Payment Date cannot be in the future');
+      return;
+    }
     try {
       setSavingPayment(true);
       setError('');
@@ -202,7 +214,9 @@ export default function AdminMedicalInsurancePage() {
       <div>
         <h1 className="text-2xl lg:text-3xl font-extrabold text-[var(--foreground)] tracking-tight">Medical Insurance Claims</h1>
         <p className="text-sm text-[var(--gray-400)] font-medium mt-1">
-          Verify documents, approve or reject claims, and process payments for approved claims.
+          {financeOnly
+            ? 'Process payments for approved claims.'
+            : 'Verify documents, approve or reject claims, and process payments for approved claims.'}
         </p>
       </div>
 
@@ -218,6 +232,7 @@ export default function AdminMedicalInsurancePage() {
       )}
 
       <div className="flex flex-wrap gap-4">
+        {!financeOnly && (
         <div>
           <label className={labelClass}>Status</label>
           <select
@@ -232,6 +247,7 @@ export default function AdminMedicalInsurancePage() {
             <option value="cancelled">Cancelled</option>
           </select>
         </div>
+        )}
         <div>
           <label className={labelClass}>Type</label>
           <select
@@ -348,7 +364,7 @@ export default function AdminMedicalInsurancePage() {
                         </div>
                         <div>
                           <p className="text-[10px] text-[var(--gray-400)] font-bold uppercase tracking-wider mb-0.5">Payment Date</p>
-                          <p className="text-xs font-bold text-[var(--foreground)]">{selected.payment_date || '-'}</p>
+                          <p className="text-xs font-bold text-[var(--foreground)]">{selected.payment_date ? selected.payment_date.slice(0, 10) : '-'}</p>
                         </div>
                         <div className="col-span-2">
                           <p className="text-[10px] text-[var(--gray-400)] font-bold uppercase tracking-wider mb-0.5">Reference</p>
@@ -455,6 +471,7 @@ export default function AdminMedicalInsurancePage() {
                             </label>
                             <input
                               type="date"
+                              max={todayISO()}
                               value={paymentForm.payment_date}
                               onChange={(e) => setPaymentForm((f) => ({ ...f, payment_date: e.target.value }))}
                               className={inputClass}
@@ -483,7 +500,7 @@ export default function AdminMedicalInsurancePage() {
                     )}
                   </div>
 
-                  {selected.status === 'pending' && !isRejectFormOpen && (
+                  {canReview && selected.status === 'pending' && !isRejectFormOpen && (
                     <div className="flex flex-col gap-2 shrink-0">
                       <Button size="sm" onClick={() => setApprovingId(selected.id)}>
                         Approve
@@ -493,7 +510,7 @@ export default function AdminMedicalInsurancePage() {
                       </Button>
                     </div>
                   )}
-                  {selected.status === 'approved' && !isPaymentFormOpen && (
+                  {canProcessPayment && selected.status === 'approved' && !isPaymentFormOpen && (
                     <div className="flex flex-col gap-2 shrink-0">
                       <Button size="sm" leftIcon={<BanknotesIcon className="h-4 w-4" />} onClick={() => openPaymentForm(selected)}>
                         {selected.payment_status === 'not_paid' ? 'Record Payment' : 'Update Payment'}

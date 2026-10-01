@@ -1,4 +1,4 @@
-import { UseFormReturn, useFieldArray } from "react-hook-form";
+import { UseFormReturn, useFieldArray, useFormState } from "react-hook-form";
 import { Button } from "@/components/ui/Button";
 import { RepeatableCard } from "@/components/profile/wizard/shared";
 import { EMPLOYMENT_TYPE_OPTIONS } from "@/types/profile";
@@ -13,12 +13,19 @@ interface StepProps {
 const todayIso = () => new Date().toISOString().slice(0, 10);
 
 export default function StepWorkHistory({ form }: Readonly<StepProps>) {
-  const {
-    register,
-    control,
-    trigger,
-    formState: { errors },
-  } = form;
+  // React Compiler opt-out: the per-card `errors.workHistory?.[index]?...`
+  // reads sit inside the fields.map() callback, so the compiler caches the
+  // cards on the whole `errors` object - which react-hook-form mutates in
+  // place, so its identity never changes.
+  "use no memo";
+
+  const { register, control, trigger } = form;
+  // Subscribes this step to error updates itself. CreateUserModal is
+  // compiled too and caches `<StepWorkHistory form={form} />` (`form` is a
+  // stable reference), so reading `form.formState` here never re-renders the
+  // step after "Next" runs trigger(["workHistory"]) - and no required /
+  // "Emoji characters are not allowed" / date-order message would show.
+  const { errors } = useFormState({ control, name: "workHistory" });
   const { fields, append, remove } = useFieldArray({ control, name: "workHistory" });
 
   return (

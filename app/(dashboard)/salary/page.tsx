@@ -18,7 +18,7 @@ import {
   ChevronRight
 } from 'lucide-react';
 import { format } from 'date-fns';
-import { DATE_FORMATS } from '@/lib/constants';
+import { DATE_FORMATS, SALARY_COMPONENTS, SALARY_COMPONENT_TYPES } from '@/lib/constants';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 
@@ -278,10 +278,10 @@ export default function SalaryPage() {
                     </thead>
                     <tbody className="bg-[var(--card-bg)] divide-y divide-[var(--gray-100)]">
                       {salaries.map((salary) => {
-                        const fullSalary = salary.details?.find(d => d.component_name === 'Full Salary')?.amount || salary.basic_salary || 0;
-                        const localSalary = salary.details?.find(d => d.component_name === 'Local Salary')?.amount || 0;
-                        const oxoSalary = salary.details?.find(d => d.component_name === 'OXO International Salary')?.amount || 0;
-                        const epfDeduction = salary.details?.find(d => d.component_name === 'Provident Fund' && d.type === 'deduction')?.amount || salary.total_deductions || 0;
+                        const fullSalary = salary.details?.find(d => d.component_name === SALARY_COMPONENTS.FULL_SALARY)?.amount || salary.total_earnings || salary.basic_salary || 0;
+                        const localSalary = salary.details?.find(d => d.component_name === SALARY_COMPONENTS.LOCAL_SALARY)?.amount || 0;
+                        const oxoSalary = salary.details?.find(d => d.component_name === SALARY_COMPONENTS.OXO_INTERNATIONAL_SALARY)?.amount || 0;
+                        const epfDeduction = salary.details?.find(d => d.component_name === SALARY_COMPONENTS.PROVIDENT_FUND && d.type === SALARY_COMPONENT_TYPES.DEDUCTION)?.amount || 0;
                         
                         const isPaid = salary.status === 'paid';
                         const isGenerated = salary.status === 'generated';
@@ -363,10 +363,10 @@ export default function SalaryPage() {
             {/* Mobile Card / Wallet View - Native App Feel */}
             <div className="md:hidden flex flex-col gap-4">
               {salaries.map((salary) => {
-                const fullSalary = salary.details?.find(d => d.component_name === 'Full Salary')?.amount || salary.basic_salary || 0;
-                const localSalary = salary.details?.find(d => d.component_name === 'Local Salary')?.amount || 0;
-                const oxoSalary = salary.details?.find(d => d.component_name === 'OXO International Salary')?.amount || 0;
-                const epfDeduction = salary.details?.find(d => d.component_name === 'Provident Fund' && d.type === 'deduction')?.amount || salary.total_deductions || 0;
+                const fullSalary = salary.details?.find(d => d.component_name === SALARY_COMPONENTS.FULL_SALARY)?.amount || salary.total_earnings || salary.basic_salary || 0;
+                const localSalary = salary.details?.find(d => d.component_name === SALARY_COMPONENTS.LOCAL_SALARY)?.amount || 0;
+                const oxoSalary = salary.details?.find(d => d.component_name === SALARY_COMPONENTS.OXO_INTERNATIONAL_SALARY)?.amount || 0;
+                const epfDeduction = salary.details?.find(d => d.component_name === SALARY_COMPONENTS.PROVIDENT_FUND && d.type === SALARY_COMPONENT_TYPES.DEDUCTION)?.amount || 0;
                 
                 const isPaid = salary.status === 'paid';
                 const isGenerated = salary.status === 'generated';

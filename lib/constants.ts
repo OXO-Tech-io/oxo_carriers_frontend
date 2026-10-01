@@ -15,6 +15,7 @@ export const PROFILE_WIZARD_STEP_KEYS = {
   WELFARE: 'welfare',
   EDUCATION: 'education',
   WORK_HISTORY: 'workHistory',
+  SUPPORTING_INFO: 'supportingInfo',
 } as const;
 
 // Supporting-document uploads (e.g. NIC copy, address proof, certificates).
@@ -62,4 +63,20 @@ export const DATE_FORMATS = {
   TIME_12H: 'hh:mm a',
   /** 12-hour time without leading zero, e.g. "3:45 PM" */
   TIME_12H_NO_PAD: 'h:mm a',
+} as const;
+
+/** Salary component names (tbl salary details `component_name`) the salary pages look up. */
+export const SALARY_COMPONENTS = {
+  FULL_SALARY: 'Full Salary',
+  LOCAL_SALARY: 'Local Salary',
+  OXO_INTERNATIONAL_SALARY: 'OXO International Salary',
+  PROVIDENT_FUND: 'Provident Fund',
+  ALLOWANCES: 'Allowances',
+  SALARY_ADVANCE_DEDUCTIONS: 'Salary Advance/Deductions',
+} as const;
+
+/** Salary component `type` values. */
+export const SALARY_COMPONENT_TYPES = {
+  EARNING: 'earning',
+  DEDUCTION: 'deduction',
 } as const;

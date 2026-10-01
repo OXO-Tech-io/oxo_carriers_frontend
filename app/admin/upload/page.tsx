@@ -6,8 +6,9 @@ import api from '@/lib/api';
 import { DocumentArrowUpIcon, CheckCircleIcon, XCircleIcon } from '@heroicons/react/24/outline';
 
 export default function AdminUploadPage() {
-  const { isHR, isSuperAdmin } = useAuth();
-  const canAccess = isHR || isSuperAdmin;
+  const { isHR, isSuperAdmin, isFinanceManager } = useAuth();
+  // OCD-581: Finance Manager runs the salary bulk upload too.
+  const canAccess = isHR || isSuperAdmin || isFinanceManager;
   const [selectedMonth, setSelectedMonth] = useState('');
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [file, setFile] = useState<File | null>(null);

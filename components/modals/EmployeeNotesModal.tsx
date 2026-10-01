@@ -14,10 +14,9 @@ interface EmployeeNotesModalProps {
   employeeName: string;
 }
 
-// HR Team (hr_executive) only ever sees the "Add Note" form - no list is
-// rendered for that role, matching the doc's write-only requirement. Only
-// HR Manager/super_admin sees the full note history with author + timestamp
-// and can edit entries.
+// All note-privileged roles (hr_executive, hr_manager, super_admin) can add
+// notes and see the full note history with author + timestamp. Only HR
+// Manager/super_admin can edit entries (HR Executive is view-only).
 // OCD-480: notes are historical/audit records - only the note's own author,
 // or someone holding a strictly more senior role than the author, may edit
 // it (also enforced server-side - this only controls whether the Edit
@@ -30,8 +29,9 @@ const NOTE_ROLE_RANK: Record<string, number> = {
 };
 
 export function EmployeeNotesModal({ isOpen, onClose, employeeId, employeeName }: EmployeeNotesModalProps) {
-  const { user, isHRManager, isSuperAdmin } = useAuth();
-  const canViewNotes = isHRManager || isSuperAdmin;
+  const { user, isHRManager, isHRExecutive, isSuperAdmin } = useAuth();
+  const canViewNotes = isHRManager || isHRExecutive || isSuperAdmin;
+  const canEditNotes = isHRManager || isSuperAdmin;
 
   const [content, setContent] = useState('');
   const [files, setFiles] = useState<File[]>([]);
@@ -59,6 +59,7 @@ export function EmployeeNotesModal({ isOpen, onClose, employeeId, employeeName }
   // resolvable author role are treated as rank 0 (editable by any of the
   // three note-privileged roles).
   const canEditNote = (note: EmployeeNote) => {
+    if (!canEditNotes) return false;
     if (isSuperAdmin) return true;
     if (user?.id != null && note.authorUserId === user.id) return true;
     const actorRank = NOTE_ROLE_RANK[user?.role ?? ''] ?? 0;
@@ -90,11 +91,6 @@ export function EmployeeNotesModal({ isOpen, onClose, employeeId, employeeName }
               Add Note
             </Button>
           </div>
-          {!canViewNotes && (
-            <p className="text-xs text-[var(--gray-400)]">
-              Notes you add here cannot be viewed or edited by you afterwards — only HR Manager can review note history.
-            </p>
-          )}
         </div>
 
         {canViewNotes && (

@@ -112,8 +112,7 @@ export default function StepReview({ form }: Readonly<StepProps>) {
                 Annual Leave Entitlement
               </p>
               <p className="text-xs text-[var(--success-text)] mb-2">
-                Hired in {leaveInfo.quarter} • {leaveInfo.remainingMonths} months remaining in
-                first year
+                Hired in {leaveInfo.quarter} • no annual leave in the year of joining
               </p>
               <div className="grid grid-cols-2 gap-3">
                 <div className="bg-[var(--card-bg)] rounded-lg p-2.5 border border-[var(--success)]/30">
@@ -122,7 +121,7 @@ export default function StepReview({ form }: Readonly<StepProps>) {
                   </p>
                   <p className="text-lg font-bold text-[var(--success-text)]">{leaveInfo.firstYear} days</p>
                   <p className="text-[10px] text-[var(--success-text)] mt-0.5">
-                    0.5 days × {leaveInfo.remainingMonths} months
+                    No annual leave in the joining year
                   </p>
                 </div>
                 <div className="bg-[var(--card-bg)] rounded-lg p-2.5 border border-[var(--success)]/30">
@@ -136,8 +135,11 @@ export default function StepReview({ form }: Readonly<StepProps>) {
               {casualLeaveType && (
                 <div className="bg-[var(--card-bg)] rounded-lg p-2.5 border border-[var(--success)]/30 mt-3">
                   <p className="text-xs text-[var(--success-text)] font-medium mb-1">Casual Leave Entitlement</p>
-                  <p className="text-lg font-bold text-[var(--success-text)]">{casualLeaveType.max_days} days</p>
-                  <p className="text-[10px] text-[var(--success-text)] mt-0.5">Granted in full from the hire date</p>
+                  <p className="text-lg font-bold text-[var(--success-text)]">{Math.min(leaveInfo.firstYearCasualMonths * 0.5, casualLeaveType.max_days)} days in {new Date(values.hire_date).getFullYear()}
+                  </p>
+                  <p className="text-[10px] text-[var(--success-text)] mt-0.5">
+                    0.5 days × {leaveInfo.firstYearCasualMonths} months, then {casualLeaveType.max_days} days per year
+                  </p>
                 </div>
               )}
             </div>

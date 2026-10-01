@@ -1,6 +1,6 @@
 'use client';
 
-import { UseFormReturn, useFieldArray } from 'react-hook-form';
+import { UseFormReturn, useFieldArray, useFormState } from 'react-hook-form';
 import { Button } from '@/components/ui/Button';
 import { DEPENDENT_RELATIONSHIP_OPTIONS, SEX_OPTIONS } from '@/types/profile';
 import { Field, RepeatableCard, inputClass } from './shared';
@@ -13,12 +13,19 @@ interface StepProps {
 }
 
 export default function StepDependents({ form, isMarried }: StepProps) {
-  const {
-    register,
-    control,
-    watch,
-    formState: { errors },
-  } = form;
+  // React Compiler opt-out: the per-card `errors.dependents?.[index]?...`
+  // reads sit inside the fields.map() callback, so the compiler caches the
+  // cards on the whole `errors` object - which react-hook-form mutates in
+  // place, so its identity never changes.
+  'use no memo';
+
+  const { register, control, watch } = form;
+  // Subscribes this step to error updates itself. The parent (CreateUserModal /
+  // the profile wizard page) is compiled too and caches `<StepDependents
+  // form={form} />` (`form` is a stable reference), so reading `form.formState`
+  // here never re-renders the step after "Next" runs trigger(["dependents"]) -
+  // and no field's error message (e.g. Mobile Number) would show.
+  const { errors } = useFormState({ control, name: 'dependents' });
   const { fields, append, remove } = useFieldArray({ control, name: 'dependents' });
   const dependentValues = watch('dependents');
 
