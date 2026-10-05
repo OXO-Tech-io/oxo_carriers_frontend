@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { Trash2, Paperclip } from 'lucide-react';
 import { Modal, Button, FileUpload, ConfirmationDialog, Badge } from '@/components/ui';
-import { useAuth } from '@/hooks/useAuth';
+import { useMyPermissionLevel } from '@/hooks/useMyPermissionLevel';
 import { useEmployeeDocumentsQuery } from '@/hooks/queries/use-documents-query';
 import { useCreateDocumentMutation, useDeleteDocumentMutation } from '@/hooks/mutations/use-document-mutations';
 import { DOCUMENT_VAULT_ACCEPT, DOCUMENT_VAULT_ACCEPT_HINT, DOCUMENT_VAULT_TYPE_ERROR } from '@/lib/constants';
@@ -22,11 +22,11 @@ interface DocumentVaultModalProps {
 // Structural clone of EmployeeNotesModal: an "Add" mini-form plus a
 // "History" list, scoped to one employee row on the admin Users page.
 export function DocumentVaultModal({ isOpen, onClose, employeeId, employeeName }: DocumentVaultModalProps) {
-  const { isHRManager, isSuperAdmin } = useAuth();
-  // OCD-496: defense in depth - the Users page already hides the icon that opens
-  // this modal for HR Executive, but gate the upload form here too in case the
-  // modal is ever reachable through another path.
-  const canUpload = isHRManager || isSuperAdmin;
+  // Defense in depth - the Users page already hides the icon that opens this
+  // modal from anyone without document_vault 'write' (Super Admin only by
+  // default), but gate the upload form on the same permission here too in case
+  // the modal is ever reachable through another path.
+  const { allowed: canUpload } = useMyPermissionLevel('document_vault', 'write');
 
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');

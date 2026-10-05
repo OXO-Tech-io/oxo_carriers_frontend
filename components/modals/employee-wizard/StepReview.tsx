@@ -3,15 +3,24 @@ import { UserRole } from "@/types";
 import { useLeaveTypesQuery } from "@/hooks/queries/use-leave-types-query";
 import { EmployeeWizardValues, calculateLeaveEntitlement } from "./wizardTypes";
 
+const DECLARATION_REQUIRED_MESSAGE = "Please confirm the declaration before creating this employee";
+
 interface StepProps {
   form: UseFormReturn<EmployeeWizardValues>;
+  // Set by CreateUserModal when "Create Employee" is clicked without the
+  // declaration ticked. Plain React state, so the message shows even when
+  // react-hook-form's error update doesn't re-render this step.
+  showDeclarationError?: boolean;
 }
 
-export default function StepReview({ form }: Readonly<StepProps>) {
+export default function StepReview({ form, showDeclarationError }: Readonly<StepProps>) {
   const {
     register,
+    clearErrors,
     formState: { errors },
   } = form;
+  const declarationError =
+    errors.declarationAccepted?.message ?? (showDeclarationError ? DECLARATION_REQUIRED_MESSAGE : undefined);
   const values = form.watch();
   const leaveInfo = calculateLeaveEntitlement(values.hire_date);
   const isServiceProvider = values.role === UserRole.SERVICE_PROVIDER;
@@ -168,16 +177,19 @@ export default function StepReview({ form }: Readonly<StepProps>) {
           <label className="flex items-start gap-3 bg-[var(--gray-25)] border border-[var(--gray-50)] rounded-lg p-4 cursor-pointer">
             <input
               type="checkbox"
-              {...register("declarationAccepted", { required: "Please confirm the declaration before creating this employee" })}
+              {...register("declarationAccepted", {
+                required: DECLARATION_REQUIRED_MESSAGE,
+                // trigger() errors only re-validate after a submit, so without
+                // this the message would stay up after the box is ticked.
+                onChange: () => clearErrors("declarationAccepted"),
+              })}
               className="mt-0.5 h-4 w-4 rounded"
             />
             <span className="text-sm text-[var(--gray-600)]">
               I confirm that the information entered in this form is accurate and true to the best of my knowledge. *
             </span>
           </label>
-          {errors.declarationAccepted && (
-            <p className="text-xs text-red-500 mt-1">{errors.declarationAccepted.message}</p>
-          )}
+          {declarationError && <p className="text-xs text-red-500 mt-1">{declarationError}</p>}
         </div>
       )}
     </div>

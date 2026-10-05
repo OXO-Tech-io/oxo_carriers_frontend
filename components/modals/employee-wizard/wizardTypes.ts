@@ -105,8 +105,9 @@ export const defaultEmployeeWizardValues: EmployeeWizardValues = {
   declarationAccepted: false,
 };
 
-// 0.5 days per remaining month in the hire year, then a flat quarter-based
-// allowance from the following year onward.
+// Casual leave: 0.5 days per calendar month of the hire year, counting the
+// joining month itself. Annual leave: a flat quarter-based allowance from the
+// following year onward.
 export function calculateLeaveEntitlement(hireDate: string): {
   firstYear: number;
   firstYearCasualMonths: number;
@@ -118,16 +119,15 @@ export function calculateLeaveEntitlement(hireDate: string): {
 
   const date = new Date(hireDate);
   const month = date.getMonth() + 1; // 1-12
-  const hireMonth = date.getMonth(); // 0-11
 
   // Annual leave: nothing is granted in the year of joining.
   const firstYear = 0;
 
-  // Casual leave accrues 0.5 day per completed month up to 31 Dec of the hire year.
-  const yearEnd = new Date(date.getFullYear(), 11, 31);
-  let remainingMonths = yearEnd.getMonth() - hireMonth;
-  if (yearEnd.getDate() < date.getDate()) remainingMonths -= 1;
-  remainingMonths = Math.max(0, remainingMonths);
+  // Casual leave accrues 0.5 day per calendar month, starting with the month the
+  // employee joins - joining on 5 Oct earns for Oct, Nov and Dec (3 months, 1.5
+  // days). Same rule as calculateAccruedCasualLeave in the backend
+  // (src/utils/leaveCalculation.ts), so the preview matches what gets granted.
+  const remainingMonths = 12 - date.getMonth();
 
   let secondYearOnwards: number;
   let quarter: string;

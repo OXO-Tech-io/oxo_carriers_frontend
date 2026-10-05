@@ -4,14 +4,16 @@ import { render, screen, fireEvent, waitFor, within } from "@testing-library/rea
 import AdminUsersPage from "@/app/admin/users/page";
 import { UserRole } from "@/types";
 
-const { apiMock, useAuthMock, toastMock } = vi.hoisted(() => ({
+const { apiMock, useAuthMock, useMyPermissionLevelMock, toastMock } = vi.hoisted(() => ({
   apiMock: { get: vi.fn(), post: vi.fn(), patch: vi.fn(), delete: vi.fn() },
   useAuthMock: vi.fn(),
+  useMyPermissionLevelMock: vi.fn(),
   toastMock: { success: vi.fn(), error: vi.fn() },
 }));
 
 vi.mock("@/lib/api", () => ({ default: apiMock }));
 vi.mock("@/hooks/useAuth", () => ({ useAuth: useAuthMock }));
+vi.mock("@/hooks/useMyPermissionLevel", () => ({ useMyPermissionLevel: useMyPermissionLevelMock }));
 vi.mock("@/contexts/ToastContext", () => ({ useToast: () => toastMock }));
 
 // These modals pull in react-hook-form/wizard steps unrelated to the
@@ -68,6 +70,8 @@ function mockAuth(role: UserRole, overrides: Partial<Record<string, any>> = {}) 
 describe("AdminUsersPage", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    // Default: no document_vault 'write' (HR Manager/HR Executive get 'read' only).
+    useMyPermissionLevelMock.mockReturnValue({ allowed: false, loaded: true });
     apiMock.get.mockImplementation((url: string) => {
       if (url.startsWith("/users/departments")) {
         return Promise.resolve({ data: { departments: ["Engineering"] } });
@@ -148,25 +152,26 @@ describe("AdminUsersPage", () => {
     expect(screen.queryByTitle("Delete User")).not.toBeInTheDocument();
   });
 
-  // OCD-496: HR Executive must not see or use Document Vault upload - the row
-  // icon that opens DocumentVaultModal is absent entirely for them, not just
-  // present-but-disabled.
-  it("hides the Document Vault icon for HR executives", async () => {
-    mockAuth(UserRole.HR_EXECUTIVE);
+  // Document Vault upload is Super Admin only by default (document_vault
+  // 'write'); HR Manager and HR Executive only get 'read'. The row icon that
+  // opens DocumentVaultModal follows that permission and is absent entirely
+  // without it, not just present-but-disabled.
+  it.each([
+    ["HR Manager", UserRole.HR_MANAGER],
+    ["HR Executive", UserRole.HR_EXECUTIVE],
+  ])("hides the Document Vault icon for %s (no document_vault write)", async (_label, role) => {
+    mockAuth(role);
     render(<AdminUsersPage />);
     await screen.findByText("Jane Doe");
     expect(screen.queryByTitle("Document Vault")).not.toBeInTheDocument();
   });
 
-  it("shows the Document Vault icon for HR Manager and Super Admin", async () => {
-    mockAuth(UserRole.HR_MANAGER);
-    render(<AdminUsersPage />);
-    await screen.findByText("Jane Doe");
-    expect(screen.getByTitle("Document Vault")).toBeInTheDocument();
-
+  it("shows the Document Vault icon for a user who holds document_vault write (Super Admin)", async () => {
     mockAuth(UserRole.SUPER_ADMIN);
+    useMyPermissionLevelMock.mockReturnValue({ allowed: true, loaded: true });
     render(<AdminUsersPage />);
     expect((await screen.findAllByTitle("Document Vault")).length).toBeGreaterThan(0);
+    expect(useMyPermissionLevelMock).toHaveBeenCalledWith("document_vault", "write");
   });
 
   it("moving the status slider patches the new status and shows a toast (Super Admin only)", async () => {

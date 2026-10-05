@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import type { ColumnDef } from '@tanstack/react-table';
 import { Paperclip, Trash2 } from 'lucide-react';
-import { useAuth } from '@/hooks/useAuth';
+import { useMyPermissionLevel } from '@/hooks/useMyPermissionLevel';
 import { useManageDocumentsQuery } from '@/hooks/queries/use-documents-query';
 import { useCreateDocumentMutation, useDeleteDocumentMutation } from '@/hooks/mutations/use-document-mutations';
 import { Modal, Button, DataTable, FileUpload, EmployeeMultiSelect, ConfirmationDialog, Badge } from '@/components/ui';
@@ -23,20 +23,22 @@ const emptyDraft = {
 const PAGE_SIZE = 10;
 
 export default function AdminDocumentsPage() {
-  const { isHR, isHRManager, isSuperAdmin } = useAuth();
+  // Everything on this page (listing, uploading, deleting) is document_vault
+  // 'write' on the backend, which is Super Admin only by default - HR Manager
+  // and HR Executive only get 'read' - so access follows that permission
+  // rather than a hard-coded role.
+  const { allowed: canManage, loaded: permissionLoaded } = useMyPermissionLevel('document_vault', 'write');
   const [showModal, setShowModal] = useState(false);
   const [draft, setDraft] = useState(emptyDraft);
   const [deleteTarget, setDeleteTarget] = useState<VaultDocument | null>(null);
   const [pageIndex, setPageIndex] = useState(0);
 
-  const documentsQuery = useManageDocumentsQuery(
-    { page: pageIndex + 1, pageSize: PAGE_SIZE },
-    isHR || isSuperAdmin,
-  );
+  const documentsQuery = useManageDocumentsQuery({ page: pageIndex + 1, pageSize: PAGE_SIZE }, canManage);
   const createMutation = useCreateDocumentMutation();
   const deleteMutation = useDeleteDocumentMutation();
 
-  if (!isHR && !isSuperAdmin) {
+  if (!permissionLoaded) return null;
+  if (!canManage) {
     return <p className="text-sm text-[var(--gray-400)]">You do not have access to this page.</p>;
   }
 
@@ -44,11 +46,6 @@ export default function AdminDocumentsPage() {
     setShowModal(false);
     setDraft(emptyDraft);
   };
-
-  // OCD-496: upload is HR Manager/Super Admin only - HR Executive can still view
-  // this page (the query above is gated on isHR || isSuperAdmin) but must not see
-  // or use the upload action.
-  const canUpload = isHRManager || isSuperAdmin;
 
   const canSave =
     draft.title.trim().length > 0 &&
@@ -164,7 +161,7 @@ export default function AdminDocumentsPage() {
             that employee&apos;s profile.
           </p>
         </div>
-        {canUpload && <Button onClick={() => setShowModal(true)}>Upload Document</Button>}
+        <Button onClick={() => setShowModal(true)}>Upload Document</Button>
       </div>
 
       <DataTable
