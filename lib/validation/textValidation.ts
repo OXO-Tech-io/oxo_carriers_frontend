@@ -35,8 +35,12 @@ export function noEmoji(value: unknown): string | true {
 // Standard email-format check (OCD-415) - deliberately simple (no full RFC
 // 5322 support) to match the examples called out in the ticket: requires a
 // non-space local part, an "@", a non-space domain, and at least one "." in
-// the domain.
-export const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+// the domain. Every dot must separate two non-empty parts, so a leading or
+// trailing dot ("abc123.@gmail.com"), doubled dots ("a..b@x.com",
+// "a@x..com") and a trailing domain dot ("a@x.com.") are rejected - the same
+// addresses the backend's @IsEmail() rejects, so they fail here instead of
+// only at submit.
+export const EMAIL_PATTERN = /^[^\s@.]+(?:\.[^\s@.]+)*@[^\s@.]+(?:\.[^\s@.]+)+$/;
 
 // --- The validators below were added for OCD-416/417/419/420/427/429/433
 // (shared profile-wizard steps: components/profile/wizard/Step*.tsx). Kept
