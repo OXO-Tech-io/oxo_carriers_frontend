@@ -3,12 +3,13 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { DocumentVaultModal } from "@/components/modals/DocumentVaultModal";
 
-const { useEmployeeDocumentsQueryMock, createMutateAsyncMock, deleteMutateAsyncMock, useAuthMock } = vi.hoisted(() => ({
-  useEmployeeDocumentsQueryMock: vi.fn(),
-  createMutateAsyncMock: vi.fn(),
-  deleteMutateAsyncMock: vi.fn(),
-  useAuthMock: vi.fn(),
-}));
+const { useEmployeeDocumentsQueryMock, createMutateAsyncMock, deleteMutateAsyncMock, useMyPermissionLevelMock } =
+  vi.hoisted(() => ({
+    useEmployeeDocumentsQueryMock: vi.fn(),
+    createMutateAsyncMock: vi.fn(),
+    deleteMutateAsyncMock: vi.fn(),
+    useMyPermissionLevelMock: vi.fn(),
+  }));
 
 vi.mock("@/hooks/queries/use-documents-query", () => ({
   useEmployeeDocumentsQuery: useEmployeeDocumentsQueryMock,
@@ -17,8 +18,8 @@ vi.mock("@/hooks/mutations/use-document-mutations", () => ({
   useCreateDocumentMutation: () => ({ mutateAsync: createMutateAsyncMock, isPending: false }),
   useDeleteDocumentMutation: () => ({ mutateAsync: deleteMutateAsyncMock, isPending: false }),
 }));
-vi.mock("@/hooks/useAuth", () => ({
-  useAuth: useAuthMock,
+vi.mock("@/hooks/useMyPermissionLevel", () => ({
+  useMyPermissionLevel: useMyPermissionLevelMock,
 }));
 
 const individualDoc = {
@@ -43,14 +44,15 @@ const allDoc = {
   attachments: [],
 };
 
-// Default: HR Manager, who retains full upload access (OCD-496).
-const hrManagerAuth = { isHRManager: true, isHRExecutive: false, isSuperAdmin: false };
-const hrExecutiveAuth = { isHRManager: false, isHRExecutive: true, isSuperAdmin: false };
+// Default: a user holding document_vault 'write' (Super Admin by default).
+const canUploadPermission = { allowed: true, loaded: true };
+// HR Manager / HR Executive only get document_vault 'read' by default.
+const readOnlyPermission = { allowed: false, loaded: true };
 
 describe("DocumentVaultModal", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    useAuthMock.mockReturnValue(hrManagerAuth);
+    useMyPermissionLevelMock.mockReturnValue(canUploadPermission);
   });
 
   it("renders the employee's name in the title and lists their documents", () => {
@@ -158,21 +160,27 @@ describe("DocumentVaultModal", () => {
     });
   });
 
-  // OCD-496: HR Executive must not see or use document upload, even if this
-  // modal were ever reached through another path than the Users page icon.
-  describe("HR Executive upload gating", () => {
+  // Upload follows the document_vault 'write' permission (Super Admin only by
+  // default), even if this modal were ever reached through another path than
+  // the Users page icon.
+  describe("upload gating", () => {
     beforeEach(() => {
-      useAuthMock.mockReturnValue(hrExecutiveAuth);
+      useMyPermissionLevelMock.mockReturnValue(readOnlyPermission);
       useEmployeeDocumentsQueryMock.mockReturnValue({ data: [individualDoc], isLoading: false });
     });
 
-    it("hides the Upload Document form entirely for HR Executive", () => {
+    it("hides the Upload Document form entirely without document_vault write (HR Manager / HR Executive)", () => {
       render(<DocumentVaultModal isOpen onClose={vi.fn()} employeeId={1} employeeName="Jane Doe" />);
       expect(screen.queryByText("Upload Document")).not.toBeInTheDocument();
       expect(screen.queryByPlaceholderText("Document title...")).not.toBeInTheDocument();
       expect(screen.queryByRole("button", { name: "Upload" })).not.toBeInTheDocument();
       // Document History (view) is unaffected by the upload gate.
       expect(screen.getByText("Employment Contract")).toBeInTheDocument();
+    });
+
+    it("checks the document_vault 'write' permission", () => {
+      render(<DocumentVaultModal isOpen onClose={vi.fn()} employeeId={1} employeeName="Jane Doe" />);
+      expect(useMyPermissionLevelMock).toHaveBeenCalledWith("document_vault", "write");
     });
   });
 });

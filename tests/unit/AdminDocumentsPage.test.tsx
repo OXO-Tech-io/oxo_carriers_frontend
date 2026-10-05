@@ -5,20 +5,20 @@ import AdminDocumentsPage from "@/app/admin/documents/page";
 import type { VaultDocument } from "@/types/hrModules";
 
 const {
-  useAuthMock,
+  useMyPermissionLevelMock,
   useManageDocumentsQueryMock,
   createMutateAsyncMock,
   deleteMutateAsyncMock,
   userDirectoryServiceMock,
 } = vi.hoisted(() => ({
-  useAuthMock: vi.fn(),
+  useMyPermissionLevelMock: vi.fn(),
   useManageDocumentsQueryMock: vi.fn(),
   createMutateAsyncMock: vi.fn(),
   deleteMutateAsyncMock: vi.fn(),
   userDirectoryServiceMock: { list: vi.fn() },
 }));
 
-vi.mock("@/hooks/useAuth", () => ({ useAuth: useAuthMock }));
+vi.mock("@/hooks/useMyPermissionLevel", () => ({ useMyPermissionLevel: useMyPermissionLevelMock }));
 vi.mock("@/hooks/queries/use-documents-query", () => ({
   useManageDocumentsQuery: useManageDocumentsQueryMock,
 }));
@@ -53,14 +53,29 @@ describe("AdminDocumentsPage", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     userDirectoryServiceMock.list.mockResolvedValue([]);
-    useAuthMock.mockReturnValue({ isHR: true, isHRManager: true, isSuperAdmin: false });
+    // Default: a user holding document_vault 'write' (Super Admin by default).
+    useMyPermissionLevelMock.mockReturnValue({ allowed: true, loaded: true });
     useManageDocumentsQueryMock.mockReturnValue({ data: paged([makeDoc()]), isLoading: false });
   });
 
-  it("denies access to a role without permission", () => {
-    useAuthMock.mockReturnValue({ isHR: false, isHRManager: false, isSuperAdmin: false });
+  it("denies access without document_vault write (HR Manager / HR Executive only get read)", () => {
+    useMyPermissionLevelMock.mockReturnValue({ allowed: false, loaded: true });
     render(<AdminDocumentsPage />);
     expect(screen.getByText("You do not have access to this page.")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Upload Document" })).not.toBeInTheDocument();
+    // The list query must not fire for a user who can't use the page.
+    expect(useManageDocumentsQueryMock).toHaveBeenCalledWith(expect.anything(), false);
+  });
+
+  it("renders nothing until the permission has loaded, instead of flashing 'no access'", () => {
+    useMyPermissionLevelMock.mockReturnValue({ allowed: false, loaded: false });
+    const { container } = render(<AdminDocumentsPage />);
+    expect(container).toBeEmptyDOMElement();
+  });
+
+  it("checks the document_vault 'write' permission", () => {
+    render(<AdminDocumentsPage />);
+    expect(useMyPermissionLevelMock).toHaveBeenCalledWith("document_vault", "write");
   });
 
   describe("OCD-497: Badge-based Target/version/mandatory tags", () => {
@@ -91,22 +106,16 @@ describe("AdminDocumentsPage", () => {
     });
   });
 
-  describe("OCD-496: HR Executive upload gating", () => {
-    it("hides the Upload Document button for HR Executive", () => {
-      useAuthMock.mockReturnValue({ isHR: true, isHRManager: false, isSuperAdmin: false });
+  describe("Upload gating (document_vault write - Super Admin only by default)", () => {
+    it("shows the Upload Document button to a user who holds document_vault write", () => {
+      render(<AdminDocumentsPage />);
+      expect(screen.getByRole("button", { name: "Upload Document" })).toBeInTheDocument();
+    });
+
+    it("does not show the Upload Document button without document_vault write", () => {
+      useMyPermissionLevelMock.mockReturnValue({ allowed: false, loaded: true });
       render(<AdminDocumentsPage />);
       expect(screen.queryByRole("button", { name: "Upload Document" })).not.toBeInTheDocument();
-    });
-
-    it("shows the Upload Document button for HR Manager", () => {
-      render(<AdminDocumentsPage />);
-      expect(screen.getByRole("button", { name: "Upload Document" })).toBeInTheDocument();
-    });
-
-    it("shows the Upload Document button for Super Admin", () => {
-      useAuthMock.mockReturnValue({ isHR: false, isHRManager: false, isSuperAdmin: true });
-      render(<AdminDocumentsPage />);
-      expect(screen.getByRole("button", { name: "Upload Document" })).toBeInTheDocument();
     });
   });
 

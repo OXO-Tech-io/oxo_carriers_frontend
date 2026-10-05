@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/useAuth";
+import { useMyPermissionLevel } from "@/hooks/useMyPermissionLevel";
 import { useToast } from "@/contexts/ToastContext";
 import api from "@/lib/api";
 import {
@@ -118,10 +119,11 @@ export default function AdminUsersPage() {
     currentUser?.role === UserRole.HR_EXECUTIVE ||
     currentUser?.role === UserRole.HR_MANAGER ||
     isSuperAdmin;
-  // OCD-496: HR Executive must not see or use Document Vault upload - unlike
-  // Employee Notes above, this icon is HR Manager/Super Admin only so it never
-  // renders (not just disabled) for HR Executive.
-  const canManageDocumentVault = currentUser?.role === UserRole.HR_MANAGER || isSuperAdmin;
+  // Document Vault upload is Super Admin only by default (role-based
+  // permissions: document_vault 'write'; HR Manager/HR Executive only get
+  // 'read'), so the icon is driven by that permission instead of a hard-coded
+  // role and never renders (not just disabled) for anyone without it.
+  const { allowed: canManageDocumentVault } = useMyPermissionLevel("document_vault", "write");
   // OCD-490: Account Status changes are restricted to Administrator only -
   // HR Manager/HR Executive can no longer change a user's Active/Inactive/On
   // Hold status from this page (server also rejects it - see

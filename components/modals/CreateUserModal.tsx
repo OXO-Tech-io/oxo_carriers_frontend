@@ -260,6 +260,8 @@ export default function CreateUserModal({
   // confirmation once the user has actually entered something.
   const [showCloseConfirm, setShowCloseConfirm] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  // Set when "Create Employee" is clicked with the declaration unticked.
+  const [declarationAttempted, setDeclarationAttempted] = useState(false);
   const form = useForm<EmployeeWizardValues>({ defaultValues: defaultEmployeeWizardValues });
   // EmployeeWizardValues extends WizardFormValues (same field names/types, plus
   // the basic/employment/bank fields), so this cast is structurally safe - it
@@ -272,6 +274,7 @@ export default function CreateUserModal({
   const isMarried = maritalStatus === "married";
   const email = form.watch("email");
   const position = form.watch("position");
+  const declarationAccepted = form.watch("declarationAccepted");
 
   const baseSteps = isServiceProvider ? SERVICE_PROVIDER_STEPS : EMPLOYEE_STEPS;
   const steps = baseSteps.map((s) => (s.key === "dependents" ? { ...s, disabled: !isMarried } : s));
@@ -281,6 +284,7 @@ export default function CreateUserModal({
     form.reset(defaultEmployeeWizardValues);
     setStepIndex(0);
     setMaxStepIndex(0);
+    setDeclarationAttempted(false);
   };
 
   const hasDuplicate = async (stepKey: string): Promise<boolean> => {
@@ -374,7 +378,10 @@ export default function CreateUserModal({
   const handleFinalSubmit = async () => {
     if (!isServiceProvider) {
       const valid = await form.trigger(["declarationAccepted"] as any);
-      if (!valid) return;
+      if (!valid) {
+        setDeclarationAttempted(true);
+        return;
+      }
     }
     setSubmitting(true);
     try {
@@ -570,7 +577,9 @@ export default function CreateUserModal({
               {currentKey === "welfare" && <StepWelfare form={profileForm} />}
               {currentKey === "education" && <StepEducation form={form} />}
               {currentKey === "workHistory" && <StepWorkHistory form={form} />}
-              {currentKey === "review" && <StepReview form={form} />}
+              {currentKey === "review" && (
+                <StepReview form={form} showDeclarationError={declarationAttempted && !declarationAccepted} />
+              )}
             </StepPanel>
 
             <div className="flex items-center justify-between pt-6 mt-2 border-t border-[var(--gray-100)]">

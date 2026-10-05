@@ -1,4 +1,4 @@
-import { UseFormReturn, useFieldArray } from "react-hook-form";
+import { UseFormReturn, useFieldArray, useWatch } from "react-hook-form";
 import { Button } from "@/components/ui/Button";
 import { RepeatableCard } from "@/components/profile/wizard/shared";
 import { QUALIFICATION_LEVEL_OPTIONS } from "@/types/profile";
@@ -11,17 +11,24 @@ interface StepProps {
 }
 
 export default function StepEducation({ form }: Readonly<StepProps>) {
+  // React Compiler opt-out: with memoization on, the compiler caches
+  // `watch("education")` on the (stable) `watch` function, so ticking
+  // "Currently pursuing" never re-rendered the step - the completion date
+  // stayed disabled and no date picker was available.
+  "use no memo";
+
   const {
     register,
     control,
-    watch,
     trigger,
     setValue,
     clearErrors,
     formState: { errors },
   } = form;
   const { fields, append, remove } = useFieldArray({ control, name: "education" });
-  const educationValues = watch("education");
+  // Subscribes this step to the education rows itself, so it re-renders when
+  // a "Currently pursuing" box is ticked regardless of how the parent renders.
+  const educationValues = useWatch({ control, name: "education" });
   // The employee-level completion date only applies while at least one
   // qualification is still being pursued; otherwise each qualification's own
   // Date Awarded is what counts.
