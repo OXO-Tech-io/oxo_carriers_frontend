@@ -35,7 +35,13 @@ export default function MyCommunicationsPage() {
 
       <div className="space-y-4">
         {communicationsQuery.isLoading && <p className="text-sm text-[var(--gray-400)]">Loading communications...</p>}
-        {communicationsQuery.data?.length === 0 && <p className="text-sm text-[var(--gray-400)]">No communications yet.</p>}
+        {communicationsQuery.data?.length === 0 && (
+          <div className="flex flex-col items-center gap-2 rounded-2xl border border-dashed border-[var(--gray-200)] py-12 text-center">
+            <CheckCircle2 className="h-8 w-8 text-[var(--gray-300)]" />
+            <p className="text-sm font-semibold text-[var(--foreground)]">You're all caught up</p>
+            <p className="text-xs text-[var(--gray-400)]">New messages and announcements from HR will appear here.</p>
+          </div>
+        )}
         {communicationsQuery.data?.map((item) => {
           const isAcknowledged = !!item.respondedAt;
           const deadlinePassed = item.deadlineAt && new Date() > new Date(item.deadlineAt);
@@ -125,9 +131,21 @@ export default function MyCommunicationsPage() {
               )}
 
               {isAcknowledged ? (
-                <div className="text-xs text-[var(--gray-400)] pt-1 flex items-center justify-between">
-                  <span>Acknowledged at: {new Date(item.respondedAt!).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' })}</span>
-                  {item.responseText && <span className="italic break-words">Your Note: "{item.responseText}"</span>}
+                <div className="pt-3 border-t border-[var(--gray-100)] space-y-2">
+                  <p className="text-xs text-[var(--gray-400)] flex items-center gap-1.5">
+                    <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
+                    Acknowledged on {new Date(item.respondedAt!).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' })}
+                  </p>
+                  {item.responseText && (
+                    <div className="ml-auto max-w-full rounded-2xl rounded-tr-sm border border-blue-100 bg-blue-50 px-3.5 py-2.5 dark:border-blue-900/50 dark:bg-blue-950/30">
+                      <p className="text-[11px] font-semibold uppercase tracking-wide text-blue-700 dark:text-blue-300 mb-0.5">
+                        Your reply
+                      </p>
+                      <p className="text-sm text-[var(--foreground)] whitespace-pre-wrap break-all leading-relaxed">
+                        {item.responseText}
+                      </p>
+                    </div>
+                  )}
                 </div>
               ) : item.requiresAcknowledgement ? (
                 <div className="flex items-center justify-between pt-2 border-t border-[var(--gray-100)]">

@@ -2,7 +2,7 @@
 
 import { useRouter, useParams, useSearchParams } from 'next/navigation';
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
-import { useFormQuery, useFormSettingsQuery, useFormThemeQuery, useMyFormResponseQuery } from '@/hooks/queries/use-forms-query';
+import { useAssignedFormsQuery, useFormQuery, useFormSettingsQuery, useFormThemeQuery, useMyFormResponseQuery } from '@/hooks/queries/use-forms-query';
 import { useSubmitFormResponseMutation } from '@/hooks/mutations/use-form-mutations';
 import { Button, ConfirmationDialog } from '@/components/ui';
 import { Clock } from 'lucide-react';
@@ -12,6 +12,7 @@ import { isQuestionVisible } from '@/lib/formLogic';
 import { resolveFileUrl } from '@/lib/constants';
 import { FORM_RESPONSE_STATUS, type FormQuestion, type FormResponseAnswer } from '@/types/hrModules';
 
+const REQUIRED_MESSAGE = 'This question is required.';
 const AUTOSAVE_DEBOUNCE_MS = 1500;
 
 // Free-text question types validated against a maxLength - distinct from
@@ -36,6 +37,8 @@ export default function FillFormClient() {
   const wantsEdit = searchParams.get('mode') === 'edit';
 
   const formQuery = useFormQuery(formId);
+  // Only forms actually distributed to this user may be opened here - guards against URL editing.
+  const assignedQuery = useAssignedFormsQuery();
   const settingsQuery = useFormSettingsQuery(formId);
   const themeQuery = useFormThemeQuery(formId);
   const myResponseQuery = useMyFormResponseQuery(formId);
@@ -112,6 +115,22 @@ export default function FillFormClient() {
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [values, files]);
+
+  if (assignedQuery.isLoading) {
+    return (
+      <div className="mx-auto max-w-2xl py-24 text-center text-sm text-[var(--gray-400)]">Loading form…</div>
+    );
+  }
+  if (!assignedQuery.data?.some((a) => a.form.id === formId)) {
+    return (
+      <div className="mx-auto max-w-2xl rounded-2xl border border-[var(--gray-100)] bg-[var(--card-bg)] p-10 text-center space-y-4">
+        <p className="text-sm font-semibold text-red-500">This form was not assigned to you.</p>
+        <Button variant="outline" onClick={() => router.push('/my-forms')}>
+          Back to My Forms
+        </Button>
+      </div>
+    );
+  }
 
   if (formQuery.isLoading || myResponseQuery.isLoading) {
     return (
@@ -211,7 +230,7 @@ export default function FillFormClient() {
     });
   };
 
-  const validate = (): boolean => {
+  const validate = (): Record<number, string> => {
     const nextErrors: Record<number, string> = {};
     questions.forEach((q) => {
       if (!isAnswerable(q) || !visibleIds.has(q.id)) return;
@@ -219,7 +238,7 @@ export default function FillFormClient() {
       const hasExistingFile = existingAttachmentsByQuestion.has(q.id) && !files[q.id];
       const empty = isEmpty(q, value, files[q.id], hasExistingFile);
       if (q.required && empty) {
-        nextErrors[q.id] = 'This question is required.';
+        nextErrors[q.id] = REQUIRED_MESSAGE;
         return;
       }
       if (empty) return;
@@ -252,13 +271,22 @@ export default function FillFormClient() {
       }
     });
     setErrors(nextErrors);
-    return Object.keys(nextErrors).length === 0;
+    return nextErrors;
   };
 
   const handleSubmit = async () => {
     setSubmitError(null);
-    if (!validate()) {
-      setSubmitError('Please answer all required questions before submitting.');
+    const validationErrors = validate();
+    const messages = Object.values(validationErrors);
+    if (messages.length > 0) {
+      // Only call out "required" when a required question is actually unanswered -
+      // out-of-range / length / selection errors are a different problem.
+      const hasMissingRequired = messages.some((m) => m === REQUIRED_MESSAGE);
+      setSubmitError(
+        hasMissingRequired
+          ? 'Please answer all required questions before submitting.'
+          : 'Please correct the highlighted answers before submitting.',
+      );
       return;
     }
     if (autosaveTimer.current) clearTimeout(autosaveTimer.current);
@@ -332,7 +360,7 @@ export default function FillFormClient() {
     >
       {themeQuery.data?.headerImageUrl && (
         // eslint-disable-next-line @next/next/no-img-element
-        <img src={themeQuery.data.headerImageUrl} alt="" className="h-32 w-full rounded-2xl object-cover" />
+        <img src={resolveFileUrl(themeQuery.data.headerImageUrl)} alt="" className="h-32 w-full rounded-2xl object-cover" />
       )}
       <div className="overflow-hidden rounded-2xl border border-[var(--gray-100)] bg-[var(--card-bg)] shadow-sm">
         <div className="h-2.5 bg-[var(--primary)]" />

@@ -103,7 +103,7 @@ export default function WorkSubmissionsPage() {
   if (!canAccessWorkSubmissions) {
     return (
       <div className="flex items-center justify-center min-h-64">
-        <p className="text-[#475467]">Access denied.</p>
+        <p className="text-[var(--gray-500)]">Access denied.</p>
       </div>
     );
   }
@@ -112,8 +112,8 @@ export default function WorkSubmissionsPage() {
     <div className="space-y-6 animate-fade-in">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-[#101828]">Work Submissions</h1>
-          <p className="mt-2 text-[#475467]">Submit your work details and log sheet for review</p>
+          <h1 className="text-3xl font-bold text-[var(--foreground)]">Work Submissions</h1>
+          <p className="mt-2 text-[var(--gray-400)]">Submit your work details and log sheet for review</p>
         </div>
         <button
           onClick={() => {
@@ -140,12 +140,12 @@ export default function WorkSubmissionsPage() {
         </div>
       )}
 
-      <div className="border-b border-[#E4E7EC]">
+      <div className="border-b border-[var(--gray-100)]">
         <nav className="-mb-px flex space-x-8">
           <button
             onClick={() => setActiveTab('list')}
             className={`py-4 px-1 border-b-2 font-medium text-sm ${
-              activeTab === 'list' ? 'border-[#465FFF] text-[#465FFF]' : 'border-transparent text-[#475467] hover:text-[#344054] hover:border-[#D0D5DD]'
+              activeTab === 'list' ? 'border-[#465FFF] text-[#465FFF]' : 'border-transparent text-[var(--gray-400)] hover:text-[var(--foreground)] hover:border-[var(--gray-200)]'
             }`}
           >
             My Submissions
@@ -153,7 +153,7 @@ export default function WorkSubmissionsPage() {
           <button
             onClick={() => setActiveTab('submit')}
             className={`py-4 px-1 border-b-2 font-medium text-sm ${
-              activeTab === 'submit' ? 'border-[#465FFF] text-[#465FFF]' : 'border-transparent text-[#475467] hover:text-[#344054] hover:border-[#D0D5DD]'
+              activeTab === 'submit' ? 'border-[#465FFF] text-[#465FFF]' : 'border-transparent text-[var(--gray-400)] hover:text-[var(--foreground)] hover:border-[var(--gray-200)]'
             }`}
           >
             Submit Work
@@ -166,40 +166,40 @@ export default function WorkSubmissionsPage() {
           <div className="animate-spin rounded-full h-12 w-12 border-4 border-[#465FFF] border-t-transparent" />
         </div>
       ) : activeTab === 'submit' ? (
-        <div className="bg-white rounded-2xl shadow-sm border border-[#E4E7EC] p-6 lg:p-8">
-          <h2 className="text-xl font-bold text-[#101828] mb-6">
+        <div className="bg-[var(--card-bg)] rounded-2xl shadow-sm border border-[var(--gray-100)] p-6 lg:p-8">
+          <h2 className="text-xl font-bold text-[var(--foreground)] mb-6">
             {resubmitId ? 'Resubmit Work' : 'Submit Work Details'}
           </h2>
           {resubmitId && (
-            <p className="text-sm text-[#475467] mb-4">Edit the values below if needed and upload a new log sheet.</p>
+            <p className="text-sm text-[var(--gray-500)] mb-4">Edit the values below if needed and upload a new log sheet.</p>
           )}
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
-                <label className="block text-sm font-semibold text-[#344054] mb-2">Which Project *</label>
+                <label className="block text-sm font-semibold text-[var(--gray-600)] mb-2">Which Project *</label>
                 <input
                   type="text"
                   required
                   value={formData.project}
                   onChange={(e) => setFormData({ ...formData, project: e.target.value })}
                   placeholder="e.g. HRIS Portal"
-                  className="block w-full px-3 py-2.5 border border-[#D0D5DD] rounded-lg text-sm text-[#101828] focus:outline-none focus:ring-2 focus:ring-[#465FFF] focus:border-transparent"
+                  className="block w-full px-3 py-2.5 bg-[var(--card-bg)] border border-[var(--gray-200)] rounded-lg text-sm text-[var(--foreground)] focus:outline-none focus:ring-2 focus:ring-[#465FFF] focus:border-transparent"
                 />
               </div>
               <div>
-                <label className="block text-sm font-semibold text-[#344054] mb-2">Which Tech *</label>
+                <label className="block text-sm font-semibold text-[var(--gray-600)] mb-2">Which Tech *</label>
                 <input
                   type="text"
                   required
                   value={formData.tech}
                   onChange={(e) => setFormData({ ...formData, tech: e.target.value })}
                   placeholder="e.g. React, Node.js"
-                  className="block w-full px-3 py-2.5 border border-[#D0D5DD] rounded-lg text-sm text-[#101828] focus:outline-none focus:ring-2 focus:ring-[#465FFF] focus:border-transparent"
+                  className="block w-full px-3 py-2.5 bg-[var(--card-bg)] border border-[var(--gray-200)] rounded-lg text-sm text-[var(--foreground)] focus:outline-none focus:ring-2 focus:ring-[#465FFF] focus:border-transparent"
                 />
               </div>
             </div>
             <div>
-              <label className="block text-sm font-semibold text-[#344054] mb-2">Total Hours *</label>
+              <label className="block text-sm font-semibold text-[var(--gray-600)] mb-2">Total Hours *</label>
               <input
                 type="number"
                 required
@@ -207,23 +207,23 @@ export default function WorkSubmissionsPage() {
                 step={0.5}
                 value={formData.total_hours}
                 onChange={(e) => setFormData({ ...formData, total_hours: e.target.value })}
-                className="block w-full px-3 py-2.5 border border-[#D0D5DD] rounded-lg text-sm text-[#101828] focus:outline-none focus:ring-2 focus:ring-[#465FFF] focus:border-transparent"
+                className="block w-full px-3 py-2.5 bg-[var(--card-bg)] border border-[var(--gray-200)] rounded-lg text-sm text-[var(--foreground)] focus:outline-none focus:ring-2 focus:ring-[#465FFF] focus:border-transparent"
                 placeholder="e.g. 140.5 or 150 (total only)"
               />
-              <p className="mt-1 text-xs text-[#667085]">Enter one total value only (e.g. 140.5, 150)</p>
+              <p className="mt-1 text-xs text-[var(--gray-400)]">Enter one total value only (e.g. 140.5, 150)</p>
             </div>
             <div>
-              <label className="block text-sm font-semibold text-[#344054] mb-2">Comment</label>
+              <label className="block text-sm font-semibold text-[var(--gray-600)] mb-2">Comment</label>
               <textarea
                 rows={3}
                 value={formData.comment}
                 onChange={(e) => setFormData({ ...formData, comment: e.target.value })}
                 placeholder="Optional notes..."
-                className="block w-full px-3 py-2.5 border border-[#D0D5DD] rounded-lg text-sm text-[#101828] focus:outline-none focus:ring-2 focus:ring-[#465FFF] focus:border-transparent"
+                className="block w-full px-3 py-2.5 bg-[var(--card-bg)] border border-[var(--gray-200)] rounded-lg text-sm text-[var(--foreground)] focus:outline-none focus:ring-2 focus:ring-[#465FFF] focus:border-transparent"
               />
             </div>
             <div>
-              <label className="block text-sm font-semibold text-[#344054] mb-2">Upload Log Excel Sheet *</label>
+              <label className="block text-sm font-semibold text-[var(--gray-600)] mb-2">Upload Log Excel Sheet *</label>
               <div className="flex flex-wrap items-center gap-2">
                 <label className="cursor-pointer">
                   <input
@@ -232,7 +232,7 @@ export default function WorkSubmissionsPage() {
                     onChange={(e) => setLogSheetFile(e.target.files?.[0] || null)}
                     className="hidden"
                   />
-                  <div className="flex items-center space-x-2 px-3 py-2.5 border border-[#D0D5DD] rounded-lg text-sm text-[#475467] hover:bg-[#F9FAFB]">
+                  <div className="flex items-center space-x-2 px-3 py-2.5 border border-[var(--gray-200)] rounded-lg text-sm text-[var(--gray-500)] hover:bg-[var(--gray-50)]">
                     <DocumentArrowUpIcon className="h-5 w-5" />
                     <span>{logSheetFile ? logSheetFile.name : 'Choose Excel file'}</span>
                   </div>
@@ -252,13 +252,13 @@ export default function WorkSubmissionsPage() {
                     document.body.removeChild(a);
                     URL.revokeObjectURL(url);
                   }}
-                  className="inline-flex items-center gap-2 px-3 py-2.5 text-sm font-medium text-[#465FFF] hover:text-[#3641F5] border border-[#465FFF] rounded-lg hover:bg-[#ECF3FF] transition-colors"
+                  className="inline-flex items-center gap-2 px-3 py-2.5 text-sm font-medium text-[#465FFF] hover:text-[#3641F5] border border-[#465FFF] rounded-lg hover:bg-[var(--gray-50)] transition-colors"
                 >
                   <ArrowDownTrayIcon className="h-5 w-5" />
                   Download template
                 </button>
               </div>
-              <p className="mt-1 text-xs text-[#667085]">
+              <p className="mt-1 text-xs text-[var(--gray-400)]">
                 Accepted: .xlsx, .xls, .csv. Template columns: Project, start_date, end_date, Total
               </p>
             </div>
@@ -270,7 +270,7 @@ export default function WorkSubmissionsPage() {
                   setFormData({ project: '', tech: '', total_hours: '', comment: '' });
                   setLogSheetFile(null);
                 }}
-                className="px-4 py-2.5 text-sm font-semibold text-[#344054] bg-white border border-[#D0D5DD] rounded-lg hover:bg-[#F9FAFB]"
+                className="px-4 py-2.5 text-sm font-semibold text-[var(--gray-600)] bg-[var(--card-bg)] border border-[var(--gray-200)] rounded-lg hover:bg-[var(--gray-50)]"
               >
                 {resubmitId ? 'Cancel' : 'Clear'}
               </button>
@@ -285,25 +285,25 @@ export default function WorkSubmissionsPage() {
           </form>
         </div>
       ) : (
-        <div className="bg-white rounded-2xl shadow-sm border border-[#E4E7EC] overflow-hidden">
+        <div className="bg-[var(--card-bg)] rounded-2xl shadow-sm border border-[var(--gray-100)] overflow-hidden">
           <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-[#E4E7EC]">
-              <thead className="bg-[#F9FAFB]">
+            <table className="min-w-full divide-y divide-[var(--gray-100)]">
+              <thead className="bg-[var(--gray-50)]">
                 <tr>
-                  <th className="px-6 py-4 text-left text-xs font-bold text-[#344054] uppercase tracking-wider">Project</th>
-                  <th className="px-6 py-4 text-left text-xs font-bold text-[#344054] uppercase tracking-wider">Tech</th>
-                  <th className="px-6 py-4 text-left text-xs font-bold text-[#344054] uppercase tracking-wider">Hours</th>
-                  <th className="px-6 py-4 text-left text-xs font-bold text-[#344054] uppercase tracking-wider">Status</th>
-                  <th className="px-6 py-4 text-left text-xs font-bold text-[#344054] uppercase tracking-wider">Submitted</th>
-                  <th className="px-6 py-4 text-left text-xs font-bold text-[#344054] uppercase tracking-wider">Actions</th>
+                  <th className="px-6 py-4 text-left text-xs font-bold text-[var(--gray-600)] uppercase tracking-wider">Project</th>
+                  <th className="px-6 py-4 text-left text-xs font-bold text-[var(--gray-600)] uppercase tracking-wider">Tech</th>
+                  <th className="px-6 py-4 text-left text-xs font-bold text-[var(--gray-600)] uppercase tracking-wider">Hours</th>
+                  <th className="px-6 py-4 text-left text-xs font-bold text-[var(--gray-600)] uppercase tracking-wider">Status</th>
+                  <th className="px-6 py-4 text-left text-xs font-bold text-[var(--gray-600)] uppercase tracking-wider">Submitted</th>
+                  <th className="px-6 py-4 text-left text-xs font-bold text-[var(--gray-600)] uppercase tracking-wider">Actions</th>
                 </tr>
               </thead>
-              <tbody className="bg-white divide-y divide-[#E4E7EC]">
+              <tbody className="bg-[var(--card-bg)] divide-y divide-[var(--gray-100)]">
                 {submissions.length === 0 ? (
                   <tr>
                     <td colSpan={6} className="px-6 py-12 text-center">
-                      <DocumentTextIcon className="h-12 w-12 text-[#98A2B3] mx-auto mb-4" />
-                      <p className="text-sm font-medium text-[#344054]">No work submissions yet</p>
+                      <DocumentTextIcon className="h-12 w-12 text-[var(--gray-300)] mx-auto mb-4" />
+                      <p className="text-sm font-medium text-[var(--gray-600)]">No work submissions yet</p>
                       <button
                         onClick={() => setActiveTab('submit')}
                         className="mt-2 text-sm font-medium text-[#465FFF] hover:text-[#3641F5]"
@@ -314,16 +314,16 @@ export default function WorkSubmissionsPage() {
                   </tr>
                 ) : (
                   submissions.map((s) => (
-                    <tr key={s.id} className="hover:bg-[#F9FAFB]">
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-[#101828]">{s.project}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-[#344054]">{s.tech}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-[#101828]">{s.total_hours}</td>
+                    <tr key={s.id} className="hover:bg-[var(--gray-50)]">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-[var(--foreground)]">{s.project}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-[var(--gray-600)]">{s.tech}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-[var(--foreground)]">{s.total_hours}</td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold ${getStatusBadge(s.status)}`}>
                           {s.status}
                         </span>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-[#475467]">{new Date(s.created_at).toLocaleDateString()}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-[var(--gray-500)]">{new Date(s.created_at).toLocaleDateString()}</td>
                       <td className="px-6 py-4">
                         <div className="flex flex-col gap-1">
                           <a

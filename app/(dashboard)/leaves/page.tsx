@@ -27,11 +27,19 @@ import { Button } from '@/components/ui/Button';
 
 type Tab = 'balance' | 'request' | 'history';
 
+const ALLOWED_ATTACHMENT_PATTERN = /\.(pdf|docx?|jpe?g|png)$/i;
+const ALLOWED_ATTACHMENT_LABEL = 'PDF, Word (.doc, .docx), JPG or PNG';
+
+const toIsoDay = (value: string | Date) =>
+  typeof value === 'string' ? value.slice(0, 10) : format(value, DATE_FORMATS.ISO_DATE);
+
 export default function LeavesPage() {
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState<Tab>('balance');
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  // Shown inside the request form itself - the page-level banner can be off-screen or behind the mobile sheet.
+  const [formError, setFormError] = useState('');
   const [isMobileSheetOpen, setIsMobileSheetOpen] = useState(false);
 
   // Request form state
@@ -177,7 +185,34 @@ export default function LeavesPage() {
 
 
 
+  // Mirrors the backend rule: an existing pending/approved request blocks the
+  // new one unless both are half-days for different periods.
+  const findLeaveConflict = (startIso: string, endIso: string) =>
+    requests.find((existing) => {
+      if (existing.status === 'rejected' || existing.status === 'cancelled') return false;
+      if (toIsoDay(existing.start_date) > endIso || toIsoDay(existing.end_date) < startIso) return false;
+      if (!existing.is_half_day || !formData.is_half_day) return true;
+      return existing.half_day_period === formData.half_day_period;
+    });
+
+  const conflictMessage = (startIso: string, endIso: string) =>
+    startIso === endIso
+      ? `You already have a pending or approved leave request on ${startIso}. Please choose a different date.`
+      : `You already have a pending or approved leave request between ${startIso} and ${endIso}. Please choose a different date range.`;
+
   const handleDateRangeChange = (start: Date | null, end: Date | null) => {
+    setFormError('');
+    if (start) {
+      const startIso = format(start, DATE_FORMATS.ISO_DATE);
+      const endIso = end ? format(end, DATE_FORMATS.ISO_DATE) : startIso;
+      if (findLeaveConflict(startIso, endIso)) {
+        setFormError(conflictMessage(startIso, endIso));
+        setStartDatePicker(null);
+        setEndDatePicker(null);
+        setFormData(prev => ({ ...prev, start_date: '', end_date: '' }));
+        return;
+      }
+    }
     setStartDatePicker(start);
     setEndDatePicker(end);
     if (start) {
@@ -194,6 +229,18 @@ export default function LeavesPage() {
     e.preventDefault();
     setError('');
     setSuccess('');
+    setFormError('');
+
+    const submitEndIso = formData.is_half_day ? formData.start_date : formData.end_date;
+    if (formData.start_date && submitEndIso && findLeaveConflict(formData.start_date, submitEndIso)) {
+      setFormError(conflictMessage(formData.start_date, submitEndIso));
+      return;
+    }
+
+    if (attachment && !ALLOWED_ATTACHMENT_PATTERN.test(attachment.name)) {
+      setError(`Unsupported file type. Please upload a ${ALLOWED_ATTACHMENT_LABEL} file.`);
+      return;
+    }
 
     if (!attachment) {
       setError('An attachment is required to submit a leave request');
@@ -232,6 +279,7 @@ export default function LeavesPage() {
         (err as { response?: { data?: { message?: string } } })?.response?.data
           ?.message || 'Failed to submit leave request';
       setError(message);
+      setFormError(message);
     }
   };
 
@@ -287,7 +335,17 @@ export default function LeavesPage() {
               required
               type="file"
               accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
-              onChange={(e) => setAttachment(e.target.files?.[0] || null)}
+              onChange={(e) => {
+                const file = e.target.files?.[0] || null;
+                if (file && !ALLOWED_ATTACHMENT_PATTERN.test(file.name)) {
+                  setAttachment(null);
+                  e.target.value = '';
+                  setError(`Unsupported file type. Please upload a ${ALLOWED_ATTACHMENT_LABEL} file.`);
+                  return;
+                }
+                setError('');
+                setAttachment(file);
+              }}
               className="hidden"
             />
             <div className="flex items-center gap-2 px-3 py-2.5 border border-dashed border-[var(--gray-200)] rounded-xl text-sm text-[var(--gray-400)] hover:bg-[var(--gray-50)] transition-colors">
@@ -295,6 +353,7 @@ export default function LeavesPage() {
               <span className="truncate">{attachment ? attachment.name : 'Click to upload document'}</span>
             </div>
           </label>
+          <p className="mt-1.5 text-[11px] text-[var(--gray-400)]">Allowed file types: {ALLOWED_ATTACHMENT_LABEL}</p>
         </div>
 
         <div>
@@ -333,6 +392,12 @@ export default function LeavesPage() {
             </div>
           )}
         </div>
+
+        {formError && (
+          <div role="alert" className="bg-red-500/10 border-l-4 border-red-500 text-red-600 dark:text-red-400 p-3 rounded-xl text-xs font-semibold">
+            {formError}
+          </div>
+        )}
 
         <div className="space-y-3">
           <div className="flex items-center gap-2">
@@ -512,12 +577,26 @@ export default function LeavesPage() {
                     </div>
                   </div>
                   <div className="space-y-3 pt-3 border-t border-[var(--gray-50)]">
+                    {balance.year_entitlement !== undefined && balance.year_entitlement !== balance.total_days && (
+                      <div className="flex items-center justify-between text-xs font-semibold">
+                        <span className="text-[var(--gray-400)]">Total for {balance.year}</span>
+                        <span className="text-[var(--foreground)]">{balance.year_entitlement} days</span>
+                      </div>
+                    )}
                     <div className="flex items-center justify-between text-xs font-semibold">
-                      <span className="text-[var(--gray-400)]">Total Entitled</span>
+                      <span className="text-[var(--gray-400)]">
+                        {balance.year_entitlement !== undefined && balance.year_entitlement !== balance.total_days
+                          ? 'Accrued So Far'
+                          : 'Total Entitled'}
+                      </span>
                       <span className="text-[var(--foreground)]">{balance.total_days} days</span>
                     </div>
                     <div className="flex items-center justify-between text-xs font-semibold">
-                      <span className="text-[var(--gray-400)]">Taken</span>
+                      <span className="text-[var(--gray-400)]">Taken This Month</span>
+                      <span className="text-[var(--foreground)]">{balance.used_this_month ?? 0} days</span>
+                    </div>
+                    <div className="flex items-center justify-between text-xs font-semibold">
+                      <span className="text-[var(--gray-400)]">Taken This Year</span>
                       <span className="text-[var(--foreground)]">{balance.used_days} days</span>
                     </div>
                     {!!balance.pending_days && (

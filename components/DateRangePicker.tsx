@@ -253,6 +253,13 @@ export default function DateRangePicker({
       if (isCustomHoliday) {
         return false;
       }
+      // Disable dates already covered by a pending/approved full-day request.
+      // Half-day requests stay selectable - the other half may still be free
+      // (the page validates the AM/PM combination).
+      const existing = getLeaveMarker(date);
+      if (existing && !existing.period) {
+        return false;
+      }
       // Allow all other dates
       return true;
     },
@@ -315,6 +322,9 @@ export default function DateRangePicker({
                 <div className="flex items-center gap-2">
                   <span className="inline-block w-4 h-4 rounded leave-day--approved"></span>
                   <span>Your Approved Leave</span>
+                </div>
+                <div className="flex items-center gap-2 w-full">
+                  <span>Dates with pending or approved full-day leave cannot be selected.</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <span className="leave-period-chip leave-period-chip--pending">AM</span>

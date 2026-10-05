@@ -1,14 +1,13 @@
 'use client';
 
 import { useState } from 'react';
-import { useAuth } from '@/hooks/useAuth';
+import { useMyPermissionLevel } from '@/hooks/useMyPermissionLevel';
 import api from '@/lib/api';
 import { DocumentArrowUpIcon, CheckCircleIcon, XCircleIcon } from '@heroicons/react/24/outline';
 
 export default function AdminUploadPage() {
-  const { isHR, isSuperAdmin, isFinanceManager } = useAuth();
-  // OCD-581: Finance Manager runs the salary bulk upload too.
-  const canAccess = isHR || isSuperAdmin || isFinanceManager;
+  // Gated by the salary_bulk_upload permission (matches the backend guard).
+  const { allowed: canAccess, loaded: permissionLoaded } = useMyPermissionLevel('salary_bulk_upload', 'write');
   const [selectedMonth, setSelectedMonth] = useState('');
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [file, setFile] = useState<File | null>(null);
@@ -113,6 +112,7 @@ export default function AdminUploadPage() {
     }
   };
 
+  if (!permissionLoaded) return null;
   if (!canAccess) {
     return (
       <div className="space-y-6">

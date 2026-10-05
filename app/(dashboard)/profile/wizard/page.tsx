@@ -7,6 +7,7 @@ import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { FileUpload } from '@/components/ui/FileUpload';
 import { Stepper, StepPanel, type StepDefinition } from '@/components/ui/Stepper';
+import api from '@/lib/api';
 import { useToast } from '@/contexts/ToastContext';
 import { useProfileQuery } from '@/hooks/queries/use-profile-query';
 import { useEmployeePersonalDetailsQuery } from '@/hooks/queries/use-employee-personal-details-query';
@@ -220,6 +221,27 @@ function ProfileWizardForm({
     const fieldNames = STEP_FIELD_NAMES[stepIndex];
     const valid = fieldNames.length === 0 ? true : await form.trigger(fieldNames as any);
     if (!valid) return;
+    // form.trigger() above clears the "manual" duplicate error StepRemittance
+    // sets from its debounced check, so re-check here and block "Next".
+    if (STEPS[stepIndex].key === STEP.REMITTANCE) {
+      const accountNumber = String(form.getValues('accountNumber') || '').trim();
+      if (accountNumber) {
+        try {
+          const res = await api.get('/users/bank-account-availability', {
+            params: { accountNumber, excludeEmployeeId: currentEmployeeId },
+          });
+          if (res.data?.exists) {
+            form.setError('accountNumber', {
+              type: 'manual',
+              message: 'This bank account number is already associated with another employee profile.',
+            });
+            return;
+          }
+        } catch {
+          // Non-blocking - the server-side check at submission is the real gate.
+        }
+      }
+    }
     let nextIndex = stepIndex + 1;
     if (nextIndex === dependentsIndex && !isMarried) nextIndex += 1;
     setStepIndex(Math.min(nextIndex, steps.length - 1));

@@ -299,7 +299,14 @@ export default function CreateUserModal({
               param: "nationalId",
               message: "An employee profile with this NIC number already exists.",
             }
-          : null;
+          : stepKey === "remittance"
+            ? {
+                field: "accountNumber" as const,
+                url: "/users/bank-account-availability",
+                param: "accountNumber",
+                message: "This bank account number is already associated with another employee profile.",
+              }
+            : null;
     if (!check) return false;
     const value = String(form.getValues(check.field) || "").trim();
     if (!value) return false;

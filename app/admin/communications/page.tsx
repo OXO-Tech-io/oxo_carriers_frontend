@@ -14,6 +14,7 @@ import {
   FileText,
 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
+import { useMyPermissionLevel } from '@/hooks/useMyPermissionLevel';
 import { useCommunicationsQuery } from '@/hooks/queries/use-communications-query';
 import { useCreateCommunicationMutation, useDeleteCommunicationMutation } from '@/hooks/mutations/use-communication-mutations';
 import { communicationService } from '@/lib/services/communication.service';
@@ -29,7 +30,8 @@ const ATTACHMENT_ACCEPT =
   'image/jpeg,image/png,image/jpg,image/gif,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,text/csv';
 
 export default function AdminCommunicationsPage() {
-  const { isHRManager, isSuperAdmin } = useAuth();
+  const { isSuperAdmin } = useAuth();
+  const { allowed: canManage, loaded: permissionLoaded } = useMyPermissionLevel('communications_management', 'write');
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [title, setTitle] = useState('');
   const [body, setBody] = useState('');
@@ -55,9 +57,15 @@ export default function AdminCommunicationsPage() {
   // OCD-515: pinned once per mount rather than recomputed on every render, so
   // the `min` attribute (and the "in the past" check) don't creep forward
   // while the modal sits open.
-  const nowLocal = useMemo(() => new Date().toISOString().slice(0, 16), []);
+  // datetime-local values are in the user's LOCAL time - toISOString() alone
+  // is UTC, which left hours of past times selectable outside UTC.
+  const nowLocal = useMemo(() => {
+    const now = new Date();
+    return new Date(now.getTime() - now.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+  }, []);
 
-  if (!isHRManager && !isSuperAdmin) {
+  if (!permissionLoaded) return null;
+  if (!canManage) {
     return <p className="text-sm text-[var(--gray-400)]">You do not have access to this page.</p>;
   }
 
@@ -232,7 +240,7 @@ export default function AdminCommunicationsPage() {
           <p className="text-[var(--gray-400)]">Send employee communications and track responses</p>
         </div>
         <div className="flex gap-2">
-          {(isHRManager || isSuperAdmin) && (
+          {canManage && (
             <Button variant="outline" leftIcon={<Download className="h-4 w-4" />} onClick={handleDownloadReport}>
               Download Report
             </Button>
@@ -372,7 +380,7 @@ export default function AdminCommunicationsPage() {
             <div className="rounded-xl border border-[var(--gray-200)] bg-[var(--card-bg)] p-4 space-y-2">
               <h3 className="text-base font-bold text-[var(--foreground)]">{selectedCommunication.title}</h3>
               <p className="text-xs text-[var(--gray-400)] flex items-center gap-3">
-                <span>Sent: {new Date(selectedCommunication.createdAt).toLocaleString()}</span>
+                <span>Sent: {new Date(selectedCommunication.createdAt).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' })}</span>
                 {selectedCommunication.requiresAcknowledgement && (
                   <span className="text-blue-600 dark:text-blue-400 font-semibold flex items-center gap-1">
                     <CheckCircle2 className="h-3.5 w-3.5" /> Ack Required
@@ -410,28 +418,55 @@ export default function AdminCommunicationsPage() {
             </div>
 
             {selectedCommunication.requiresAcknowledgement && (
-              <div className="grid grid-cols-4 gap-3">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                 <div className="rounded-xl border border-[var(--gray-200)] bg-[var(--card-bg)] p-3 text-center">
-                  <p className="text-xs text-[var(--gray-400)]">Total Sent</p>
+                  <p className="text-xs font-medium text-[var(--gray-500)]">Total Sent</p>
                   <p className="text-xl font-bold text-[var(--foreground)]">{selectedCommunication.totalRecipients || 0}</p>
                 </div>
-                <div className="rounded-xl border border-emerald-200 bg-emerald-50/50 dark:bg-emerald-950/20 p-3 text-center">
-                  <p className="text-xs text-emerald-700 dark:text-emerald-400 font-medium">Ack (On-Time)</p>
-                  <p className="text-xl font-bold text-emerald-600 dark:text-emerald-400">{selectedCommunication.onTimeCount || 0}</p>
+                <div className="rounded-xl border border-[var(--gray-200)] bg-[var(--success-light)] p-3 text-center">
+                  <p className="text-xs font-medium text-[var(--success-text)]">Ack (On-Time)</p>
+                  <p className="text-xl font-bold text-[var(--success-text)]">{selectedCommunication.onTimeCount || 0}</p>
                 </div>
-                <div className="rounded-xl border border-amber-200 bg-amber-50/50 dark:bg-amber-950/20 p-3 text-center">
-                  <p className="text-xs text-amber-700 dark:text-amber-400 font-medium">Ack (Late)</p>
-                  <p className="text-xl font-bold text-amber-600 dark:text-amber-400">{selectedCommunication.lateCount || 0}</p>
+                <div className="rounded-xl border border-[var(--gray-200)] bg-[var(--warning-light)] p-3 text-center">
+                  <p className="text-xs font-medium text-[var(--warning-text)]">Ack (Late)</p>
+                  <p className="text-xl font-bold text-[var(--warning-text)]">{selectedCommunication.lateCount || 0}</p>
                 </div>
-                <div className="rounded-xl border border-rose-200 bg-rose-50/50 dark:bg-rose-950/20 p-3 text-center">
-                  <p className="text-xs text-rose-700 dark:text-rose-400 font-medium">Pending</p>
-                  <p className="text-xl font-bold text-rose-600 dark:text-rose-400">{selectedCommunication.pendingCount || 0}</p>
+                <div className="rounded-xl border border-[var(--gray-200)] bg-[var(--error-light)] p-3 text-center">
+                  <p className="text-xs font-medium text-[var(--error-text)]">Pending</p>
+                  <p className="text-xl font-bold text-[var(--error-text)]">{selectedCommunication.pendingCount || 0}</p>
+                </div>
+              </div>
+            )}
+
+            {selectedCommunication.requiresAcknowledgement && (selectedCommunication.totalRecipients || 0) > 0 && (
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between text-xs">
+                  <span className="font-semibold text-[var(--foreground)]">Acknowledgement progress</span>
+                  <span className="text-[var(--gray-400)]">
+                    {(selectedCommunication.onTimeCount || 0) + (selectedCommunication.lateCount || 0)} of{' '}
+                    {selectedCommunication.totalRecipients}
+                  </span>
+                </div>
+                <div className="flex h-2 overflow-hidden rounded-full bg-[var(--gray-100)]">
+                  <div
+                    className="bg-emerald-500 transition-all"
+                    style={{ width: `${((selectedCommunication.onTimeCount || 0) / selectedCommunication.totalRecipients!) * 100}%` }}
+                  />
+                  <div
+                    className="bg-amber-500 transition-all"
+                    style={{ width: `${((selectedCommunication.lateCount || 0) / selectedCommunication.totalRecipients!) * 100}%` }}
+                  />
                 </div>
               </div>
             )}
 
             <div>
-              <h4 className="text-sm font-semibold text-[var(--foreground)] mb-2">Recipient Status Breakdown</h4>
+              <h4 className="text-sm font-semibold text-[var(--foreground)] mb-2">
+                Recipient Status Breakdown
+                <span className="ml-2 text-xs font-normal text-[var(--gray-400)]">
+                  {selectedCommunication.recipients?.length ?? 0} recipient{selectedCommunication.recipients?.length === 1 ? '' : 's'}
+                </span>
+              </h4>
               <div className="max-h-64 overflow-y-auto rounded-xl border border-[var(--gray-200)] divide-y divide-[var(--gray-100)]">
                 {selectedCommunication.recipients?.map((r) => {
                   const deadlinePassed =
@@ -470,22 +505,44 @@ export default function AdminCommunicationsPage() {
                   }
 
                   return (
-                    <div key={r.id} className="p-3 flex items-center justify-between gap-4 text-xs">
-                      <div>
-                        <p className="font-semibold text-[var(--foreground)]">{r.name}</p>
-                        <p className="text-[var(--gray-400)]">{r.email}</p>
-                        {r.responseText && (
-                          <p className="mt-1 italic text-[var(--gray-400)] break-words">Note: "{r.responseText}"</p>
-                        )}
+                    <div
+                      key={r.id}
+                      className="p-3 space-y-2 text-xs transition-colors hover:bg-[var(--gray-25)]"
+                    >
+                      <div className="flex items-start justify-between gap-4">
+                      <div className="flex min-w-0 flex-1 items-start gap-3">
+                        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[var(--primary-light)] text-xs font-bold text-[var(--primary)]">
+                          {(r.name || '?')
+                            .split(' ')
+                            .filter(Boolean)
+                            .slice(0, 2)
+                            .map((part) => part[0]?.toUpperCase())
+                            .join('')}
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p className="font-semibold text-[var(--foreground)] break-words">{r.name}</p>
+                          <p className="text-[var(--gray-400)] break-all">{r.email}</p>
+                        </div>
                       </div>
-                      <div className="text-right space-y-1">
+                      <div className="shrink-0 text-right space-y-1">
                         <div>{statusBadge}</div>
                         <p className="text-[var(--gray-400)]">
                           {r.respondedAt
-                            ? `Ack: ${new Date(r.respondedAt).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' })}`
+                            ? new Date(r.respondedAt).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' })
                             : 'No response'}
                         </p>
                       </div>
+                      </div>
+                      {r.responseText && (
+                        <div className="w-full rounded-xl border border-blue-100 bg-blue-50 px-3 py-2 dark:border-blue-900/50 dark:bg-blue-950/30">
+                          <p className="text-[10px] font-semibold uppercase tracking-wide text-blue-700 dark:text-blue-300">
+                            Reply
+                          </p>
+                          <p className="text-xs text-[var(--foreground)] whitespace-pre-wrap break-all leading-relaxed">
+                            {r.responseText}
+                          </p>
+                        </div>
+                      )}
                     </div>
                   );
                 })}

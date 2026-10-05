@@ -1,5 +1,9 @@
 @import "tailwindcss";
 
+/* Tailwind's `dark:` variant follows the app's manual theme (the `.dark` class
+   set on <html> by ThemeContext) instead of the OS prefers-color-scheme. */
+@custom-variant dark (&:where(.dark, .dark *));
+
 /* ── OXO Carriers Theme: "Stratify" — soft, borderless, pill-shaped ── */
 :root {
   /* OCD-410: native form controls (select, text/number/date inputs,
