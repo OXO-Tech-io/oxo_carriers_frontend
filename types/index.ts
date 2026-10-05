@@ -174,6 +174,10 @@ export interface LeaveBalance {
   pending_days: number;
   /** remaining_days minus pending_days - what can still be requested. */
   available_days: number;
+  /** HR-approved days taken in the current calendar month. */
+  used_this_month?: number;
+  /** Full-year entitlement; total_days is only what has accrued so far (casual leave). */
+  year_entitlement?: number;
   year: number;
   leave_type: LeaveType;
 }

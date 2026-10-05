@@ -237,15 +237,15 @@ export default function SalarySlipDetailClient() {
                 <td style={{ border: '1pt solid #000000', padding: '6pt 8pt', width: '50%', verticalAlign: 'top' }}>
                   <p style={{ margin: 0, lineHeight: 1.4, textAlign: 'left' }}>
                     <span style={{ fontFamily: 'Garamond, serif', fontWeight: 700, fontSize: '11pt', color: '#000000' }}>Bank :</span>
-                    <span style={{ fontFamily: 'Garamond, serif', fontSize: '11pt' }}>&nbsp;{slipEmployee?.bank_name}</span>
+                    <span style={{ fontFamily: 'Garamond, serif', fontSize: '11pt', color: '#000000' }}>&nbsp;{slipEmployee?.bank_name}</span>
                   </p>
                   <p style={{ margin: 0, lineHeight: 1.4, textAlign: 'left' }}>
                     <span style={{ fontFamily: 'Garamond, serif', fontWeight: 700, fontSize: '11pt', color: '#000000' }}>Branch :</span>
-                    <span style={{ fontFamily: 'Garamond, serif', fontSize: '11pt' }}>&nbsp;{slipEmployee?.bank_branch}</span>
+                    <span style={{ fontFamily: 'Garamond, serif', fontSize: '11pt', color: '#000000' }}>&nbsp;{slipEmployee?.bank_branch}</span>
                   </p>
                   <p style={{ margin: 0, lineHeight: 1.4, textAlign: 'left' }}>
                     <span style={{ fontFamily: 'Garamond, serif', fontWeight: 700, fontSize: '11pt', color: '#000000' }}>Account No :</span>
-                    <span style={{ fontFamily: 'Garamond, serif', fontSize: '11pt' }}>&nbsp;{slipEmployee?.account_number}</span>
+                    <span style={{ fontFamily: 'Garamond, serif', fontSize: '11pt', color: '#000000' }}>&nbsp;{slipEmployee?.account_number}</span>
                   </p>
                 </td>
               </tr>

@@ -15,7 +15,7 @@ import {
   Shield,
   Calendar,
   Lock,
-  Download,
+  Eye,
   Check,
   Bell,
   Camera,
@@ -45,6 +45,8 @@ import { useToast } from '@/contexts/ToastContext';
 import { QUALIFICATION_LEVEL_OPTIONS, TITLE_OPTIONS, type ProfileChangeRequest } from '@/types/profile';
 import { resolveFileUrl, DATE_FORMATS } from '@/lib/constants';
 import type { ColumnDef } from '@tanstack/react-table';
+import { DocumentViewer } from '@/components/DocumentViewer';
+import type { Attachment } from '@/types/hrModules';
 
 type ProfileTab = 'personal' | 'contacts' | 'education' | 'work-history' | 'pending-changes' | 'employment' | 'documents' | 'settings';
 
@@ -89,9 +91,10 @@ export default function ProfilePage() {
   const { data: pii } = useEmployeePersonalDetailsQuery(displayUser?.id);
   const { data: changeRequests = [], isLoading: changeRequestsLoading } = useMyChangeRequestsQuery();
   const documentsQuery = useMyDocumentsQuery();
-  // Document Vault shows only documents targeted at this employee individually -
-  // company-wide ('all') documents live on the separate Documents page/sidebar item instead.
-  const myDocuments = (documentsQuery.data ?? []).filter((doc) => doc.targetType === 'individual');
+  // Same set as the Documents page: everything shared with this employee.
+  const myDocuments = documentsQuery.data ?? [];
+  // View-only: attachments open in the in-app viewer, never as a raw file link.
+  const [viewerAttachment, setViewerAttachment] = useState<Attachment | null>(null);
 
   const [selectedRequest, setSelectedRequest] = useState<ProfileChangeRequest | null>(null);
 
@@ -676,12 +679,11 @@ export default function ProfilePage() {
                   <div className="space-y-3">
                     {myDocuments.flatMap((doc) =>
                       (doc.attachments ?? []).map((attachment) => (
-                        <a
+                        <button
                           key={attachment.id}
-                          href={resolveFileUrl(attachment.fileUrl)}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="flex items-center justify-between p-4 bg-[var(--gray-25)] hover:bg-[var(--gray-50)] border border-[var(--gray-100)] hover:border-[var(--primary-ring)] rounded-2xl transition-all duration-200"
+                          type="button"
+                          onClick={() => setViewerAttachment(attachment)}
+                          className="w-full text-left flex items-center justify-between p-4 bg-[var(--gray-25)] hover:bg-[var(--gray-50)] border border-[var(--gray-100)] hover:border-[var(--primary-ring)] rounded-2xl transition-all duration-200"
                         >
                           <div className="flex items-center gap-3">
                             <div className="p-2.5 bg-white text-[var(--primary)] border border-[var(--gray-100)] rounded-xl shrink-0">
@@ -697,11 +699,11 @@ export default function ProfilePage() {
 
                           <span
                             className="p-2 bg-white text-[var(--gray-500)] hover:text-[var(--primary)] border border-[var(--gray-100)] hover:border-[var(--primary-ring)] rounded-xl hover:shadow-sm transition-colors shrink-0"
-                            title="Download Document"
+                            title="View Document"
                           >
-                            <Download className="h-4 w-4" />
+                            <Eye className="h-4 w-4" />
                           </span>
-                        </a>
+                        </button>
                       ))
                     )}
                   </div>
@@ -803,6 +805,16 @@ export default function ProfilePage() {
         request={selectedRequest}
         canDecide={false}
       />
+
+      {viewerAttachment && (
+        <DocumentViewer
+          isOpen={!!viewerAttachment}
+          onClose={() => setViewerAttachment(null)}
+          fileUrl={resolveFileUrl(viewerAttachment.fileUrl)}
+          fileName={viewerAttachment.fileName}
+          mimeType={viewerAttachment.mimeType}
+        />
+      )}
     </div>
   );
 }

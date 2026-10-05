@@ -7,6 +7,8 @@ import { ArrowLeft, Eye, Loader2 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/contexts/ToastContext';
 import { useFormEditor } from '@/hooks/useFormEditor';
+import { useFormThemeQuery } from '@/hooks/queries/use-forms-query';
+import { resolveFileUrl } from '@/lib/constants';
 import { useDragReorder } from '@/hooks/useDragReorder';
 import { Button } from '@/components/ui';
 import { QuestionEditor } from '@/components/forms/QuestionEditor';
@@ -84,6 +86,7 @@ export default function EditFormClient() {
   const toast = useToast();
 
   const editor = useFormEditor(formId || null);
+  const themeQuery = useFormThemeQuery(formId);
   const [activeQuestionId, setActiveQuestionId] = useState<number | null>(null);
   const [targetSectionId, setTargetSectionId] = useState<number | null>(null);
   const [logicQuestion, setLogicQuestion] = useState<FormQuestion | null>(null);
@@ -229,6 +232,10 @@ export default function EditFormClient() {
         </aside>
 
         <main className="space-y-4">
+          {themeQuery.data?.headerImageUrl && (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={resolveFileUrl(themeQuery.data.headerImageUrl)} alt="" className="h-32 w-full rounded-2xl object-cover" />
+          )}
           <div className="rounded-2xl border-t-4 border-[var(--primary)] border border-[var(--gray-100)] bg-[var(--card-bg)] p-5 space-y-3">
             <input
               value={form.title}

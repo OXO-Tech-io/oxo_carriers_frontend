@@ -10,6 +10,7 @@ import { useFormQuery, useFormSettingsQuery, useFormThemeQuery } from '@/hooks/q
 import { useUpdateFormSettingsMutation, useUpdateFormThemeMutation } from '@/hooks/mutations/use-form-mutations';
 import { FileUpload } from '@/components/ui';
 import type { FormSettings, FormTheme } from '@/types/hrModules';
+import { resolveFileUrl } from '@/lib/constants';
 
 function ToggleRow({ label, hint, checked, onChange, disabled }: { label: string; hint?: string; checked: boolean; onChange: () => void; disabled?: boolean }) {
   return (
@@ -208,7 +209,7 @@ export default function FormSettingsClient() {
               // uploaded alongside the newly-persisted existingFiles entry for the same image.
               key={theme.headerImageUrl ?? 'no-header-image'}
               accept="image/*"
-              existingFiles={theme.headerImageUrl ? [{ name: theme.headerImageUrl.split('/').pop() || 'Header image', url: theme.headerImageUrl }] : []}
+              existingFiles={theme.headerImageUrl ? [{ name: theme.headerImageUrl.split('/').pop() || 'Header image', url: resolveFileUrl(theme.headerImageUrl) }] : []}
               onRemoveExisting={() => patchTheme({ headerImageUrl: null })}
               onFilesSelected={(files) => {
                 const file = files[0] ?? null;

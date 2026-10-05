@@ -15,23 +15,13 @@ interface EmployeeNotesModalProps {
 }
 
 // All note-privileged roles (hr_executive, hr_manager, super_admin) can add
-// notes and see the full note history with author + timestamp. Only HR
-// Manager/super_admin can edit entries (HR Executive is view-only).
-// OCD-480: notes are historical/audit records - only the note's own author,
-// or someone holding a strictly more senior role than the author, may edit
-// it (also enforced server-side - this only controls whether the Edit
-// button is shown). Mirrors the HR_MANAGER > HR_EXECUTIVE authority already
-// established for Profile Approvals (OCD-473).
-const NOTE_ROLE_RANK: Record<string, number> = {
-  hr_executive: 1,
-  hr_manager: 2,
-  super_admin: 3,
-};
+// notes and see the full note history with author + timestamp. Notes are
+// historical/audit records: only the user who added a note can edit it
+// (also enforced server-side - this only controls whether Edit is shown).
 
 export function EmployeeNotesModal({ isOpen, onClose, employeeId, employeeName }: EmployeeNotesModalProps) {
   const { user, isHRManager, isHRExecutive, isSuperAdmin } = useAuth();
   const canViewNotes = isHRManager || isHRExecutive || isSuperAdmin;
-  const canEditNotes = isHRManager || isSuperAdmin;
 
   const [content, setContent] = useState('');
   const [files, setFiles] = useState<File[]>([]);
@@ -58,14 +48,8 @@ export function EmployeeNotesModal({ isOpen, onClose, employeeId, employeeName }
   // note, or a note authored by a strictly lower-ranked role. Notes with no
   // resolvable author role are treated as rank 0 (editable by any of the
   // three note-privileged roles).
-  const canEditNote = (note: EmployeeNote) => {
-    if (!canEditNotes) return false;
-    if (isSuperAdmin) return true;
-    if (user?.id != null && note.authorUserId === user.id) return true;
-    const actorRank = NOTE_ROLE_RANK[user?.role ?? ''] ?? 0;
-    const authorRank = note.authorRole ? NOTE_ROLE_RANK[note.authorRole] ?? 0 : 0;
-    return actorRank > authorRank;
-  };
+  const canEditNote = (note: EmployeeNote) =>
+    canViewNotes && user?.id != null && note.authorUserId === user.id;
 
   const saveEdit = async () => {
     if (editingId === null) return;

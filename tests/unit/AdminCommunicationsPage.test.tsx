@@ -5,6 +5,7 @@ import AdminCommunicationsPage from "@/app/admin/communications/page";
 
 const {
   useAuthMock,
+  useMyPermissionLevelMock,
   useCommunicationsQueryMock,
   createMutateAsyncMock,
   deleteMutateAsyncMock,
@@ -14,6 +15,7 @@ const {
   downloadReportMock,
 } = vi.hoisted(() => ({
   useAuthMock: vi.fn(),
+  useMyPermissionLevelMock: vi.fn(),
   useCommunicationsQueryMock: vi.fn(),
   createMutateAsyncMock: vi.fn(),
   deleteMutateAsyncMock: vi.fn(),
@@ -24,6 +26,8 @@ const {
 }));
 
 vi.mock("@/hooks/useAuth", () => ({ useAuth: useAuthMock }));
+// The page gates on the communications_management:write permission (not the role flags).
+vi.mock("@/hooks/useMyPermissionLevel", () => ({ useMyPermissionLevel: useMyPermissionLevelMock }));
 vi.mock("@/hooks/queries/use-communications-query", () => ({
   useCommunicationsQuery: useCommunicationsQueryMock,
 }));
@@ -63,6 +67,11 @@ const sampleCommunication = {
 
 function mockAuth(overrides: Partial<{ isHRManager: boolean; isSuperAdmin: boolean }> = {}) {
   useAuthMock.mockReturnValue({ isHRManager: false, isSuperAdmin: false, ...overrides });
+  // Stands in for the communications_management:write grant held by HR Manager / Super Admin.
+  useMyPermissionLevelMock.mockReturnValue({
+    allowed: !!(overrides.isHRManager || overrides.isSuperAdmin),
+    loaded: true,
+  });
 }
 
 // The nested EmployeeMultiSelect kicks off its own userDirectoryService.list() fetch on mount;

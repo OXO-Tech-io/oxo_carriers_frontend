@@ -65,7 +65,8 @@ export default function StepEducation({ form }: Readonly<StepProps>) {
           {...register("undergraduateDegreeCompletionDate", {
             validate: (value) => {
               const ongoing = (form.getValues("education") ?? []).some((e) => e?.isOngoing);
-              return !ongoing || !!value || "Expected completion date is required while a qualification is being pursued";
+              if (!ongoing) return !value || "Completion date only applies while a qualification is being pursued";
+              return !!value || "Expected completion date is required while a qualification is being pursued";
             },
           })}
           className={inputClass}
@@ -155,7 +156,11 @@ export default function StepEducation({ form }: Readonly<StepProps>) {
                   {...register(`education.${index}.dateAwarded`, {
                     validate: {
                       required: (value) => {
-                        if (isOngoing) return true;
+                        // Awarded date and "currently pursuing" are mutually
+                        // exclusive: a pursued qualification has no award date.
+                        if (isOngoing) {
+                          return !value || "Clear the awarded date - this qualification is currently being pursued";
+                        }
                         return !!value || "Date awarded is required unless this qualification is currently being pursued";
                       },
                       noFutureDate,
@@ -179,7 +184,7 @@ export default function StepEducation({ form }: Readonly<StepProps>) {
                           setValue("undergraduateDegreeCompletionDate", "");
                           clearErrors("undergraduateDegreeCompletionDate");
                         }
-                        trigger(`education.${index}.dateAwarded`);
+                        void trigger([`education.${index}.dateAwarded`, "undergraduateDegreeCompletionDate"]);
                       },
                     })}
                     className="h-4 w-4 rounded"

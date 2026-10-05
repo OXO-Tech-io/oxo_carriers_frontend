@@ -13,6 +13,7 @@ import {
   useState,
 } from "react";
 import api from "@/lib/api";
+import { UserRole } from "@/types";
 import Image from "next/image";
 import {
   LayoutDashboard,
@@ -60,6 +61,8 @@ type MenuItem = {
    * where a role list is a fixed product requirement rather than an
    * admin-configurable permission. */
   hrManagerOnly?: boolean;
+  /** Roles for which the item is hidden even if the permission grants it. */
+  hiddenForRoles?: string[];
 };
 
 const navigation: MenuItem[] = [
@@ -156,6 +159,7 @@ const navigation: MenuItem[] = [
     icon: FolderOpen,
     permissionKeys: ["document_vault"],
     requiredLevel: "read",
+    hiddenForRoles: [UserRole.HR_EXECUTIVE],
   },
 ];
 
@@ -221,7 +225,7 @@ const adminNavigation: MenuItem[] = [
     name: "Bulk Upload",
     href: "/admin/upload",
     icon: Upload,
-    permissionKeys: ["salaries"],
+    permissionKeys: ["salary_bulk_upload"],
     requiredLevel: "write",
   },
   {
@@ -245,7 +249,8 @@ const adminNavigation: MenuItem[] = [
     name: "Communications",
     href: "/admin/communications",
     icon: Mail,
-    hrManagerOnly: true,
+    permissionKeys: ["communications_management"],
+    requiredLevel: "write",
   },
   {
     name: "Forms",
@@ -411,6 +416,17 @@ function NavItems({
   );
 }
 
+// The sidebar is mounted by more than one layout ((dashboard) and admin), so
+// moving between a user page and an admin page unmounts and remounts it.
+// Component refs/state die with it - keep the scroll offsets and the last
+// loaded permissions at module level so the menu keeps its place and doesn't
+// flash empty (an empty list clamps scrollTop to 0) on each remount.
+const sidebarScroll = { desktop: 0, mobile: 0 };
+let cachedPermissions: {
+  userId: number | string;
+  levels: Record<string, AccessLevel>;
+} | null = null;
+
 export default function Sidebar() {
   const pathname = usePathname();
   const { user, isSuperAdmin, isHRManager } = useAuth();
@@ -421,9 +437,12 @@ export default function Sidebar() {
   // while that happens, losing the user's place in a long menu. Track the
   // last scroll offset and reapply it after every render.
   const desktopNavRef = useRef<HTMLElement>(null);
-  const desktopNavScrollPos = useRef(0);
+  const desktopNavScrollPos = useRef(sidebarScroll.desktop);
   const mobileNavRef = useRef<HTMLElement>(null);
-  const mobileNavScrollPos = useRef(0);
+  const mobileNavScrollPos = useRef(sidebarScroll.mobile);
+  // Programmatic scrollTop restores while the list is still empty/short fire
+  // scroll events with a clamped value - don't let those overwrite the saved offset.
+  const canSaveScroll = useRef(false);
 
   useLayoutEffect(() => {
     if (desktopNavRef.current) {
@@ -438,17 +457,26 @@ export default function Sidebar() {
   });
 
   const handleDesktopNavScroll = (event: React.UIEvent<HTMLElement>) => {
+    if (!canSaveScroll.current) return;
     desktopNavScrollPos.current = event.currentTarget.scrollTop;
+    sidebarScroll.desktop = event.currentTarget.scrollTop;
   };
 
   const handleMobileNavScroll = (event: React.UIEvent<HTMLElement>) => {
+    if (!canSaveScroll.current) return;
     mobileNavScrollPos.current = event.currentTarget.scrollTop;
+    sidebarScroll.mobile = event.currentTarget.scrollTop;
   };
 
   const [permissionLevels, setPermissionLevels] = useState<
     Record<string, AccessLevel>
-  >({});
-  const [permissionLoaded, setPermissionLoaded] = useState(false);
+  >(() =>
+    user && cachedPermissions?.userId === user.id ? cachedPermissions.levels : {},
+  );
+  const [permissionLoaded, setPermissionLoaded] = useState(
+    () => !!user && cachedPermissions?.userId === user.id,
+  );
+  canSaveScroll.current = permissionLoaded;
 
   useEffect(() => {
     if (!user) {
@@ -459,15 +487,15 @@ export default function Sidebar() {
 
     const loadPermissions = async () => {
       try {
-        setPermissionLoaded(false);
+        if (cachedPermissions?.userId !== user.id) setPermissionLoaded(false);
         const res = await api.get("/permissions/me");
         if (
           res.data?.permissionLevels &&
           typeof res.data.permissionLevels === "object"
         ) {
-          setPermissionLevels(
-            res.data.permissionLevels as Record<string, AccessLevel>,
-          );
+          const levels = res.data.permissionLevels as Record<string, AccessLevel>;
+          cachedPermissions = { userId: user.id, levels };
+          setPermissionLevels(levels);
         } else {
           setPermissionLevels({});
         }
@@ -494,6 +522,7 @@ export default function Sidebar() {
   const canSeeItem = (item: MenuItem) => {
     if (isSuperAdmin) return true;
     if (item.superAdminOnly) return false;
+    if (user && item.hiddenForRoles?.includes(user.role)) return false;
     if (item.hrManagerOnly) return isHRManager;
     if (!item.permissionKeys || item.permissionKeys.length === 0) return false;
     return item.permissionKeys.some((key) =>

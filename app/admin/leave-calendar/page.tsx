@@ -171,10 +171,10 @@ export default function LeaveCalendarPage() {
           <select
             value={selectedYear}
             onChange={(e) => setSelectedYear(parseInt(e.target.value))}
-            className="rounded-lg border border-[var(--gray-200)] px-4 py-2 text-sm text-[var(--foreground)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)]"
+            className="rounded-lg border border-[var(--gray-200)] bg-[var(--card-bg)] px-4 py-2 text-sm text-[var(--foreground)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)]"
           >
             {Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - 2 + i).map((year) => (
-              <option key={year} value={year}>
+              <option key={year} value={year} className="bg-[var(--card-bg)] text-[var(--foreground)]">
                 {year}
               </option>
             ))}

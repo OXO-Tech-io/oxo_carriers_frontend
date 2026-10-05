@@ -10,9 +10,9 @@ import type { Attachment } from '@/types/hrModules';
 
 export default function MyDocumentsPage() {
   const documentsQuery = useMyDocumentsQuery();
-  // This page shows company-wide documents only - documents targeted at you
-  // individually live on your Profile's Document Vault tab instead.
-  const companyDocuments = (documentsQuery.data ?? []).filter((doc) => doc.targetType === 'all');
+  // The backend's merged view already contains only documents shared with this
+  // user (targeted at them, or 'All Employees') - same set as Profile > Document Vault.
+  const companyDocuments = documentsQuery.data ?? [];
   // OCD-499: employees can only VIEW a shared document inline, not download it -
   // clicking an attachment opens this viewer instead of the raw file URL.
   const [viewerAttachment, setViewerAttachment] = useState<Attachment | null>(null);
@@ -21,13 +21,13 @@ export default function MyDocumentsPage() {
     <div className="space-y-6 animate-fade-in">
       <div>
         <h1 className="text-3xl font-bold text-[var(--foreground)]">Documents</h1>
-        <p className="text-[var(--gray-400)]">Company-wide documents shared with every employee</p>
+        <p className="text-[var(--gray-400)]">Documents shared with you</p>
       </div>
 
       <div className="space-y-4">
         {documentsQuery.isLoading && <p className="text-sm text-[var(--gray-400)]">Loading documents...</p>}
         {!documentsQuery.isLoading && companyDocuments.length === 0 && (
-          <p className="text-sm text-[var(--gray-400)]">No company-wide documents have been shared yet.</p>
+          <p className="text-sm text-[var(--gray-400)]">No documents have been shared with you yet.</p>
         )}
         {companyDocuments.map((doc) => (
           <div key={doc.id} className="rounded-2xl border border-[var(--gray-200)] bg-[var(--card-bg)] p-5 space-y-3">
