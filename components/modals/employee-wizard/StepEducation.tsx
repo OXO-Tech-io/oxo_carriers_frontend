@@ -2,7 +2,7 @@ import { UseFormReturn, useFieldArray, useWatch } from "react-hook-form";
 import { Button } from "@/components/ui/Button";
 import { RepeatableCard } from "@/components/profile/wizard/shared";
 import { QUALIFICATION_LEVEL_OPTIONS } from "@/types/profile";
-import { noEmoji, noFutureDate } from "@/lib/validation/textValidation";
+import { localIsoDate, noEmoji, noFutureDate, onlyFutureDate } from "@/lib/validation/textValidation";
 import { Field, inputClass } from "./shared";
 import { EmployeeWizardValues } from "./wizardTypes";
 
@@ -68,12 +68,14 @@ export default function StepEducation({ form }: Readonly<StepProps>) {
       >
         <input
           type="date"
+          min={localIsoDate(1)}
           disabled={!anyOngoing}
           {...register("undergraduateDegreeCompletionDate", {
             validate: (value) => {
               const ongoing = (form.getValues("education") ?? []).some((e) => e?.isOngoing);
               if (!ongoing) return !value || "Completion date only applies while a qualification is being pursued";
-              return !!value || "Expected completion date is required while a qualification is being pursued";
+              if (!value) return "Expected completion date is required while a qualification is being pursued";
+              return onlyFutureDate(value);
             },
           })}
           className={inputClass}
