@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { containsEmoji, stripEmoji, noEmoji, noFutureDate } from "@/lib/validation/textValidation";
+import { containsEmoji, stripEmoji, noEmoji, noFutureDate, onlyFutureDate, localIsoDate } from "@/lib/validation/textValidation";
 
 describe("containsEmoji", () => {
   it("detects the ticket's example mixed-content string", () => {
@@ -85,5 +85,41 @@ describe("noFutureDate (react-hook-form validate rule, OCD-417)", () => {
   it("passes through empty/invalid values so it composes with `required`", () => {
     expect(noFutureDate("")).toBe(true);
     expect(noFutureDate("not-a-date")).toBe(true);
+  });
+});
+
+describe("onlyFutureDate (react-hook-form validate rule)", () => {
+  const FUTURE_ONLY_MESSAGE = "Date must be a future date. Please select a date after today.";
+
+  it("rejects today", () => {
+    expect(onlyFutureDate(localIsoDate())).toBe(FUTURE_ONLY_MESSAGE);
+  });
+
+  it("rejects yesterday and older dates", () => {
+    expect(onlyFutureDate(localIsoDate(-1))).toBe(FUTURE_ONLY_MESSAGE);
+    expect(onlyFutureDate("2020-01-01")).toBe(FUTURE_ONLY_MESSAGE);
+  });
+
+  it("accepts tomorrow and later dates", () => {
+    expect(onlyFutureDate(localIsoDate(1))).toBe(true);
+    expect(onlyFutureDate("2099-12-31")).toBe(true);
+  });
+
+  it("passes through empty/invalid values so it composes with `required`", () => {
+    expect(onlyFutureDate("")).toBe(true);
+    expect(onlyFutureDate("not-a-date")).toBe(true);
+  });
+});
+
+describe("localIsoDate", () => {
+  it("returns today's local date as YYYY-MM-DD", () => {
+    const now = new Date();
+    const expected = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+    expect(localIsoDate()).toBe(expected);
+  });
+
+  it("offsets by whole days", () => {
+    expect(localIsoDate(1) > localIsoDate()).toBe(true);
+    expect(localIsoDate(-1) < localIsoDate()).toBe(true);
   });
 });

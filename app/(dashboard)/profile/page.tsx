@@ -89,7 +89,10 @@ export default function ProfilePage() {
   const { data: education = [], isLoading: educationLoading } = useEmployeeEducationQuery();
   const { data: workHistory = [], isLoading: workHistoryLoading } = useEmployeeWorkHistoryQuery();
   const { data: pii } = useEmployeePersonalDetailsQuery(displayUser?.id);
-  const { data: changeRequests = [], isLoading: changeRequestsLoading } = useMyChangeRequestsQuery();
+  const { data: allVisibleChangeRequests = [], isLoading: changeRequestsLoading } = useMyChangeRequestsQuery();
+  // GET /profile-change-requests returns every employee's requests to HR roles
+  // (and ignores `userId`), so keep only the ones raised for the logged-in user.
+  const changeRequests = allVisibleChangeRequests.filter((r) => r.employee?.id === displayUser?.id);
   const documentsQuery = useMyDocumentsQuery();
   // Same set as the Documents page: everything shared with this employee.
   const myDocuments = documentsQuery.data ?? [];

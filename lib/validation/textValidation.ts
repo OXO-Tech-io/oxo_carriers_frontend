@@ -178,3 +178,30 @@ export function noFutureDate(value: string): string | true {
   endOfToday.setHours(23, 59, 59, 999);
   return date.getTime() > endOfToday.getTime() ? 'Date cannot be a future date. Please enter a valid date.' : true;
 }
+
+/**
+ * Local calendar date as `YYYY-MM-DD`, `offsetDays` from today. Built from the
+ * local getters (not `toISOString`) so it matches what a native date input
+ * shows the user, whatever the timezone.
+ */
+export function localIsoDate(offsetDays = 0): string {
+  const d = new Date();
+  d.setDate(d.getDate() + offsetDays);
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${d.getFullYear()}-${month}-${day}`;
+}
+
+/**
+ * react-hook-form `validate` rule allowing only dates strictly after today -
+ * today and past dates are rejected. Used for the Undergraduate Degree
+ * (expected) Completion Date. Pair the input with `min={localIsoDate(1)}` so the
+ * picker blocks those days too. Passes through empty values so it composes with
+ * a separate `required` rule.
+ */
+export function onlyFutureDate(value: string): string | true {
+  if (typeof value !== 'string' || !value) return true;
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return true;
+  // ISO dates sort lexicographically, so a string compare avoids timezone drift.
+  return value > localIsoDate() ? true : 'Date must be a future date. Please select a date after today.';
+}

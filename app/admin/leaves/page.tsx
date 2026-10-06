@@ -12,7 +12,7 @@ import { ConfirmationDialog } from '@/components/ui/ConfirmationDialog';
 import { RejectLeaveModal } from '@/components/leaves/RejectLeaveModal';
 import { LeaveStatusBadge } from '@/components/leaves/LeaveStatusBadge';
 import type { LeaveRequest } from '@/types';
-import { DATE_FORMATS } from '@/lib/constants';
+import { DATE_FORMATS, resolveFileUrl } from '@/lib/constants';
 
 type Tab = 'pending' | 'approved' | 'rejected';
 
@@ -257,7 +257,7 @@ export default function AdminLeaveManagementPage() {
                     {selected.attachment_url && (
                       <div className="pt-2">
                         <a
-                          href={selected.attachment_url}
+                          href={resolveFileUrl(selected.attachment_url)}
                           target="_blank"
                           rel="noopener noreferrer"
                           className="inline-flex items-center gap-1.5 text-xs font-bold text-[var(--primary)] hover:underline"
