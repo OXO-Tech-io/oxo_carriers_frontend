@@ -50,6 +50,7 @@ export default function AdminDocumentsPage() {
   const canSave =
     draft.title.trim().length > 0 &&
     draft.version.trim().length > 0 &&
+    draft.files.length > 0 &&
     (draft.targetType === 'all' || draft.individualEmployeeIds.length > 0);
 
   const handleSave = async () => {
@@ -253,7 +254,7 @@ export default function AdminDocumentsPage() {
           </div>
 
           <div>
-            <label className="text-sm font-semibold text-[var(--foreground)]">Files</label>
+            <label className="text-sm font-semibold text-[var(--foreground)]">Files (required)</label>
             <p className="mt-0.5 text-xs text-[var(--gray-400)]">{DOCUMENT_VAULT_ACCEPT_HINT}</p>
             <div className="mt-1">
               <FileUpload

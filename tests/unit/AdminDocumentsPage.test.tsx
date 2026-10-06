@@ -49,6 +49,11 @@ function makeDoc(overrides: Partial<VaultDocument> = {}): VaultDocument {
 
 const paged = (items: VaultDocument[]) => ({ items, total: items.length, page: 1, pageSize: 10 });
 
+const attachFile = (name = "policy.pdf") => {
+  const input = document.querySelector('input[type="file"]') as HTMLInputElement;
+  fireEvent.change(input, { target: { files: [new File(["x"], name, { type: "application/pdf" })] } });
+};
+
 describe("AdminDocumentsPage", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -120,7 +125,7 @@ describe("AdminDocumentsPage", () => {
   });
 
   describe("OCD-500: Version Number required gating", () => {
-    it("keeps Upload disabled until Title, Version and a target are filled in", () => {
+    it("keeps Upload disabled until Title, Version, a file and a target are filled in", () => {
       render(<AdminDocumentsPage />);
       fireEvent.click(screen.getByRole("button", { name: "Upload Document" }));
 
@@ -138,7 +143,30 @@ describe("AdminDocumentsPage", () => {
       expect(uploadButton).toBeDisabled();
 
       fireEvent.click(screen.getByText("All Employees"));
+      // Still disabled: every other field is valid but no file is attached.
+      expect(uploadButton).toBeDisabled();
+
+      attachFile();
       expect(uploadButton).not.toBeDisabled();
+    });
+
+    it("marks the Files field as required and re-disables Upload when the file is removed", () => {
+      render(<AdminDocumentsPage />);
+      fireEvent.click(screen.getByRole("button", { name: "Upload Document" }));
+      expect(screen.getByText("Files (required)")).toBeInTheDocument();
+
+      fireEvent.change(screen.getByPlaceholderText("e.g. Updated Employment Contract"), {
+        target: { value: "New Policy" },
+      });
+      fireEvent.change(screen.getByPlaceholderText("e.g. 1.0"), { target: { value: "1.0" } });
+      fireEvent.click(screen.getByText("All Employees"));
+      attachFile("policy.pdf");
+
+      const uploadButton = screen.getByRole("button", { name: "Upload" });
+      expect(uploadButton).not.toBeDisabled();
+
+      fireEvent.click(screen.getByLabelText(/remove/i));
+      expect(uploadButton).toBeDisabled();
     });
 
     it("submits version and isMandatoryViewing on save", async () => {
@@ -152,6 +180,7 @@ describe("AdminDocumentsPage", () => {
       fireEvent.change(screen.getByPlaceholderText("e.g. 1.0"), { target: { value: "2.0" } });
       fireEvent.click(screen.getByText("Mark as mandatory viewing for employees"));
       fireEvent.click(screen.getByText("All Employees"));
+      attachFile();
 
       fireEvent.click(screen.getByRole("button", { name: "Upload" }));
 
