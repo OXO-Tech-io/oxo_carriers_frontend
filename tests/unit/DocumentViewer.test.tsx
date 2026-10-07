@@ -16,7 +16,11 @@ describe("DocumentViewer", () => {
     );
     const embed = document.querySelector("embed");
     expect(embed).toBeTruthy();
-    expect(embed).toHaveAttribute("src", "http://localhost:5000/uploads/documents/handbook.pdf");
+    // The URL fragment hides the browser PDF viewer's toolbar and side panel.
+    expect(embed).toHaveAttribute(
+      "src",
+      "http://localhost:5000/uploads/documents/handbook.pdf#toolbar=0&navpanes=0",
+    );
     expect(embed).toHaveAttribute("type", "application/pdf");
     expect(screen.queryByRole("link")).not.toBeInTheDocument();
   });

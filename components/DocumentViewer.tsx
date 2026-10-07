@@ -20,6 +20,14 @@ const isPdfFile = (fileName: string, mimeType?: string | null): boolean => {
   return /\.pdf$/i.test(fileName);
 };
 
+// Open-parameter fragment understood by the browser's built-in PDF viewer
+// (Chrome / Edge): hides its top toolbar (download, print, zoom, etc.) and the
+// side thumbnail panel. Fragments are never sent to the server, so this is
+// safe to append to signed or authenticated URLs.
+const PDF_VIEWER_PARAMS = 'toolbar=0&navpanes=0';
+
+const withPdfViewerParams = (url: string): string => `${url.split('#')[0]}#${PDF_VIEWER_PARAMS}`;
+
 /**
  * OCD-499: in-app viewer used on the employee-facing "My Documents" page so
  * employees can VIEW a shared document without a visible download/save
@@ -39,7 +47,7 @@ export function DocumentViewer({ isOpen, onClose, fileUrl, fileName, mimeType }:
       <div onContextMenu={(e) => e.preventDefault()} className="w-full">
         {isPdf && (
           <embed
-            src={fileUrl}
+            src={withPdfViewerParams(fileUrl)}
             type="application/pdf"
             className="w-full h-[70vh] rounded-xl border border-[var(--gray-100)]"
           />
