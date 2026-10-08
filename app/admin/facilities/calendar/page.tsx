@@ -1,8 +1,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useAuth } from '@/hooks/useAuth';
-import api from '@/lib/api';
+import { useMyPermissionLevel } from '@/hooks/useMyPermissionLevel';
+import { facilityService } from '@/lib/services/facility.service';
 import {
   CalendarIcon,
   ChevronLeftIcon,
@@ -15,13 +15,16 @@ import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, addMont
 import { DATE_FORMATS } from '@/lib/constants';
 
 export default function AdminBookingCalendarPage() {
-  const { isHR, isSuperAdmin } = useAuth();
-  const canAccess = isHR || isSuperAdmin;
+  // OCD-591: gated by the same "facilities" write permission as the sidebar's
+  // Booking Calendar entry (and Facility Management), not by role - so access
+  // granted on the Permissions screen actually opens the page.
+  const { allowed: canAccess, loaded: permissionLoaded } = useMyPermissionLevel('facilities', 'write');
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [bookings, setBookings] = useState<FacilityBooking[]>([]);
   const [facilities, setFacilities] = useState<Facility[]>([]);
   const [selectedFacility, setSelectedFacility] = useState<string>('all');
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
 
   useEffect(() => {
     if (canAccess) {
@@ -32,8 +35,7 @@ export default function AdminBookingCalendarPage() {
 
   const fetchFacilities = async () => {
     try {
-      const response = await api.get('/facilities');
-      setFacilities(response.data || []);
+      setFacilities(await facilityService.listFacilities());
     } catch (err) {
       console.error(err);
     }
@@ -42,18 +44,18 @@ export default function AdminBookingCalendarPage() {
   const fetchBookings = async () => {
     try {
       setLoading(true);
-      const start = format(startOfMonth(currentMonth), 'yyyy-MM-dd');
-      const end = format(endOfMonth(currentMonth), 'yyyy-MM-dd');
-      
-      let url = `/facilities/all-bookings?start_date=${start}&end_date=${end}`;
-      if (selectedFacility !== 'all') {
-        url += `&facility_id=${selectedFacility}`;
-      }
-      
-      const response = await api.get(url);
-      setBookings(response.data || []);
+      setError('');
+      setBookings(
+        await facilityService.getAllBookings({
+          start_date: format(startOfMonth(currentMonth), 'yyyy-MM-dd'),
+          end_date: format(endOfMonth(currentMonth), 'yyyy-MM-dd'),
+          facility_id: selectedFacility === 'all' ? undefined : Number(selectedFacility),
+        }),
+      );
     } catch (err) {
       console.error(err);
+      setBookings([]);
+      setError('Could not load bookings. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -64,6 +66,7 @@ export default function AdminBookingCalendarPage() {
     end: endOfMonth(currentMonth),
   });
 
+  if (!permissionLoaded) return null;
   if (!canAccess) return <div className="p-8 text-center font-bold">Unauthorized</div>;
 
   return (
@@ -179,7 +182,12 @@ export default function AdminBookingCalendarPage() {
           Detailed Schedule
         </h2>
         <div className="space-y-4">
-          {bookings.length === 0 ? (
+          {error && (
+            <div role="alert" className="rounded-xl bg-[var(--error-light)] p-3 text-sm font-semibold text-[var(--error-text)]">
+              {error}
+            </div>
+          )}
+          {bookings.length === 0 && !error ? (
             <div className="text-center py-10 text-[var(--gray-400)]">No bookings found for this period.</div>
           ) : (
             bookings.map((b) => (

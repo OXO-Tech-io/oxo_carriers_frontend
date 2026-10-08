@@ -129,6 +129,10 @@ export default function AdminUsersPage() {
   // Hold status from this page (server also rejects it - see
   // UsersService.updateStatus).
   const canManageStatus = isSuperAdmin;
+  // OCD-592: deleting a user profile is Administrator only - HR Manager no
+  // longer gets the Delete action (DELETE /users/:id rejects it server-side
+  // too - see UsersController.delete).
+  const canDeleteUsers = isSuperAdmin;
   // OCD-476: HR Manager, HR Executive and Administrator get full profile
   // visibility and can edit organizational/employment fields.
   const canViewEditProfile = isHR || isSuperAdmin;
@@ -302,7 +306,7 @@ export default function AdminUsersPage() {
   // it, so the dialog's wording reflects "move to Archive" rather than
   // "permanently delete".
   const handleDeleteUser = async () => {
-    if (!deleteTarget) return;
+    if (!canDeleteUsers || !deleteTarget) return;
     setIsDeleting(true);
     try {
       await api.delete(`/users/${deleteTarget.id}`);
@@ -650,7 +654,7 @@ export default function AdminUsersPage() {
                             >
                               <KeyIcon className="h-5 w-5" />
                             </button>
-                            {(currentUser?.role === UserRole.HR_MANAGER || isSuperAdmin) && (
+                            {canDeleteUsers && (
                               <button
                                 onClick={() => setDeleteTarget(item)}
                                 className="p-2 text-red-600 hover:bg-[var(--error-light)] rounded-lg transition-colors"

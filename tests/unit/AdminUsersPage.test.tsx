@@ -98,7 +98,7 @@ describe("AdminUsersPage", () => {
   // app-styled ConfirmationDialog (title "Delete Employee", Delete/Cancel
   // actions), which the OCD-453 archive wording is layered onto.
   it("deletes only PII/Keycloak data and deactivates the account, leaving other records untouched", async () => {
-    mockAuth(UserRole.HR_MANAGER);
+    mockAuth(UserRole.SUPER_ADMIN);
     apiMock.delete.mockResolvedValue({});
     render(<AdminUsersPage />);
 
@@ -121,7 +121,7 @@ describe("AdminUsersPage", () => {
   });
 
   it("does not call delete when the confirmation is dismissed", async () => {
-    mockAuth(UserRole.HR_MANAGER);
+    mockAuth(UserRole.SUPER_ADMIN);
     render(<AdminUsersPage />);
 
     await screen.findByText("Jane Doe");
@@ -132,7 +132,7 @@ describe("AdminUsersPage", () => {
   });
 
   it("surfaces a failure toast without crashing when the delete request fails", async () => {
-    mockAuth(UserRole.HR_MANAGER);
+    mockAuth(UserRole.SUPER_ADMIN);
     apiMock.delete.mockRejectedValue({ response: { data: { message: "boom" } } });
     render(<AdminUsersPage />);
 
@@ -145,11 +145,28 @@ describe("AdminUsersPage", () => {
     );
   });
 
-  it("hides the delete action for HR executives (only HR Manager/Super Admin can delete)", async () => {
-    mockAuth(UserRole.HR_EXECUTIVE);
+  // OCD-592: deleting a user profile is Administrator only. HR Manager (who
+  // used to have it) and every other role that can open this page just don't
+  // get the Delete action - it's absent, not disabled.
+  it("shows the delete action to a Super Admin", async () => {
+    mockAuth(UserRole.SUPER_ADMIN);
+    render(<AdminUsersPage />);
+    await screen.findByText("Jane Doe");
+    expect(screen.getByTitle("Delete User")).toBeInTheDocument();
+  });
+
+  it.each([
+    ["HR Manager", UserRole.HR_MANAGER],
+    ["HR Executive", UserRole.HR_EXECUTIVE],
+  ])("hides the delete action from a %s while still listing users", async (_label, role) => {
+    mockAuth(role);
     render(<AdminUsersPage />);
     await screen.findByText("Jane Doe");
     expect(screen.queryByTitle("Delete User")).not.toBeInTheDocument();
+    expect(screen.queryByText("Delete Employee")).not.toBeInTheDocument();
+    // The other row actions an HR Manager legitimately has are unaffected.
+    expect(screen.getByTitle("Reset Password")).toBeInTheDocument();
+    expect(apiMock.delete).not.toHaveBeenCalled();
   });
 
   // Document Vault upload is Super Admin only by default (document_vault
