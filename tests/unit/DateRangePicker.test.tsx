@@ -62,6 +62,35 @@ describe("DateRangePicker", () => {
     expect(screen.getByText("Your Approved Leave")).toBeInTheDocument();
   });
 
+  it("renders a color swatch next to the pending and approved leave legend labels", async () => {
+    render(
+      <DateRangePicker
+        startDate={null}
+        endDate={null}
+        onChange={vi.fn()}
+        existingLeaveRequests={[
+          { start_date: "2026-01-05", end_date: "2026-01-06", status: "pending" },
+          { start_date: "2026-01-10", end_date: "2026-01-10", status: "hr_approved" },
+        ]}
+      />,
+    );
+    await waitFor(() => expect(apiMock.get).toHaveBeenCalled());
+
+    const pendingSwatch = screen.getByText("Your Pending Leave").previousElementSibling;
+    const approvedSwatch = screen.getByText("Your Approved Leave").previousElementSibling;
+
+    // The swatches are styled inline: the calendar's `.holiday-calendar .leave-day--*`
+    // rules don't reach the legend, which renders outside the calendar element.
+    expect(pendingSwatch).toHaveClass("bg-[var(--warning-light)]", "border");
+    expect(approvedSwatch).toHaveClass("bg-[var(--success-light)]", "border");
+    expect(pendingSwatch?.className).not.toBe(approvedSwatch?.className);
+
+    // The AM/PM half-day samples reuse the day-cell chip, which is absolutely
+    // positioned; the legend modifier keeps them in the flow beside their label.
+    expect(screen.getByText("AM")).toHaveClass("leave-period-chip", "leave-period-chip--legend");
+    expect(screen.getByText("PM")).toHaveClass("leave-period-chip", "leave-period-chip--legend");
+  });
+
   it("shows the selected range summary once both dates are set", async () => {
     render(
       <DateRangePicker

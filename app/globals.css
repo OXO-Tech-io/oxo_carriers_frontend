@@ -476,6 +476,13 @@ input[type="week"] {
   padding: 1px 3px;
   border-radius: 4px;
 }
+/* The legend reuses the chip as a sample outside any day cell, so it sits in
+   the flow instead of being pinned to a (non-existent) cell corner (OCD-587). */
+.leave-period-chip--legend {
+  position: static;
+  font-size: 9px;
+  padding: 2px 5px;
+}
 .leave-period-chip--pending {
   background-color: var(--warning-light);
   color: var(--warning-text);
@@ -483,4 +490,22 @@ input[type="week"] {
 .leave-period-chip--approved {
   background-color: var(--success-light);
   color: var(--success-text);
+}
+
+/* Spill-over days from the previous/next month (OCD-587). With two months
+   shown, react-datepicker renders these as empty cells at the end of the first
+   month and the start of the second, but they still receive the same state
+   classes as the real date (selected, range, today, leave tint) - so picking
+   Dec 2 also painted a blank circle in November's grid. Only the cell that
+   belongs to the displayed month should carry a highlight. The :hover variant
+   is listed separately because the generic day hover rule above is more
+   specific than the base selector. */
+.holiday-calendar .react-datepicker__day--outside-month.react-datepicker__day,
+.holiday-calendar .react-datepicker__day--outside-month.react-datepicker__day:hover:not(.react-datepicker__day--disabled) {
+  background-color: transparent;
+  color: var(--gray-400);
+  border-color: transparent;
+  border-radius: 9999px;
+  box-shadow: none;
+  font-weight: 500;
 }

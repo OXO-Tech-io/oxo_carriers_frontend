@@ -315,21 +315,24 @@ export default function DateRangePicker({
             </div>
             {hasLeaveMarkers && (
               <>
+                {/* Swatches mirror the calendar's own tints (leave-day--pending/approved in
+                    globals.css). Those rules are scoped under .holiday-calendar, so the
+                    legend - which sits outside it - styles its swatches inline (OCD-587). */}
                 <div className="flex items-center gap-2">
-                  <span className="inline-block w-4 h-4 rounded leave-day--pending"></span>
+                  <span className="inline-block w-4 h-4 shrink-0 rounded-full bg-[var(--warning-light)] border border-[var(--warning-text)]"></span>
                   <span>Your Pending Leave</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className="inline-block w-4 h-4 rounded leave-day--approved"></span>
+                  <span className="inline-block w-4 h-4 shrink-0 rounded-full bg-[var(--success-light)] border border-[var(--success-text)]"></span>
                   <span>Your Approved Leave</span>
                 </div>
                 <div className="flex items-center gap-2 w-full">
                   <span>Dates with pending or approved full-day leave cannot be selected.</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className="leave-period-chip leave-period-chip--pending">AM</span>
+                  <span className="leave-period-chip leave-period-chip--legend leave-period-chip--pending">AM</span>
                   <span>/</span>
-                  <span className="leave-period-chip leave-period-chip--approved">PM</span>
+                  <span className="leave-period-chip leave-period-chip--legend leave-period-chip--approved">PM</span>
                   <span>Half-Day Leave</span>
                 </div>
               </>

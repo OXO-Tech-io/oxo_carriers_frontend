@@ -108,6 +108,49 @@ describe("Sidebar", () => {
     expect(screen.queryByText("Document Vault")).not.toBeInTheDocument();
   });
 
+  describe("Booking Calendar visibility (OCD-591)", () => {
+    // "facilities" read is held by every Employee so they can book facilities - it must not
+    // surface the admin-only Booking Calendar (the page itself answers "Unauthorized").
+    it.each(["employee", "finance_manager", "finance_executive"])(
+      "hides Booking Calendar, Facility Management and the Administration heading from role %s with only facilities read",
+      async (role) => {
+        useAuthMock.mockReturnValue({ user: { id: 20, first_name: "R", last_name: "O", role }, isSuperAdmin: false });
+        apiMock.get.mockResolvedValue({ data: { permissionLevels: { facilities: "read" } } });
+
+        render(<Sidebar />);
+        // The employee-facing Facilities entry stays - only the admin entries go.
+        await waitFor(() => expect(screen.getAllByText("Facilities").length).toBeGreaterThan(0));
+        expect(screen.queryByText("Booking Calendar")).not.toBeInTheDocument();
+        expect(screen.queryByText("Facility Management")).not.toBeInTheDocument();
+        expect(screen.queryByText("Administration")).not.toBeInTheDocument();
+      },
+    );
+
+    it.each([
+      ["hr_manager", { isHRManager: true }],
+      ["hr_executive", { isHRManager: false }],
+    ])("shows Booking Calendar to an %s with facilities write", async (role, flags) => {
+      useAuthMock.mockReturnValue({
+        user: { id: 21, first_name: "H", last_name: "R", role },
+        isSuperAdmin: false,
+        ...flags,
+      });
+      apiMock.get.mockResolvedValue({ data: { permissionLevels: { facilities: "write" } } });
+
+      render(<Sidebar />);
+      await waitFor(() => expect(screen.getAllByText("Booking Calendar").length).toBeGreaterThan(0));
+      expect(screen.getAllByText("Facility Management").length).toBeGreaterThan(0);
+      expect(screen.getAllByText("Administration").length).toBeGreaterThan(0);
+    });
+
+    it("keeps Booking Calendar for a super admin without waiting on /permissions/me", async () => {
+      useAuthMock.mockReturnValue({ user: { id: 1, first_name: "A", last_name: "B", role: "super_admin" }, isSuperAdmin: true });
+      render(<Sidebar />);
+      expect(screen.getAllByText("Booking Calendar").length).toBeGreaterThan(0);
+      await act(() => Promise.resolve());
+    });
+  });
+
   it("falls back to no items when the permissions request fails", async () => {
     useAuthMock.mockReturnValue({ user: { id: 4, first_name: "G", last_name: "H", role: "employee" }, isSuperAdmin: false });
     apiMock.get.mockRejectedValue(new Error("network error"));

@@ -212,11 +212,15 @@ const adminNavigation: MenuItem[] = [
     requiredLevel: "write",
   },
   {
+    // OCD-591: needs "write" like its sibling "Facility Management". Plain
+    // "read" is held by every Employee (it's what lets them book facilities),
+    // so the item showed up for them even though the page itself is limited
+    // to HR + Super Admin and answers "Unauthorized".
     name: "Booking Calendar",
     href: "/admin/facilities/calendar",
     icon: Calendar,
     permissionKeys: ["facilities"],
-    requiredLevel: "read",
+    requiredLevel: "write",
   },
   {
     // Salary bulk upload (POST /salaries/bulk-uploads) - was mis-keyed to
