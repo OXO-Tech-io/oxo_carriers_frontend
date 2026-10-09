@@ -491,6 +491,43 @@ input[type="week"] {
   background-color: var(--success-light);
   color: var(--success-text);
 }
+/* Half-day tags are centred above (AM) and below (PM) the date number, so a
+   date with both halves booked shows both (OCD-593). The legend samples carry
+   neither modifier and stay in the flow. */
+.leave-period-chip--am,
+.leave-period-chip--pm {
+  right: auto;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 8px;
+  padding: 1px 4px;
+}
+.leave-period-chip--am { top: 2px; }
+.leave-period-chip--pm { top: auto; bottom: 2px; }
+/* A half-day request colours only its own half of the cell - top for the
+   morning, bottom for the evening, each in its own status colour - so the free
+   half still reads as free. Each half's colour comes in through a variable set
+   by the status classes below (leave-day--am-pending and its siblings). */
+.holiday-calendar .leave-day--halves {
+  background-image:
+    linear-gradient(var(--leave-am, transparent), var(--leave-am, transparent)),
+    linear-gradient(var(--leave-pm, transparent), var(--leave-pm, transparent));
+  background-size: 100% 50%, 100% 50%;
+  background-position: top, bottom;
+  background-repeat: no-repeat;
+}
+.holiday-calendar .leave-day--am-pending { --leave-am: var(--warning-light); }
+.holiday-calendar .leave-day--am-approved { --leave-am: var(--success-light); }
+.holiday-calendar .leave-day--pm-pending { --leave-pm: var(--warning-light); }
+.holiday-calendar .leave-day--pm-approved { --leave-pm: var(--success-light); }
+/* A date being picked keeps its selection colour; the tags alone mark the booked halves. */
+.holiday-calendar .leave-day--halves.react-datepicker__day--selected,
+.holiday-calendar .leave-day--halves.react-datepicker__day--keyboard-selected,
+.holiday-calendar .leave-day--halves.react-datepicker__day--range-start,
+.holiday-calendar .leave-day--halves.react-datepicker__day--range-end,
+.holiday-calendar .leave-day--halves.react-datepicker__day--in-range {
+  background-image: none;
+}
 
 /* Spill-over days from the previous/next month (OCD-587). With two months
    shown, react-datepicker renders these as empty cells at the end of the first

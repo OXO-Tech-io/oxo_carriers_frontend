@@ -40,6 +40,15 @@ function RangeHint({ startDate, endDate }: { startDate: Date | null; endDate: Da
   );
 }
 
+interface LeaveMarker {
+  variant: 'pending' | 'approved';
+  period?: 'morning' | 'evening';
+  label: string;
+}
+
+const PERIOD_LABEL_SUFFIX = { morning: ' (Morning)', evening: ' (Evening)' } as const;
+const PERIOD_TAG = { morning: 'AM', evening: 'PM' } as const;
+
 export interface ExistingLeaveMarker {
   start_date: string | Date;
   end_date: string | Date;
@@ -130,10 +139,12 @@ export default function DateRangePicker({
   // color-coded marker on the calendar so the viewer can see, at a glance,
   // which dates they've already requested off (OCD-512). Rejected/cancelled
   // requests leave the date unmarked, since it's available to request again.
-  const getLeaveMarker = (
-    date: Date
-  ): { variant: 'pending' | 'approved'; period?: 'morning' | 'evening'; label: string } | null => {
+  // A date can carry two markers - a morning and an evening half-day, each with
+  // its own status - so every covering request is returned, not just the first.
+  // At most one marker per slot (full day / morning / evening) is kept.
+  const getLeaveMarkers = (date: Date): LeaveMarker[] => {
     const dayStart = startOfDay(date).getTime();
+    const markers: LeaveMarker[] = [];
     for (const request of leaveMarkers) {
       if (request.status === 'rejected' || request.status === 'cancelled') continue;
       const rangeStart = startOfDay(new Date(request.start_date)).getTime();
@@ -142,13 +153,29 @@ export default function DateRangePicker({
 
       const variant: 'pending' | 'approved' = request.status === 'hr_approved' ? 'approved' : 'pending';
       const period = request.is_half_day ? request.half_day_period : undefined;
+      if (markers.some((marker) => marker.period === period)) continue;
       const statusLabel = variant === 'approved' ? 'Approved' : 'Pending';
-      let periodLabel = '';
-      if (period === 'morning') periodLabel = ' (Morning)';
-      else if (period === 'evening') periodLabel = ' (Evening)';
-      return { variant, period, label: `${statusLabel} leave${periodLabel}` };
+      const periodLabel = period ? PERIOD_LABEL_SUFFIX[period] : '';
+      markers.push({ variant, period, label: `${statusLabel} leave${periodLabel}` });
     }
-    return null;
+    return markers;
+  };
+
+  // A full-day request tints the whole cell; half-day requests tint only their
+  // own half (top = morning, bottom = evening), so the free half still reads as
+  // free (OCD-593).
+  const getLeaveDayClasses = (markers: LeaveMarker[]): string[] => {
+    const fullDay = markers.find((marker) => !marker.period);
+    if (fullDay) {
+      return [fullDay.variant === 'approved' ? 'leave-day--approved' : 'leave-day--pending'];
+    }
+    if (markers.length === 0) return [];
+    return [
+      'leave-day--halves',
+      ...markers.map(
+        (marker) => `leave-day--${marker.period === 'morning' ? 'am' : 'pm'}-${marker.variant}`
+      ),
+    ];
   };
 
   // Custom day class name for highlighting holidays
@@ -171,15 +198,8 @@ export default function DateRangePicker({
       classes.push('holiday-day');
     }
 
-    // Tint the whole cell for a full-day pending/approved leave request -
-    // half-day requests only get the AM/PM chip rendered in renderDayContents,
-    // since tinting the entire cell would misleadingly suggest the whole date
-    // is unavailable.
     if (!isWeekendDay && !isCustomHoliday) {
-      const marker = getLeaveMarker(date);
-      if (marker && !marker.period) {
-        classes.push(marker.variant === 'approved' ? 'leave-day--approved' : 'leave-day--pending');
-      }
+      classes.push(...getLeaveDayClasses(getLeaveMarkers(date)));
     }
 
     // Add range selection classes (only for selectable dates)
@@ -256,8 +276,7 @@ export default function DateRangePicker({
       // Disable dates already covered by a pending/approved full-day request.
       // Half-day requests stay selectable - the other half may still be free
       // (the page validates the AM/PM combination).
-      const existing = getLeaveMarker(date);
-      if (existing && !existing.period) {
+      if (getLeaveMarkers(date).some((marker) => !marker.period)) {
         return false;
       }
       // Allow all other dates
@@ -273,7 +292,9 @@ export default function DateRangePicker({
     renderDayContents: (dayOfMonth: number, date: Date) => {
       const holidayName = getHolidayName(date);
       const isWeekendDay = isWeekend(date);
-      const marker = getLeaveMarker(date);
+      // One tag per booked half: AM sits above the date, PM below it, so a date
+      // with both halves taken shows both.
+      const halfDayMarkers = getLeaveMarkers(date).filter((marker) => marker.period);
       return (
         <div className="date-picker-day">
           <span>{dayOfMonth}</span>
@@ -282,14 +303,15 @@ export default function DateRangePicker({
               ●
             </span>
           )}
-          {marker?.period && (
+          {halfDayMarkers.map((marker) => (
             <span
-              className={`leave-period-chip leave-period-chip--${marker.variant}`}
+              key={marker.period}
+              className={`leave-period-chip leave-period-chip--${marker.variant} leave-period-chip--${marker.period === 'morning' ? 'am' : 'pm'}`}
               title={marker.label}
             >
-              {marker.period === 'morning' ? 'AM' : 'PM'}
+              {PERIOD_TAG[marker.period!]}
             </span>
-          )}
+          ))}
         </div>
       );
     }
