@@ -19,6 +19,11 @@ import {
 import { format, isWeekend, isSameDay } from 'date-fns';
 import DateRangePicker from '@/components/DateRangePicker';
 import { DATE_FORMATS } from '@/lib/constants';
+import {
+  findLeaveConflict,
+  getLeaveConflictMessage,
+  type LeaveSelection,
+} from '@/lib/leaveConflicts';
 import { LeaveStatusBadge } from '@/components/leaves/LeaveStatusBadge';
 
 import { BottomSheet } from '@/components/ui/BottomSheet';
@@ -29,9 +34,6 @@ type Tab = 'balance' | 'request' | 'history';
 
 const ALLOWED_ATTACHMENT_PATTERN = /\.(pdf|docx?|jpe?g|png)$/i;
 const ALLOWED_ATTACHMENT_LABEL = 'PDF, Word (.doc, .docx), JPG or PNG';
-
-const toIsoDay = (value: string | Date) =>
-  typeof value === 'string' ? value.slice(0, 10) : format(value, DATE_FORMATS.ISO_DATE);
 
 export default function LeavesPage() {
   const { user } = useAuth();
@@ -185,28 +187,42 @@ export default function LeavesPage() {
 
 
 
-  // Mirrors the backend rule: an existing pending/approved request blocks the
-  // new one unless both are half-days for different periods.
-  const findLeaveConflict = (startIso: string, endIso: string) =>
-    requests.find((existing) => {
-      if (existing.status === 'rejected' || existing.status === 'cancelled') return false;
-      if (toIsoDay(existing.start_date) > endIso || toIsoDay(existing.end_date) < startIso) return false;
-      if (!existing.is_half_day || !formData.is_half_day) return true;
-      return existing.half_day_period === formData.half_day_period;
-    });
-
-  const conflictMessage = (startIso: string, endIso: string) =>
-    startIso === endIso
-      ? `You already have a pending or approved leave request on ${startIso}. Please choose a different date.`
-      : `You already have a pending or approved leave request between ${startIso} and ${endIso}. Please choose a different date range.`;
+  // What would be submitted right now, checked against the viewer's own requests
+  // (rules in lib/leaveConflicts.ts, mirroring the backend). Drives the inline
+  // error and the Submit button, so a half-day booked on one half of a date
+  // still lets the other half be requested (OCD-593).
+  const submitEndIso = formData.is_half_day ? formData.start_date : formData.end_date;
+  const submitSelection: LeaveSelection = {
+    startIso: formData.start_date,
+    endIso: submitEndIso,
+    isHalfDay: formData.is_half_day,
+    period: formData.half_day_period,
+  };
+  const leaveConflict =
+    formData.start_date && submitEndIso ? findLeaveConflict(requests, submitSelection) : undefined;
+  const leaveConflictMessage = leaveConflict
+    ? getLeaveConflictMessage(submitSelection, leaveConflict)
+    : '';
+  const formAlert = formError || leaveConflictMessage;
 
   const handleDateRangeChange = (start: Date | null, end: Date | null) => {
     setFormError('');
     if (start) {
       const startIso = format(start, DATE_FORMATS.ISO_DATE);
       const endIso = end ? format(end, DATE_FORMATS.ISO_DATE) : startIso;
-      if (findLeaveConflict(startIso, endIso)) {
-        setFormError(conflictMessage(startIso, endIso));
+      // The half-day toggle sits below the calendar, so a single date is picked
+      // before the user can opt into a half-day. Unless it's a multi-day range,
+      // judge it as a half-day with the period still open: a date with one half
+      // booked stays selectable, and the chosen period is checked once picked.
+      const selection: LeaveSelection = {
+        startIso,
+        endIso,
+        isHalfDay: formData.is_half_day || startIso === endIso,
+        period: formData.is_half_day ? formData.half_day_period : '',
+      };
+      const conflict = findLeaveConflict(requests, selection);
+      if (conflict) {
+        setFormError(getLeaveConflictMessage(selection, conflict));
         setStartDatePicker(null);
         setEndDatePicker(null);
         setFormData(prev => ({ ...prev, start_date: '', end_date: '' }));
@@ -231,11 +247,8 @@ export default function LeavesPage() {
     setSuccess('');
     setFormError('');
 
-    const submitEndIso = formData.is_half_day ? formData.start_date : formData.end_date;
-    if (formData.start_date && submitEndIso && findLeaveConflict(formData.start_date, submitEndIso)) {
-      setFormError(conflictMessage(formData.start_date, submitEndIso));
-      return;
-    }
+    // The conflict is already shown inline (formAlert); just don't submit it.
+    if (leaveConflict) return;
 
     if (attachment && !ALLOWED_ATTACHMENT_PATTERN.test(attachment.name)) {
       setError(`Unsupported file type. Please upload a ${ALLOWED_ATTACHMENT_LABEL} file.`);
@@ -393,9 +406,9 @@ export default function LeavesPage() {
           )}
         </div>
 
-        {formError && (
+        {formAlert && (
           <div role="alert" className="bg-red-500/10 border-l-4 border-red-500 text-red-600 dark:text-red-400 p-3 rounded-xl text-xs font-semibold">
-            {formError}
+            {formAlert}
           </div>
         )}
 
@@ -407,6 +420,7 @@ export default function LeavesPage() {
               checked={formData.is_half_day}
               onChange={(e) => {
                 const isHalfDay = e.target.checked;
+                setFormError('');
                 setFormData({
                   ...formData,
                   is_half_day: isHalfDay,
@@ -429,7 +443,10 @@ export default function LeavesPage() {
               <select
                 required={formData.is_half_day}
                 value={formData.half_day_period}
-                onChange={(e) => setFormData({ ...formData, half_day_period: e.target.value as 'morning' | 'evening' })}
+                onChange={(e) => {
+                  setFormError('');
+                  setFormData({ ...formData, half_day_period: e.target.value as 'morning' | 'evening' });
+                }}
                 className="block w-full px-3 py-2.5 border border-[var(--gray-100)] rounded-xl text-sm font-semibold text-[var(--foreground)] bg-[var(--card-bg)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)]"
               >
                 <option value="">Select time period</option>
@@ -498,7 +515,7 @@ export default function LeavesPage() {
         </Button>
         <Button
           type="submit"
-          disabled={submitting || hasInsufficientBalance || !formData.leave_type_id || !formData.start_date || (!formData.end_date && !formData.is_half_day) || !formData.reason || (formData.is_half_day && !formData.half_day_period) || !attachment}
+          disabled={submitting || hasInsufficientBalance || !!leaveConflict || !formData.leave_type_id || !formData.start_date || (!formData.end_date && !formData.is_half_day) || !formData.reason || (formData.is_half_day && !formData.half_day_period) || !attachment}
           isLoading={submitting}
         >
           Submit
