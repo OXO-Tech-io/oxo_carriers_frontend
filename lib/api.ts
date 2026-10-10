@@ -1,7 +1,6 @@
 import axios from 'axios';
 import { useAuthStore } from '@/store/authStore';
 import { ensureFreshToken } from '@/lib/keycloakAuth';
-import { SESSION_TERMINATED_MESSAGE_KEY } from '@/lib/keycloak';
 
 const API_URL =
   process.env.NEXT_PUBLIC_API_URL ||
@@ -40,21 +39,6 @@ api.interceptors.response.use(
   (response) => response,
   async (error) => {
     if (error.response?.status === 401 && typeof window !== 'undefined') {
-      // OCD-455: a mismatched session (logged in from another browser) gets
-      // a distinct error code from JwtAuthGuard - stash its message so the
-      // login page can explain why the user landed there. A plain expired-
-      // token 401 has no `code` and silently redirects, same as before.
-      if (error.response?.data?.code === 'SESSION_TERMINATED') {
-        try {
-          sessionStorage.setItem(
-            SESSION_TERMINATED_MESSAGE_KEY,
-            error.response.data.message ??
-              'This account has been logged in from another browser. Your current session has been terminated.',
-          );
-        } catch {
-          // Best-effort - worst case the login page just doesn't explain why.
-        }
-      }
       const { logout } = useAuthStore.getState();
       // logout() redirects to Keycloak's end-session endpoint and never resolves.
       await logout();
