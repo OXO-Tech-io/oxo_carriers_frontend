@@ -1,5 +1,4 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { SESSION_TERMINATED_MESSAGE_KEY } from "@/lib/keycloak";
 
 const { captured, createMock, ensureFreshTokenMock, syncFromKeycloakMock, logoutMock } =
   vi.hoisted(() => {
@@ -113,34 +112,5 @@ describe("lib/api", () => {
     const error = { response: { status: 500 } };
     await expect(captured.responseRejected!(error)).rejects.toBe(error);
     expect(logoutMock).not.toHaveBeenCalled();
-  });
-
-  it("response interceptor stashes the SESSION_TERMINATED message before logging out (OCD-455)", async () => {
-    logoutMock.mockResolvedValue(undefined);
-    sessionStorage.removeItem(SESSION_TERMINATED_MESSAGE_KEY);
-    const error = {
-      response: {
-        status: 401,
-        data: {
-          code: "SESSION_TERMINATED",
-          message: "This account has been logged in from another browser. Your current session has been terminated.",
-        },
-      },
-    };
-
-    await expect(captured.responseRejected!(error)).rejects.toBe(error);
-    expect(logoutMock).toHaveBeenCalled();
-    expect(sessionStorage.getItem(SESSION_TERMINATED_MESSAGE_KEY)).toBe(
-      "This account has been logged in from another browser. Your current session has been terminated.",
-    );
-  });
-
-  it("response interceptor logs out without stashing a message on a plain expired-token 401", async () => {
-    logoutMock.mockResolvedValue(undefined);
-    sessionStorage.removeItem(SESSION_TERMINATED_MESSAGE_KEY);
-    const error = { response: { status: 401 } };
-
-    await expect(captured.responseRejected!(error)).rejects.toBe(error);
-    expect(sessionStorage.getItem(SESSION_TERMINATED_MESSAGE_KEY)).toBeNull();
   });
 });

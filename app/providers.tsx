@@ -5,39 +5,9 @@ import { useEffect, useState, type ReactNode } from 'react';
 import { ToastProvider } from '@/contexts/ToastContext';
 import { queryClient } from '@/lib/queryClient';
 import { useAuthStore } from '@/store/authStore';
-import { getKeycloak, initKeycloak, PENDING_NEW_LOGIN_KEY } from '@/lib/keycloak';
+import { initKeycloak } from '@/lib/keycloak';
 import api from '@/lib/api';
 import { mapDbUserToAppUser } from '@/lib/mappers/user.mapper';
-
-/**
- * OCD-455: if this init resolved a session that was just started via an
- * explicit `kcLogin()` redirect (flagged in lib/keycloak.ts, never set by a
- * silent SSO restore or a plain token refresh), tell the backend to claim it
- * as the account's sole active session, displacing any other one. A failure
- * here just means single-session enforcement doesn't kick in for this login,
- * not that the login itself failed.
- *
- * Callers must await this before anything else hits the API: until the claim
- * lands, the backend still holds the previous session's id and rejects the new
- * session's requests (e.g. /auth/me) as superseded, which logs the user straight
- * back out and loops them to the login page.
- */
-export async function claimSessionIfPendingNewLogin(): Promise<void> {
-  let pendingNewLogin = false;
-  try {
-    pendingNewLogin = sessionStorage.getItem(PENDING_NEW_LOGIN_KEY) === '1';
-    if (pendingNewLogin) sessionStorage.removeItem(PENDING_NEW_LOGIN_KEY);
-  } catch {
-    return;
-  }
-  if (!pendingNewLogin || !getKeycloak()?.authenticated) return;
-
-  try {
-    await api.post('/auth/claim-sessions');
-  } catch (err) {
-    console.error('[OCD-455] Failed to claim session:', err);
-  }
-}
 
 /**
  * Initialize keycloak-js once on mount, then sync tokens into the auth store
@@ -53,13 +23,9 @@ function KeycloakBootstrap({ children }: { children: ReactNode }) {
     if (initialized) return;
     let cancelled = false;
     initKeycloak({ onTokens: () => syncFromKeycloak() })
-      .then(async () => {
+      .then(() => {
         if (cancelled) return;
         syncFromKeycloak();
-        // Claim the new session before rendering children - see the note on
-        // claimSessionIfPendingNewLogin.
-        await claimSessionIfPendingNewLogin();
-        if (cancelled) return;
         setInitialized(true);
       })
       .catch((err) => {
