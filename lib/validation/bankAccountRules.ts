@@ -1,0 +1,106 @@
+// OCD-598: per-bank account number rules. Mirrors
+// oxo_carriers_backend/src/utils/bankAccountRules.ts - keep both in sync.
+//
+// The bank is captured as free text, so a rule is resolved by matching the
+// entered name against known aliases. Unrecognised banks fall back to the
+// generic numeric 6-20 digit rule. No supported bank uses alphanumeric account
+// numbers, so every rule is digits-only.
+
+export interface BankAccountRule {
+  bank: string;
+  aliases: string[];
+  lengths: number[];
+  /** Optional prefix constraint per length (e.g. Standard Chartered). */
+  prefixes?: Record<number, string[]>;
+}
+
+/** Dropdown choice for banks without a rule above; uses the generic numeric rule. */
+export const OTHER_BANK_OPTION = 'Other';
+
+export const FALLBACK_ACCOUNT_NUMBER_MIN = 6;
+export const FALLBACK_ACCOUNT_NUMBER_MAX = 20;
+
+export const BANK_ACCOUNT_RULES: BankAccountRule[] = [
+  { bank: 'Bank of Ceylon', aliases: ['bankofceylon', 'boc'], lengths: [10] },
+  { bank: 'Commercial Bank of Ceylon', aliases: ['commercialbankofceylon', 'commercialbank', 'combank'], lengths: [10] },
+  { bank: 'Citibank', aliases: ['citibank', 'citi'], lengths: [10] },
+  { bank: 'Deutsche Bank', aliases: ['deutschebank'], lengths: [10] },
+  {
+    bank: 'Standard Chartered Bank',
+    aliases: ['standardchartered', 'standardcharteredbank', 'scb'],
+    lengths: [11, 12],
+    prefixes: { 11: ['18', '01'], 12: ['88'] },
+  },
+  { bank: 'Cargills Bank', aliases: ['cargillsbank'], lengths: [12] },
+  { bank: 'DFCC Bank', aliases: ['dfccbank', 'dfcc'], lengths: [12] },
+  { bank: 'Hatton National Bank', aliases: ['hattonnationalbank', 'hnb'], lengths: [12] },
+  { bank: 'HSBC', aliases: ['hsbc'], lengths: [12] },
+  { bank: 'National Development Bank', aliases: ['nationaldevelopmentbank', 'ndbbank', 'ndb'], lengths: [12] },
+  { bank: 'National Savings Bank', aliases: ['nationalsavingsbank', 'nsb'], lengths: [12] },
+  { bank: 'Nations Trust Bank', aliases: ['nationstrustbank', 'ntb'], lengths: [12] },
+  { bank: 'Pan Asia Bank', aliases: ['panasiabank', 'pabc'], lengths: [12] },
+  { bank: 'Regional Development Bank', aliases: ['regionaldevelopmentbank', 'rdb'], lengths: [12] },
+  { bank: 'Sampath Bank', aliases: ['sampathbank'], lengths: [12] },
+  { bank: 'Amana Bank', aliases: ['amanabank'], lengths: [13] },
+  { bank: 'Public Bank', aliases: ['publicbank'], lengths: [13] },
+  { bank: 'Habib Bank', aliases: ['habibbank'], lengths: [13] },
+  { bank: 'State Bank of India', aliases: ['statebankofindia', 'sbi'], lengths: [14] },
+  { bank: "People's Bank", aliases: ['peoplesbank'], lengths: [15] },
+  { bank: 'Seylan Bank', aliases: ['seylanbank'], lengths: [15] },
+  { bank: 'Union Bank', aliases: ['unionbank'], lengths: [16] },
+  { bank: 'CDB', aliases: ['citizensdevelopmentbusiness', 'cdbbank', 'cdb'], lengths: [18] },
+];
+
+const normalise = (value: string): string => value.toLowerCase().replace(/[^a-z0-9]/g, '');
+
+/**
+ * Resolves the rule for a free-text bank name. Short abbreviations (<= 5
+ * chars) must match the whole name; longer aliases may appear within it. The
+ * longest matching alias wins so "Commercial Bank of Ceylon" is not mistaken
+ * for "Bank of Ceylon".
+ */
+export function getBankAccountRule(bankName: string | null | undefined): BankAccountRule | null {
+  const name = normalise(bankName ?? '');
+  if (!name) return null;
+  let best: { rule: BankAccountRule; length: number } | null = null;
+  for (const rule of BANK_ACCOUNT_RULES) {
+    for (const alias of rule.aliases) {
+      const matches = alias.length <= 5 ? name === alias : name.includes(alias);
+      if (matches && (!best || alias.length > best.length)) best = { rule, length: alias.length };
+    }
+  }
+  return best?.rule ?? null;
+}
+
+export function describeBankAccountRule(bankName: string | null | undefined): string {
+  const rule = getBankAccountRule(bankName);
+  if (!rule) return `Numeric digits only (${FALLBACK_ACCOUNT_NUMBER_MIN}-${FALLBACK_ACCOUNT_NUMBER_MAX} digits)`;
+  const lengths = rule.lengths.join(' or ');
+  return `${rule.bank}: ${lengths} digits, numeric only`;
+}
+
+/** Returns true when valid (or empty), otherwise a user-facing error message. */
+export function validateAccountNumberForBank(
+  accountNumber: string | null | undefined,
+  bankName: string | null | undefined,
+): string | true {
+  const value = (accountNumber ?? '').trim();
+  if (!value) return true;
+  if (!/^\d+$/.test(value)) return 'Bank account number must contain numeric digits only (no spaces, hyphens or letters).';
+
+  const rule = getBankAccountRule(bankName);
+  if (!rule) {
+    return value.length >= FALLBACK_ACCOUNT_NUMBER_MIN && value.length <= FALLBACK_ACCOUNT_NUMBER_MAX
+      ? true
+      : `Bank account number must contain ${FALLBACK_ACCOUNT_NUMBER_MIN}-${FALLBACK_ACCOUNT_NUMBER_MAX} numeric digits only.`;
+  }
+
+  if (!rule.lengths.includes(value.length)) {
+    return `${rule.bank} account numbers must be ${rule.lengths.join(' or ')} digits long.`;
+  }
+  const allowed = rule.prefixes?.[value.length];
+  if (allowed && !allowed.some((p) => value.startsWith(p))) {
+    return `${rule.bank} ${value.length}-digit account numbers must start with ${allowed.join(' or ')}.`;
+  }
+  return true;
+}

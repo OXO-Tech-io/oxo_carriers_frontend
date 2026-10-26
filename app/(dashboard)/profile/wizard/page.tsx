@@ -1,7 +1,7 @@
 'use client';
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { Suspense, useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useForm, type UseFormReturn } from 'react-hook-form';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -9,7 +9,9 @@ import { FileUpload } from '@/components/ui/FileUpload';
 import { Stepper, StepPanel, type StepDefinition } from '@/components/ui/Stepper';
 import api from '@/lib/api';
 import { useToast } from '@/contexts/ToastContext';
+import { useAuth } from '@/hooks/useAuth';
 import { useProfileQuery } from '@/hooks/queries/use-profile-query';
+import { useUserByIdQuery } from '@/hooks/queries/use-user-by-id-query';
 import { useEmployeePersonalDetailsQuery } from '@/hooks/queries/use-employee-personal-details-query';
 import { useEmployeeNomineesQuery } from '@/hooks/queries/use-employee-nominees-query';
 import { useEmployeeDependentsQuery } from '@/hooks/queries/use-employee-dependents-query';
@@ -120,9 +122,36 @@ const STEP_FIELD_NAMES: (keyof WizardFormValues)[][] = [
   [],
 ];
 
+// OCD-603/604/605: who has to approve a request raised by `role` before it is applied.
+const approvalPathLabel = (role?: string) =>
+  role === 'hr_manager' || role === 'super_admin'
+    ? 'the Administrator'
+    : 'the HR Manager and then the Administrator';
+
 export default function ProfileWizardPage() {
+  // useSearchParams needs a Suspense boundary for Next's static prerender.
+  return (
+    <Suspense fallback={null}>
+      <ProfileWizardLoader />
+    </Suspense>
+  );
+}
+
+function ProfileWizardLoader() {
   const router = useRouter();
-  const { data: profile } = useProfileQuery();
+  const searchParams = useSearchParams();
+  const { user: me, isHR, isSuperAdmin } = useAuth();
+  // OCD-603/604: HR Manager / HR Executive (and the Administrator) can open this
+  // wizard for another employee via ?userId=<id>; the changes still go through
+  // approval. Everyone else always edits their own profile.
+  const requestedUserId = Number(searchParams.get('userId'));
+  const targetUserId =
+    (isHR || isSuperAdmin) && Number.isInteger(requestedUserId) && requestedUserId > 0 && requestedUserId !== me?.id
+      ? requestedUserId
+      : undefined;
+  const { data: myProfile } = useProfileQuery({ enabled: !targetUserId });
+  const { data: targetProfile, isError: targetFailed } = useUserByIdQuery(targetUserId);
+  const profile = targetUserId ? targetProfile : myProfile;
   const { data: pii, isLoading: piiLoading } = useEmployeePersonalDetailsQuery(profile?.id, { enabled: !!profile?.id });
   const { data: nominees, isLoading: nomineesLoading } = useEmployeeNomineesQuery(profile?.id, {
     enabled: !!profile?.id,
@@ -137,8 +166,12 @@ export default function ProfileWizardPage() {
   const { data: welfareInfo, isLoading: welfareLoading } = useEmployeeWelfareInfoQuery(profile?.id, {
     enabled: !!profile?.id,
   });
-  const { data: education, isLoading: educationLoading } = useEmployeeEducationQuery();
-  const { data: workHistory, isLoading: workHistoryLoading } = useEmployeeWorkHistoryQuery();
+  const { data: education, isLoading: educationLoading } = useEmployeeEducationQuery(targetUserId, {
+    enabled: !targetUserId || !!profile,
+  });
+  const { data: workHistory, isLoading: workHistoryLoading } = useEmployeeWorkHistoryQuery(targetUserId, {
+    enabled: !targetUserId || !!profile,
+  });
 
   const isLoading =
     !profile ||
@@ -150,11 +183,28 @@ export default function ProfileWizardPage() {
     educationLoading ||
     workHistoryLoading;
 
+  // The employee HR asked to edit could not be loaded (not found / no access) - say so
+  // instead of showing "Loading..." forever.
+  if (targetUserId && targetFailed) {
+    return (
+      <div className="max-w-4xl mx-auto py-10 px-4">
+        <Card padding="lg">
+          <p className="text-sm font-semibold text-[var(--foreground)]">Unable to load this employee&apos;s profile.</p>
+          <p className="text-xs text-[var(--gray-400)] font-medium mt-1">
+            The employee may not exist or you may not have access. Go back and try again.
+          </p>
+        </Card>
+      </div>
+    );
+  }
+
   if (isLoading) {
     return (
       <div className="max-w-4xl mx-auto py-10 px-4">
         <Card padding="lg">
-          <p className="text-sm text-[var(--gray-400)] font-medium">Loading your profile…</p>
+          <p className="text-sm text-[var(--gray-400)] font-medium">
+            {targetUserId ? 'Loading employee profile…' : 'Loading your profile…'}
+          </p>
         </Card>
       </div>
     );
@@ -177,7 +227,14 @@ export default function ProfileWizardPage() {
       // OCD-444: lets StepStatutory/StepRemittance's duplicate NIC/bank
       // account checks exclude this employee's own already-saved value.
       currentEmployeeId={profile?.employee_id}
-      onDone={() => router.push('/profile')}
+      // OCD-603/604: set only when HR edits someone else's profile.
+      targetEmployee={
+        targetUserId
+          ? { employeeId: profile?.employee_id ?? '', name: `${profile?.first_name ?? ''} ${profile?.last_name ?? ''}`.trim() }
+          : undefined
+      }
+      submitterRole={me?.role}
+      onDone={() => router.push(targetUserId ? '/admin/users' : '/profile')}
     />
   );
 }
@@ -187,12 +244,16 @@ function ProfileWizardForm({
   email,
   designation,
   currentEmployeeId,
+  targetEmployee,
+  submitterRole,
   onDone,
 }: {
   defaultValues: WizardFormValues;
   email: string;
   designation: string;
   currentEmployeeId?: string;
+  targetEmployee?: { employeeId: string; name: string };
+  submitterRole?: string;
   onDone: () => void;
 }) {
   const toast = useToast();
@@ -278,8 +339,12 @@ function ProfileWizardForm({
         changes,
         comments: reasonForChange.trim() || undefined,
         files: changeDocuments.length ? changeDocuments : undefined,
+        targetEmployeeId: targetEmployee?.employeeId || undefined,
       });
-      toast.success('Change request submitted', 'HR will review your requested changes shortly.');
+      toast.success(
+        'Change request submitted',
+        `The changes will be applied once ${approvalPathLabel(submitterRole)} approve${submitterRole === 'hr_manager' || submitterRole === 'super_admin' ? 's' : ''} them.`
+      );
       onDone();
     } catch {
       toast.error('Failed to submit change request', 'Please try again.');
@@ -292,9 +357,12 @@ function ProfileWizardForm({
   return (
     <div className="max-w-full mx-auto py-8 px-4 space-y-6">
       <div>
-        <h1 className="text-xl font-extrabold text-[var(--foreground)]">Employee Profile</h1>
+        <h1 className="text-xl font-extrabold text-[var(--foreground)]">
+          {targetEmployee ? `Edit Profile - ${targetEmployee.name}` : 'Employee Profile'}
+        </h1>
         <p className="text-xs text-[var(--gray-400)] font-medium mt-1">
-          Complete each tab and submit at the end. HR will review your changes before they take effect.
+          Complete each tab and submit at the end. {targetEmployee ? 'The' : 'Your'} changes take effect only after{' '}
+          {approvalPathLabel(submitterRole)} approve{submitterRole === 'hr_manager' || submitterRole === 'super_admin' ? 's' : ''} them.
         </p>
       </div>
 
@@ -323,7 +391,7 @@ function ProfileWizardForm({
           <div>
             <h3 className="text-sm font-bold text-[var(--foreground)]">Supporting Information (Optional)</h3>
             <p className="text-xs text-[var(--gray-400)] font-medium mt-1">
-              Give HR context for these changes and attach any supporting documents (e.g. NIC copy, address proof,
+              Give the approvers context for these changes and attach any supporting documents (e.g. NIC copy, address proof,
               marriage certificate, educational certificate).
             </p>
           </div>

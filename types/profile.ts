@@ -435,6 +435,11 @@ export type ProfileChangeRequestStatus =
   | 'returned_for_modification'
   | 'cancelled';
 
+// OCD-603/604/605: stage a pending request is waiting at. Employee and HR
+// Executive requests go HR Manager -> Administrator; HR Manager requests go
+// straight to the Administrator.
+export type ProfileApprovalStage = 'hr_manager' | 'admin';
+
 export interface ProfileChangeRequestEmployee {
   id: number;
   firstName: string;
@@ -462,6 +467,10 @@ export interface ProfileChangeRequest {
   reviewerComments: string | null;
   decidedAt: string | null;
   previousRequestId: number | null;
+  approvalStage?: ProfileApprovalStage | null;
+  submittedByRole?: string | null;
+  hrManagerComments?: string | null;
+  hrManagerApprovedAt?: string | null;
   createdAt: string;
   updatedAt: string;
   // OCD-478: supporting documents (NIC copy, address proof, etc.) uploaded
@@ -473,6 +482,9 @@ export interface SubmitProfileChangeRequestInput {
   changes: ProfileChangeItem[];
   comments?: string;
   previousRequestId?: number;
+  // OCD-603/604: employeeId of the employee being edited, when HR submits on
+  // their behalf. Omitted for self-service requests.
+  targetEmployeeId?: string;
   // OCD-478: optional supporting documents attached to the change request -
   // when present, the request is sent as multipart/form-data instead of JSON.
   files?: File[];

@@ -1,6 +1,7 @@
 import { describe, it, expect, vi } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
 import { useForm } from "react-hook-form";
+import api from "@/lib/api";
 import StepBasicInfo from "@/components/modals/employee-wizard/StepBasicInfo";
 import { defaultEmployeeWizardValues, type EmployeeWizardValues } from "@/components/modals/employee-wizard/wizardTypes";
 
@@ -47,5 +48,18 @@ describe("StepBasicInfo email format", () => {
     fireEvent.click(screen.getByText("Next"));
     await new Promise((r) => setTimeout(r, 50));
     expect(screen.queryByText("Enter a valid email address")).toBeNull();
+  });
+});
+
+describe("StepBasicInfo email uniqueness (OCD-595)", () => {
+  it("shows the duplicate message immediately when the field loses focus", async () => {
+    vi.mocked(api.get).mockResolvedValueOnce({ data: { exists: true } });
+    render(<Harness />);
+    fireEvent.change(input("email"), { target: { value: "taken@example.com" } });
+    fireEvent.blur(input("email"));
+    expect(
+      await screen.findByText("Email address already exists. Please use a different email address."),
+    ).toBeTruthy();
+    expect(api.get).toHaveBeenCalledWith("/users/email-availability", { params: { email: "taken@example.com" } });
   });
 });

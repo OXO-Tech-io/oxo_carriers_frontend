@@ -234,13 +234,22 @@ export default function ProfilePage() {
     {
       header: 'Status',
       accessorKey: 'status',
-      cell: ({ getValue }) => {
+      cell: ({ getValue, row }) => {
         const status = getValue<ProfileChangeRequest['status']>();
         const badge = STATUS_BADGES[status];
+        // OCD-603/604/605: show which approver the request is currently waiting on.
+        const stage = row.original.approvalStage;
         return (
-          <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider border ${badge.className}`}>
-            {badge.label}
-          </span>
+          <div className="space-y-1">
+            <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider border ${badge.className}`}>
+              {badge.label}
+            </span>
+            {status === 'pending_approval' && stage && (
+              <p className="text-[10px] font-semibold text-[var(--gray-400)]">
+                {stage === 'admin' ? 'Awaiting Administrator approval' : 'Awaiting HR Manager approval'}
+              </p>
+            )}
+          </div>
         );
       },
     },
@@ -437,7 +446,7 @@ export default function ProfilePage() {
                     <div className="p-4 bg-[var(--gray-25)] border border-[var(--gray-100)] rounded-2xl flex gap-3.5 items-start">
                       <Lock className="h-5 w-5 text-[var(--gray-400)] mt-0.5 shrink-0" />
                       <p className="text-xs text-[var(--gray-400)] font-medium leading-relaxed">
-                        These fields require HR approval to change. Use "Edit Profile" above - your current values stay in effect until an HR Manager approves your request.
+                        These fields require HR approval to change. Use "Edit Profile" above - your current values stay in effect until the HR Manager and the Administrator approve your request.
                       </p>
                     </div>
                   </div>
@@ -464,7 +473,7 @@ export default function ProfilePage() {
                     <div className="p-4 bg-[var(--gray-25)] border border-[var(--gray-100)] rounded-2xl flex gap-3.5 items-start">
                       <Lock className="h-5 w-5 text-[var(--gray-400)] mt-0.5 shrink-0" />
                       <p className="text-xs text-[var(--gray-400)] font-medium leading-relaxed">
-                        These fields require HR approval to change. Use "Edit Profile" above - your current values stay in effect until an HR Manager approves your request.
+                        These fields require HR approval to change. Use "Edit Profile" above - your current values stay in effect until the HR Manager and the Administrator approve your request.
                       </p>
                     </div>
                   </div>

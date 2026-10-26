@@ -5,6 +5,7 @@ import { Badge, type BadgeVariant } from '@/components/ui/Badge';
 const STATUS_VARIANT: Record<string, BadgeVariant> = {
   pending: 'warning',
   team_leader_approved: 'info',
+  hr_manager_approved: 'info',
   hr_approved: 'success',
   rejected: 'error',
   cancelled: 'gray',
@@ -13,6 +14,8 @@ const STATUS_VARIANT: Record<string, BadgeVariant> = {
 const STATUS_LABEL: Record<string, string> = {
   pending: 'Pending',
   team_leader_approved: 'TL Approved',
+  // HR Manager has approved; the leave is not confirmed until the Administrator does too.
+  hr_manager_approved: 'Awaiting Admin Approval',
   hr_approved: 'Approved',
   rejected: 'Rejected',
   cancelled: 'Cancelled',

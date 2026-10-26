@@ -4,6 +4,7 @@ import api from "@/lib/api";
 import { profileService } from "@/lib/services/profile.service";
 import { userDirectoryService } from "@/lib/services/user-directory.service";
 import { reportsService } from "@/lib/services/reports.service";
+import { useAuthStore } from "@/store/authStore";
 
 vi.mock("@/lib/api", () => ({
   default: {
@@ -52,25 +53,23 @@ describe("profileService", () => {
   });
 
   it("covers education, work history and PII endpoints", async () => {
+    // The "my" variants resolve the signed-in user id for the /employees/:id/... routes.
+    useAuthStore.setState({ user: { id: 7 } as never });
     apiMock.get.mockResolvedValueOnce(asResponse({ data: [] }));
     await profileService.getMyEducation();
-    expect(apiMock.get).toHaveBeenCalledWith("/employee-education");
+    expect(apiMock.get).toHaveBeenCalledWith("/employees/7/educations");
 
     apiMock.get.mockResolvedValueOnce(asResponse({ data: [] }));
     await profileService.getEducationForUser(5);
-    expect(apiMock.get).toHaveBeenCalledWith("/employee-education", {
-      params: { userId: 5 },
-    });
+    expect(apiMock.get).toHaveBeenCalledWith("/employees/5/educations");
 
     apiMock.get.mockResolvedValueOnce(asResponse({ data: [] }));
     await profileService.getMyWorkHistory();
-    expect(apiMock.get).toHaveBeenCalledWith("/employee-work-history");
+    expect(apiMock.get).toHaveBeenCalledWith("/employees/7/work-histories");
 
     apiMock.get.mockResolvedValueOnce(asResponse({ data: [] }));
     await profileService.getWorkHistoryForUser(5);
-    expect(apiMock.get).toHaveBeenCalledWith("/employee-work-history", {
-      params: { userId: 5 },
-    });
+    expect(apiMock.get).toHaveBeenCalledWith("/employees/5/work-histories");
 
     apiMock.get.mockResolvedValueOnce({
       data: { success: true, personalDetails: { nic: "123" } },
@@ -100,16 +99,11 @@ describe("profileService", () => {
 
     apiMock.get.mockResolvedValueOnce(asResponse({ data: { totalYears: 3 } }));
     await profileService.getMyExperienceSummary();
-    expect(apiMock.get).toHaveBeenCalledWith(
-      "/employee-work-history/experience-summary",
-    );
+    expect(apiMock.get).toHaveBeenCalledWith("/employees/7/work-histories/experience-summaries");
 
     apiMock.get.mockResolvedValueOnce(asResponse({ data: { totalYears: 3 } }));
     await profileService.getExperienceSummaryForUser(5);
-    expect(apiMock.get).toHaveBeenCalledWith(
-      "/employee-work-history/experience-summary",
-      { params: { userId: 5 } },
-    );
+    expect(apiMock.get).toHaveBeenCalledWith("/employees/5/work-histories/experience-summaries");
   });
 
   it("covers change-request listing and decisions", async () => {
