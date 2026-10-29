@@ -138,10 +138,8 @@ export function validateBankName(value: string): string | true {
 }
 
 // Bank account number - numeric only. OCD-598: length (and, for some banks,
-// prefix) depends on the selected bank - see bankAccountRules.ts. Unknown
-// banks fall back to 6-20 digits.
-export const BANK_ACCOUNT_NUMBER_PATTERN = /^\d{6,20}$/;
-
+// prefix) depends on the selected bank, and unknown banks fall back to a
+// generic digit range - both loaded from the backend, see bankAccountRules.ts.
 export function validateBankAccountNumber(value: string, bankName?: string | null): string | true {
   if (typeof value !== 'string' || !value) return true;
   return validateAccountNumberForBank(value, bankName);

@@ -42,7 +42,13 @@ import ProfileChangeDiffModal from '@/components/modals/ProfileChangeDiffModal';
 import { WorkHistoryTimeline } from '@/components/profile/WorkHistoryTimeline';
 import { ExperienceSummaryCard } from '@/components/profile/ExperienceSummaryCard';
 import { useToast } from '@/contexts/ToastContext';
-import { QUALIFICATION_LEVEL_OPTIONS, TITLE_OPTIONS, type ProfileChangeRequest } from '@/types/profile';
+import {
+  PROFILE_CHANGE_STATUS_BADGES,
+  QUALIFICATION_LEVEL_OPTIONS,
+  TITLE_OPTIONS,
+  type ProfileApprovalStage,
+  type ProfileChangeRequest,
+} from '@/types/profile';
 import { resolveFileUrl, DATE_FORMATS } from '@/lib/constants';
 import type { ColumnDef } from '@tanstack/react-table';
 import { DocumentViewer } from '@/components/DocumentViewer';
@@ -50,12 +56,9 @@ import type { Attachment } from '@/types/hrModules';
 
 type ProfileTab = 'personal' | 'contacts' | 'education' | 'work-history' | 'pending-changes' | 'employment' | 'documents' | 'settings';
 
-const STATUS_BADGES: Record<ProfileChangeRequest['status'], { label: string; className: string }> = {
-  pending_approval: { label: 'Pending', className: 'bg-amber-50 text-amber-700 border-amber-200' },
-  approved: { label: 'Approved', className: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
-  rejected: { label: 'Rejected', className: 'bg-red-50 text-red-700 border-red-200' },
-  returned_for_modification: { label: 'Returned', className: 'bg-orange-50 text-orange-700 border-orange-200' },
-  cancelled: { label: 'Cancelled', className: 'bg-[var(--gray-50)] text-[var(--gray-500)] border-[var(--gray-200)]' },
+const STAGE_LABELS: Record<ProfileApprovalStage, string> = {
+  hr_manager: 'Awaiting HR Manager approval',
+  admin: 'Awaiting Administrator approval',
 };
 
 function qualificationLabel(level: string) {
@@ -236,7 +239,7 @@ export default function ProfilePage() {
       accessorKey: 'status',
       cell: ({ getValue, row }) => {
         const status = getValue<ProfileChangeRequest['status']>();
-        const badge = STATUS_BADGES[status];
+        const badge = PROFILE_CHANGE_STATUS_BADGES[status];
         // OCD-603/604/605: show which approver the request is currently waiting on.
         const stage = row.original.approvalStage;
         return (
@@ -245,9 +248,7 @@ export default function ProfilePage() {
               {badge.label}
             </span>
             {status === 'pending_approval' && stage && (
-              <p className="text-[10px] font-semibold text-[var(--gray-400)]">
-                {stage === 'admin' ? 'Awaiting Administrator approval' : 'Awaiting HR Manager approval'}
-              </p>
+              <p className="text-[10px] font-semibold text-[var(--gray-400)]">{STAGE_LABELS[stage]}</p>
             )}
           </div>
         );

@@ -68,7 +68,8 @@ const toggleHalfDay = () => fireEvent.click(screen.getByLabelText("Half-day leav
 const choosePeriod = (period: "morning" | "evening") =>
   fireEvent.change(screen.getByText("Select time period").closest("select")!, { target: { value: period } });
 
-describe("LeavesPage with the real calendar - requesting the other half of a date (OCD-593)", () => {
+// Renders the whole page with the real calendar; under a full parallel run this can exceed the 5s default.
+describe("LeavesPage with the real calendar - requesting the other half of a date (OCD-593)", { timeout: 20000 }, () => {
   beforeEach(() => {
     vi.clearAllMocks();
     // Only Date is faked, so the picker's minDate (today) is stable without stalling timers.

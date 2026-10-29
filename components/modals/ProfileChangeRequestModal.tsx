@@ -7,6 +7,7 @@ import { Modal } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
 import { useToast } from '@/contexts/ToastContext';
 import { useSubmitProfileChangeMutation } from '@/hooks/mutations/use-submit-profile-change-mutation';
+import { useBankAccountRulesQuery } from '@/hooks/queries/use-bank-account-rules-query';
 import { validateLocationName, validateBankAccountNumber } from '@/lib/validation/textValidation';
 import type { User } from '@/types';
 import { TITLE_OPTIONS, type EmployeePii, type ProfileChangeItem } from '@/types/profile';
@@ -50,6 +51,8 @@ interface ProfileChangeRequestModalProps {
 export default function ProfileChangeRequestModal({ isOpen, onClose, user, pii }: ProfileChangeRequestModalProps) {
   const toast = useToast();
   const submitChange = useSubmitProfileChangeMutation();
+  // Loads the per-bank rules the schema's account number check reads.
+  useBankAccountRulesQuery();
 
   const {
     register,

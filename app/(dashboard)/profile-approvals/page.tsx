@@ -15,19 +15,16 @@ import { useRejectProfileChangeMutation } from '@/hooks/mutations/use-reject-pro
 import { useReturnProfileChangeMutation } from '@/hooks/mutations/use-return-profile-change-mutation';
 import ProfileChangeDiffModal from '@/components/modals/ProfileChangeDiffModal';
 import ProfileChangeDecisionModal from '@/components/modals/ProfileChangeDecisionModal';
-import type { ProfileApprovalStage, ProfileChangeRequest, ProfileChangeRequestStatus } from '@/types/profile';
+import {
+  PROFILE_CHANGE_STATUS_BADGES,
+  type ProfileApprovalStage,
+  type ProfileChangeRequest,
+  type ProfileChangeRequestStatus,
+} from '@/types/profile';
 
 const STAGE_LABELS: Record<ProfileApprovalStage, string> = {
   hr_manager: 'Awaiting HR Manager',
   admin: 'Awaiting Administrator',
-};
-
-const STATUS_BADGES: Record<ProfileChangeRequestStatus, { label: string; className: string }> = {
-  pending_approval: { label: 'Pending', className: 'bg-amber-50 text-amber-700 border-amber-200' },
-  approved: { label: 'Approved', className: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
-  rejected: { label: 'Rejected', className: 'bg-red-50 text-red-700 border-red-200' },
-  returned_for_modification: { label: 'Returned', className: 'bg-orange-50 text-orange-700 border-orange-200' },
-  cancelled: { label: 'Cancelled', className: 'bg-[var(--gray-50)] text-[var(--gray-500)] border-[var(--gray-200)]' },
 };
 
 const FILTERS: { key: ProfileChangeRequestStatus | 'all'; label: string }[] = [
@@ -204,7 +201,7 @@ export default function ProfileApprovalsPage() {
       accessorKey: 'status',
       cell: ({ getValue, row }) => {
         const status = getValue<ProfileChangeRequestStatus>();
-        const badge = STATUS_BADGES[status];
+        const badge = PROFILE_CHANGE_STATUS_BADGES[status];
         const stage = row.original.approvalStage;
         return (
           <div className="space-y-1">

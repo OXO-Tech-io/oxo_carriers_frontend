@@ -16,7 +16,8 @@ import {
   validateSwiftCode,
   MOBILE_NUMBER_HINT,
 } from '@/lib/validation/textValidation';
-import { BANK_ACCOUNT_RULES, OTHER_BANK_OPTION, describeBankAccountRule, getBankAccountRule, FALLBACK_ACCOUNT_NUMBER_MAX } from '@/lib/validation/bankAccountRules';
+import { OTHER_BANK_OPTION, describeBankAccountRule, getBankAccountRule } from '@/lib/validation/bankAccountRules';
+import { useBankAccountRulesQuery } from '@/hooks/queries/use-bank-account-rules-query';
 
 interface StepProps {
   form: UseFormReturn<WizardFormValues>;
@@ -40,11 +41,12 @@ export default function StepRemittance({ form, currentEmployeeId }: StepProps) {
   } = form;
   const accountNumber = watch('accountNumber');
   const bankName = watch('bankName');
+  const { data: bankRules } = useBankAccountRulesQuery();
   const accountRule = getBankAccountRule(bankName);
   // Previously saved free-text banks that aren't in the list stay selectable so editing doesn't blank them.
-  const bankOptions: string[] = [...BANK_ACCOUNT_RULES.map((b) => b.bank), OTHER_BANK_OPTION];
+  const bankOptions: string[] = [...(bankRules?.rules ?? []).map((b) => b.bank), OTHER_BANK_OPTION];
   if (bankName && !bankOptions.includes(bankName)) bankOptions.unshift(bankName);
-  const maxAccountLength = accountRule ? Math.max(...accountRule.lengths) : FALLBACK_ACCOUNT_NUMBER_MAX;
+  const maxAccountLength = accountRule ? Math.max(...accountRule.lengths) : bankRules?.fallbackAccountNumberMax;
   const [checkingAccount, setCheckingAccount] = useState(false);
 
   // OCD-444: flag a duplicate bank account number as soon as the user

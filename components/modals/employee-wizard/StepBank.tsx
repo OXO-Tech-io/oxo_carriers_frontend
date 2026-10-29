@@ -1,5 +1,6 @@
 import { UseFormReturn } from "react-hook-form";
 import { noEmoji, validateBankAccountNumber } from "@/lib/validation/textValidation";
+import { useBankAccountRulesQuery } from "@/hooks/queries/use-bank-account-rules-query";
 import { Field, inputClass } from "./shared";
 import { EmployeeWizardValues } from "./wizardTypes";
 
@@ -13,6 +14,8 @@ export default function StepBank({ form }: Readonly<StepProps>) {
     trigger,
     formState: { errors },
   } = form;
+  // Loads the per-bank rules validateBankAccountNumber checks against.
+  useBankAccountRulesQuery();
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

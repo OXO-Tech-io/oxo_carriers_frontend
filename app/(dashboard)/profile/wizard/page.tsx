@@ -34,6 +34,7 @@ import StepWorkHistory from '@/components/modals/employee-wizard/StepWorkHistory
 import type { EmployeeWizardValues } from '@/components/modals/employee-wizard/wizardTypes';
 import { buildDefaultValues, type WizardFormValues } from '@/components/profile/wizard/wizardTypes';
 import { buildWizardChanges } from '@/components/profile/wizard/wizardDiff';
+import { UserRole } from '@/types';
 import {
   PROFILE_WIZARD_STEP_KEYS as STEP,
   SUPPORTING_DOCUMENT_ACCEPT,
@@ -123,8 +124,12 @@ const STEP_FIELD_NAMES: (keyof WizardFormValues)[][] = [
 ];
 
 // OCD-603/604/605: who has to approve a request raised by `role` before it is applied.
+const ADMINISTRATOR_ONLY_APPROVAL_ROLES: string[] = [UserRole.HR_MANAGER, UserRole.SUPER_ADMIN];
+
+const needsAdministratorOnly = (role?: string) => !!role && ADMINISTRATOR_ONLY_APPROVAL_ROLES.includes(role);
+
 const approvalPathLabel = (role?: string) =>
-  role === 'hr_manager' || role === 'super_admin'
+  needsAdministratorOnly(role)
     ? 'the Administrator'
     : 'the HR Manager and then the Administrator';
 
@@ -343,7 +348,7 @@ function ProfileWizardForm({
       });
       toast.success(
         'Change request submitted',
-        `The changes will be applied once ${approvalPathLabel(submitterRole)} approve${submitterRole === 'hr_manager' || submitterRole === 'super_admin' ? 's' : ''} them.`
+        `The changes will be applied once ${approvalPathLabel(submitterRole)} approve${needsAdministratorOnly(submitterRole) ? 's' : ''} them.`
       );
       onDone();
     } catch {
@@ -362,7 +367,7 @@ function ProfileWizardForm({
         </h1>
         <p className="text-xs text-[var(--gray-400)] font-medium mt-1">
           Complete each tab and submit at the end. {targetEmployee ? 'The' : 'Your'} changes take effect only after{' '}
-          {approvalPathLabel(submitterRole)} approve{submitterRole === 'hr_manager' || submitterRole === 'super_admin' ? 's' : ''} them.
+          {approvalPathLabel(submitterRole)} approve{needsAdministratorOnly(submitterRole) ? 's' : ''} them.
         </p>
       </div>
 
