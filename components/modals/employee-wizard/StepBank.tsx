@@ -1,5 +1,6 @@
 import { UseFormReturn } from "react-hook-form";
-import { noEmoji } from "@/lib/validation/textValidation";
+import { noEmoji, validateBankAccountNumber } from "@/lib/validation/textValidation";
+import { useBankAccountRulesQuery } from "@/hooks/queries/use-bank-account-rules-query";
 import { Field, inputClass } from "./shared";
 import { EmployeeWizardValues } from "./wizardTypes";
 
@@ -10,15 +11,21 @@ interface StepProps {
 export default function StepBank({ form }: Readonly<StepProps>) {
   const {
     register,
+    trigger,
     formState: { errors },
   } = form;
+  // Loads the per-bank rules validateBankAccountNumber checks against.
+  useBankAccountRulesQuery();
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
       <Field label="Bank Name" error={errors.bank_name?.message}>
         <input
           type="text"
-          {...register("bank_name", { validate: noEmoji })}
+          {...register("bank_name", {
+            validate: noEmoji,
+            onChange: () => void trigger("account_number"),
+          })}
           placeholder="e.g. Commercial Bank"
           className={inputClass}
         />
@@ -34,7 +41,9 @@ export default function StepBank({ form }: Readonly<StepProps>) {
       <Field label="Account Number" error={errors.account_number?.message}>
         <input
           type="text"
-          {...register("account_number", { validate: noEmoji })}
+          {...register("account_number", {
+            validate: (value) => noEmoji(value) === true ? validateBankAccountNumber(value, form.getValues("bank_name")) : noEmoji(value),
+          })}
           placeholder="Bank account number"
           className={inputClass}
         />

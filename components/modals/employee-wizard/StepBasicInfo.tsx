@@ -36,37 +36,37 @@ export default function StepBasicInfo({ form, currentUserRole }: StepProps) {
   const [checkingEmail, setCheckingEmail] = useState(false);
   const lastCheckedRef = useRef<string | null>(null);
 
-  useEffect(() => {
-    const value = (email || "").trim();
-    lastCheckedRef.current = null;
-    if (!value || !EMAIL_PATTERN.test(value)) {
-      return;
-    }
-
-    const timer = setTimeout(async () => {
-      setCheckingEmail(true);
-      try {
-        const response = await api.get("/users/email-availability", { params: { email: value } });
-        // Bail if the field changed while the request was in flight.
-        if (watch("email") !== value) return;
-        lastCheckedRef.current = value;
-        if (response.data?.exists) {
-          setError("email", {
-            type: "manual",
-            message: "Email address already exists. Please use a different email address.",
-          });
-        } else if (errors.email?.type === "manual") {
-          clearErrors("email");
-        }
-      } catch {
-        // Non-blocking: if the availability check itself fails (network,
-        // auth, etc.) we don't want to trap the user on this step - the
-        // final-submission duplicate check still guards against it.
-      } finally {
-        setCheckingEmail(false);
+  const checkEmailAvailability = async (raw: string) => {
+    const value = (raw || "").trim();
+    if (!value || !EMAIL_PATTERN.test(value) || lastCheckedRef.current === value) return;
+    setCheckingEmail(true);
+    try {
+      const response = await api.get("/users/email-availability", { params: { email: value } });
+      // Bail if the field changed while the request was in flight.
+      if (watch("email").trim() !== value) return;
+      lastCheckedRef.current = value;
+      if (response.data?.exists) {
+        setError("email", {
+          type: "manual",
+          message: "Email address already exists. Please use a different email address.",
+        });
+      } else if (form.getFieldState("email").error?.type === "manual") {
+        clearErrors("email");
       }
-    }, EMAIL_CHECK_DEBOUNCE_MS);
+    } catch {
+      // Non-blocking: if the availability check itself fails (network,
+      // auth, etc.) we don't want to trap the user on this step - the
+      // "Next" re-check and the final-submission check still guard it.
+    } finally {
+      setCheckingEmail(false);
+    }
+  };
 
+  // Debounced check while typing; the onBlur handler below runs the same
+  // check immediately (OCD-595), and lastCheckedRef de-dupes the two.
+  useEffect(() => {
+    lastCheckedRef.current = null;
+    const timer = setTimeout(() => void checkEmailAvailability(email), EMAIL_CHECK_DEBOUNCE_MS);
     return () => clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [email]);
@@ -167,6 +167,7 @@ export default function StepBasicInfo({ form, currentUserRole }: StepProps) {
               {...register("email", {
                 required: "Email is required",
                 pattern: { value: EMAIL_PATTERN, message: "Enter a valid email address" },
+                onBlur: (e) => void checkEmailAvailability(e.target.value),
               })}
               className={inputClass}
             />
@@ -193,6 +194,7 @@ export default function StepBasicInfo({ form, currentUserRole }: StepProps) {
               {...register("email", {
                 required: "Email is required",
                 pattern: { value: EMAIL_PATTERN, message: "Enter a valid email address" },
+                onBlur: (e) => void checkEmailAvailability(e.target.value),
               })}
               className={inputClass}
             />

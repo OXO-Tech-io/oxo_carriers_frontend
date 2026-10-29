@@ -277,6 +277,14 @@ export default function ProfileChangeDiffModal({
 
   const statusStyle = STATUS_STYLES[request.status];
   const showActions = canDecide && request.status === 'pending_approval';
+  const awaiting =
+    request.status === 'pending_approval'
+      ? request.approvalStage === 'admin'
+        ? 'Awaiting Administrator approval'
+        : request.approvalStage === 'hr_manager'
+          ? 'Awaiting HR Manager approval'
+          : null
+      : null;
 
   return (
     <Modal
@@ -319,6 +327,16 @@ export default function ProfileChangeDiffModal({
             {statusStyle.label}
           </span>
         </div>
+
+        {awaiting && (
+          <p className="text-xs font-semibold text-[var(--gray-500)]">
+            {awaiting}
+            {request.approvalStage === 'admin' && request.hrManagerApprovedAt
+              ? ` · HR Manager approved ${formatDate(request.hrManagerApprovedAt)}`
+              : ''}
+            {request.approvalStage === 'admin' && request.hrManagerComments ? ` · "${request.hrManagerComments}"` : ''}
+          </p>
+        )}
 
         {request.attachments && request.attachments.length > 0 && (
           <div className="rounded-2xl border border-[var(--gray-100)] bg-[var(--gray-25)] p-4">

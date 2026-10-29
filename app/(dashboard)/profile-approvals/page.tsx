@@ -15,14 +15,16 @@ import { useRejectProfileChangeMutation } from '@/hooks/mutations/use-reject-pro
 import { useReturnProfileChangeMutation } from '@/hooks/mutations/use-return-profile-change-mutation';
 import ProfileChangeDiffModal from '@/components/modals/ProfileChangeDiffModal';
 import ProfileChangeDecisionModal from '@/components/modals/ProfileChangeDecisionModal';
-import type { ProfileChangeRequest, ProfileChangeRequestStatus } from '@/types/profile';
+import {
+  PROFILE_CHANGE_STATUS_BADGES,
+  type ProfileApprovalStage,
+  type ProfileChangeRequest,
+  type ProfileChangeRequestStatus,
+} from '@/types/profile';
 
-const STATUS_BADGES: Record<ProfileChangeRequestStatus, { label: string; className: string }> = {
-  pending_approval: { label: 'Pending', className: 'bg-amber-50 text-amber-700 border-amber-200' },
-  approved: { label: 'Approved', className: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
-  rejected: { label: 'Rejected', className: 'bg-red-50 text-red-700 border-red-200' },
-  returned_for_modification: { label: 'Returned', className: 'bg-orange-50 text-orange-700 border-orange-200' },
-  cancelled: { label: 'Cancelled', className: 'bg-[var(--gray-50)] text-[var(--gray-500)] border-[var(--gray-200)]' },
+const STAGE_LABELS: Record<ProfileApprovalStage, string> = {
+  hr_manager: 'Awaiting HR Manager',
+  admin: 'Awaiting Administrator',
 };
 
 const FILTERS: { key: ProfileChangeRequestStatus | 'all'; label: string }[] = [
@@ -104,6 +106,14 @@ export default function ProfileApprovalsPage() {
   const { data: requests = [], isLoading } = useAllChangeRequestsQuery(
     statusFilter === 'all' ? {} : { status: statusFilter }
   );
+  // OCD-603/604/605: each request waits at one stage (HR Manager, then
+  // Administrator) and only that stage's role may decide on it.
+  const canDecideRequest = (request: ProfileChangeRequest | null) => {
+    if (!request || request.status !== 'pending_approval') return false;
+    return (request.approvalStage ?? 'hr_manager') === 'admin' ? isSuperAdmin : isHRManager;
+  };
+  const approvesIntoAdminStage =
+    !!selected && (selected.approvalStage ?? 'hr_manager') === 'hr_manager' && selected.submittedByRole !== 'hr_manager';
   const approveMutation = useApproveProfileChangeMutation();
   const rejectMutation = useRejectProfileChangeMutation();
   const returnMutation = useReturnProfileChangeMutation();
@@ -123,7 +133,12 @@ export default function ProfileApprovalsPage() {
     if (!selected) return;
     try {
       await approveMutation.mutateAsync({ id: selected.id });
-      toast.success('Request approved', "The employee's profile has been updated.");
+      toast.success(
+        approvesIntoAdminStage ? 'Forwarded to Administrator' : 'Request approved',
+        approvesIntoAdminStage
+          ? 'The request now awaits Administrator approval before any changes are applied.'
+          : "The employee's profile has been updated."
+      );
       setApproveConfirmOpen(false);
       setSelected(null);
     } catch {
@@ -184,15 +199,21 @@ export default function ProfileApprovalsPage() {
     {
       header: 'Status',
       accessorKey: 'status',
-      cell: ({ getValue }) => {
+      cell: ({ getValue, row }) => {
         const status = getValue<ProfileChangeRequestStatus>();
-        const badge = STATUS_BADGES[status];
+        const badge = PROFILE_CHANGE_STATUS_BADGES[status];
+        const stage = row.original.approvalStage;
         return (
-          <span
-            className={`inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider border ${badge.className}`}
-          >
-            {badge.label}
-          </span>
+          <div className="space-y-1">
+            <span
+              className={`inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider border ${badge.className}`}
+            >
+              {badge.label}
+            </span>
+            {status === 'pending_approval' && stage && (
+              <p className="text-[10px] font-semibold text-[var(--gray-400)]">{STAGE_LABELS[stage]}</p>
+            )}
+          </div>
         );
       },
     },
@@ -239,7 +260,7 @@ export default function ProfileApprovalsPage() {
         onClose={() => setSelected(null)}
         request={selected}
         employeeName={selected?.employee ? `${selected.employee.firstName} ${selected.employee.lastName}` : undefined}
-        canDecide
+        canDecide={canDecideRequest(selected)}
         onApprove={() => setApproveConfirmOpen(true)}
         onReject={() => setDecisionModal('rejected')}
         onReturn={() => setDecisionModal('returned_for_modification')}
@@ -251,8 +272,12 @@ export default function ProfileApprovalsPage() {
         onClose={() => setApproveConfirmOpen(false)}
         onConfirm={handleApprove}
         title="Approve Change Request"
-        message="This will immediately apply all the requested changes to the employee's profile."
-        confirmLabel="Approve"
+        message={
+          approvesIntoAdminStage
+            ? 'This will forward the request to the Administrator. No changes are applied until the Administrator approves it.'
+            : "This will immediately apply all the requested changes to the employee's profile."
+        }
+        confirmLabel={approvesIntoAdminStage ? 'Approve & Forward' : 'Approve'}
         isLoading={approveMutation.isPending}
       />
 

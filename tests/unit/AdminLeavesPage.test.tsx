@@ -60,3 +60,46 @@ describe("AdminLeaveManagementPage attachment link", () => {
     expect(screen.queryByRole("link", { name: /View Attachment Doc/ })).toBeNull();
   });
 });
+
+describe("AdminLeaveManagementPage two-stage approval", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("HR Manager sees Approve on a pending request and is told the Administrator must also approve", () => {
+    useAuthMock.mockReturnValue({ isSuperAdmin: false, isHRManager: true });
+    useLeaveRequestsQueryMock.mockImplementation((params: { status?: string }) => ({
+      data: params.status === "pending" ? [makeRequest()] : [],
+      isLoading: false,
+    }));
+
+    render(<AdminLeaveManagementPage />);
+
+    expect(screen.getByRole("button", { name: "Approve" })).toBeInTheDocument();
+  });
+
+  it("HR Manager cannot approve again once HR-Manager-approved - it awaits the Administrator", () => {
+    useAuthMock.mockReturnValue({ isSuperAdmin: false, isHRManager: true });
+    useLeaveRequestsQueryMock.mockImplementation((params: { status?: string }) => ({
+      data: params.status === "hr_manager_approved" ? [makeRequest({ status: "hr_manager_approved" })] : [],
+      isLoading: false,
+    }));
+
+    render(<AdminLeaveManagementPage />);
+
+    expect(screen.queryByRole("button", { name: /^(Final )?Approve$/ })).toBeNull();
+    expect(screen.getByText(/Awaiting Administrator approval/)).toBeInTheDocument();
+  });
+
+  it("Administrator gets Final Approve on an HR-Manager-approved request", () => {
+    useAuthMock.mockReturnValue({ isSuperAdmin: true, isHRManager: false });
+    useLeaveRequestsQueryMock.mockImplementation((params: { status?: string }) => ({
+      data: params.status === "hr_manager_approved" ? [makeRequest({ status: "hr_manager_approved" })] : [],
+      isLoading: false,
+    }));
+
+    render(<AdminLeaveManagementPage />);
+
+    expect(screen.getByRole("button", { name: "Final Approve" })).toBeInTheDocument();
+  });
+});

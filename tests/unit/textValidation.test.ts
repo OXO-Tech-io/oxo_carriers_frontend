@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { containsEmoji, stripEmoji, noEmoji, noFutureDate, onlyFutureDate, localIsoDate } from "@/lib/validation/textValidation";
+import { containsEmoji, stripEmoji, noEmoji, noFutureDate, onlyFutureDate, localIsoDate, validateLocationName, validateGnDivision } from "@/lib/validation/textValidation";
 
 describe("containsEmoji", () => {
   it("detects the ticket's example mixed-content string", () => {
@@ -121,5 +121,29 @@ describe("localIsoDate", () => {
   it("offsets by whole days", () => {
     expect(localIsoDate(1) > localIsoDate()).toBe(true);
     expect(localIsoDate(-1) < localIsoDate()).toBe(true);
+  });
+});
+
+describe("validateLocationName (OCD-596)", () => {
+  it("accepts letters, spaces, hyphens, apostrophes, periods and local scripts", () => {
+    for (const ok of ["Colombo", "Nuwara-Eliya", "St. John's", "කොළඹ", "தமிழ்", ""]) {
+      expect(validateLocationName(ok)).toBe(true);
+    }
+  });
+
+  it("rejects digits, special characters and emoji", () => {
+    for (const bad of ["Colombo 7", "Kandy@", "Galle#1", "Jaffna\u{1F600}"]) {
+      expect(validateLocationName(bad)).not.toBe(true);
+    }
+  });
+});
+
+describe("validateGnDivision (OCD-596)", () => {
+  it("allows digits alongside letters", () => {
+    expect(validateGnDivision("123A Kollupitiya")).toBe(true);
+  });
+  it("rejects special characters and emoji", () => {
+    expect(validateGnDivision("GN@5")).not.toBe(true);
+    expect(validateGnDivision("GN\u{1F600}")).not.toBe(true);
   });
 });

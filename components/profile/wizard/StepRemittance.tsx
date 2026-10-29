@@ -14,9 +14,10 @@ import {
   validateBankAccountNumber,
   validateBankBranchCode,
   validateSwiftCode,
-  BANK_ACCOUNT_NUMBER_PATTERN,
   MOBILE_NUMBER_HINT,
 } from '@/lib/validation/textValidation';
+import { OTHER_BANK_OPTION, describeBankAccountRule, getBankAccountRule } from '@/lib/validation/bankAccountRules';
+import { useBankAccountRulesQuery } from '@/hooks/queries/use-bank-account-rules-query';
 
 interface StepProps {
   form: UseFormReturn<WizardFormValues>;
@@ -35,9 +36,17 @@ export default function StepRemittance({ form, currentEmployeeId }: StepProps) {
     setValue,
     setError,
     clearErrors,
+    trigger,
     formState: { errors },
   } = form;
   const accountNumber = watch('accountNumber');
+  const bankName = watch('bankName');
+  const { data: bankRules } = useBankAccountRulesQuery();
+  const accountRule = getBankAccountRule(bankName);
+  // Previously saved free-text banks that aren't in the list stay selectable so editing doesn't blank them.
+  const bankOptions: string[] = [...(bankRules?.rules ?? []).map((b) => b.bank), OTHER_BANK_OPTION];
+  if (bankName && !bankOptions.includes(bankName)) bankOptions.unshift(bankName);
+  const maxAccountLength = accountRule ? Math.max(...accountRule.lengths) : bankRules?.fallbackAccountNumberMax;
   const [checkingAccount, setCheckingAccount] = useState(false);
 
   // OCD-444: flag a duplicate bank account number as soon as the user
@@ -45,7 +54,7 @@ export default function StepRemittance({ form, currentEmployeeId }: StepProps) {
   // authoritative, race-proof gate at final submission.
   useEffect(() => {
     const value = (accountNumber || '').trim();
-    if (!value || !BANK_ACCOUNT_NUMBER_PATTERN.test(value)) return;
+    if (!value || validateBankAccountNumber(value, bankName) !== true) return;
 
     const timer = setTimeout(async () => {
       setCheckingAccount(true);
@@ -71,7 +80,7 @@ export default function StepRemittance({ form, currentEmployeeId }: StepProps) {
 
     return () => clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [accountNumber]);
+  }, [accountNumber, bankName]);
 
   // OCD-470: default assumption is that the residing address is the same as
   // the permanent one - the checkbox below is the only way to diverge from
@@ -117,10 +126,10 @@ export default function StepRemittance({ form, currentEmployeeId }: StepProps) {
             </Field>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <Field label="City" error={errors.residingCity?.message}>
-                <input {...register('residingCity', { validate: { validateLocationName, noEmoji } })} className={inputClass} />
+                <input {...register('residingCity', { validate: { validateLocationName, noEmoji }, onChange: () => void trigger('residingCity') })} className={inputClass} />
               </Field>
               <Field label="District" error={errors.residingDistrict?.message}>
-                <input {...register('residingDistrict', { validate: { validateLocationName, noEmoji } })} className={inputClass} />
+                <input {...register('residingDistrict', { validate: { validateLocationName, noEmoji }, onChange: () => void trigger('residingDistrict') })} className={inputClass} />
               </Field>
             </div>
           </>
@@ -148,7 +157,9 @@ export default function StepRemittance({ form, currentEmployeeId }: StepProps) {
               {...register('accountHolderName', {
                 required: 'Account holder name is required',
                 validate: { validateBankName, noEmoji },
+                onChange: () => void trigger('accountHolderName'),
               })}
+              placeholder="Name exactly as on the bank account"
               className={inputClass}
             />
           </Field>
@@ -156,38 +167,76 @@ export default function StepRemittance({ form, currentEmployeeId }: StepProps) {
             label="Bank A/C Number"
             required
             error={errors.accountNumber?.message}
-            hint={checkingAccount ? 'Checking availability...' : 'Numeric digits only (6-20 digits)'}
+            hint={checkingAccount ? 'Checking availability...' : describeBankAccountRule(bankName)}
           >
             <input
               {...register('accountNumber', {
                 required: 'Account number is required',
-                validate: validateBankAccountNumber,
+                validate: (value) => validateBankAccountNumber(value, form.getValues('bankName')),
+                onChange: () => void trigger('accountNumber'),
               })}
+              placeholder="Digits only"
               inputMode="numeric"
+              maxLength={maxAccountLength}
               className={inputClass}
             />
           </Field>
           <Field label="Bank" required error={errors.bankName?.message}>
-            <input
-              {...register('bankName', { required: 'Bank is required', validate: { validateBankName, noEmoji } })}
+            <select
+              {...register('bankName', {
+                required: 'Bank is required',
+                validate: { validateBankName, noEmoji },
+                // OCD-598: the account number rule depends on the bank.
+                onChange: () => {
+                  if (form.getValues('accountNumber')) void trigger('accountNumber');
+                },
+              })}
               className={inputClass}
-            />
+            >
+              <option value="">Select bank</option>
+              {bankOptions.map((name) => (
+                <option key={name} value={name}>
+                  {name}
+                </option>
+              ))}
+            </select>
           </Field>
           <Field label="Branch" required error={errors.bankBranch?.message}>
             <input
-              {...register('bankBranch', { required: 'Branch is required', validate: { validateBankName, noEmoji } })}
+              {...register('bankBranch', {
+                required: 'Branch is required',
+                validate: { validateBankName, noEmoji },
+                onChange: () => void trigger('bankBranch'),
+              })}
+              placeholder="e.g. Colombo Fort"
               className={inputClass}
             />
           </Field>
           <Field label="Branch Code" error={errors.bankBranchCode?.message} hint="3-10 alphanumeric characters">
-            <input {...register('bankBranchCode', { validate: validateBankBranchCode })} className={inputClass} />
+            <input
+              {...register('bankBranchCode', {
+                validate: validateBankBranchCode,
+                onChange: () => void trigger('bankBranchCode'),
+              })}
+              placeholder="e.g. 7010"
+              maxLength={10}
+              className={inputClass}
+            />
           </Field>
           <Field
             label="Swift Code"
             error={errors.swiftCode?.message}
             hint="8 or 11 characters, e.g. BCEYLKLX"
           >
-            <input {...register('swiftCode', { validate: validateSwiftCode })} className={inputClass} />
+            <input
+              {...register('swiftCode', {
+                validate: validateSwiftCode,
+                onChange: () => void trigger('swiftCode'),
+              })}
+              placeholder="e.g. BCEYLKLX or BCEYLKLXXXX"
+              maxLength={11}
+              className={`${inputClass} uppercase`}
+            />
           </Field>
         </div>
       </div>
