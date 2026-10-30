@@ -1,6 +1,8 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/hooks/useAuth';
 import { attendanceService } from '@/lib/services/attendance.service';
+import { activityAgentService } from '@/lib/services/activity-agent.service';
+import { SessionAction } from '@/types/attendance';
 
 function requireEmployeeId(employeeId: string | undefined): string {
   if (!employeeId) {
@@ -16,6 +18,7 @@ export const useClockInMutation = () => {
     mutationFn: () => attendanceService.clockIn(requireEmployeeId(user?.employee_id)),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['attendance'] });
+      activityAgentService.notify(SessionAction.CLOCK_IN);
     },
   });
 };
@@ -27,6 +30,31 @@ export const useClockOutMutation = () => {
     mutationFn: () => attendanceService.clockOut(requireEmployeeId(user?.employee_id)),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['attendance'] });
+      activityAgentService.notify(SessionAction.CLOCK_OUT);
+    },
+  });
+};
+
+export const useStartBreakMutation = () => {
+  const queryClient = useQueryClient();
+  const { user } = useAuth();
+  return useMutation({
+    mutationFn: () => attendanceService.startBreak(requireEmployeeId(user?.employee_id)),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['attendance'] });
+      activityAgentService.notify(SessionAction.BREAK_START);
+    },
+  });
+};
+
+export const useEndBreakMutation = () => {
+  const queryClient = useQueryClient();
+  const { user } = useAuth();
+  return useMutation({
+    mutationFn: () => attendanceService.endBreak(requireEmployeeId(user?.employee_id)),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['attendance'] });
+      activityAgentService.notify(SessionAction.BREAK_END);
     },
   });
 };

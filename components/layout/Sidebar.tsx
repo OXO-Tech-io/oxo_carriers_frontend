@@ -16,6 +16,7 @@ import api from "@/lib/api";
 import { UserRole } from "@/types";
 import Image from "next/image";
 import {
+  Activity,
   LayoutDashboard,
   Receipt,
   Briefcase,
@@ -310,6 +311,13 @@ const adminNavigation: MenuItem[] = [
     href: "/admin/archive",
     icon: Archive,
     permissionKeys: ["archive"],
+    requiredLevel: "read",
+  },
+  {
+    name: "Activity Logs",
+    href: "/admin/activity-logs",
+    icon: Activity,
+    permissionKeys: ["attendance"],
     requiredLevel: "read",
   },
 ];
