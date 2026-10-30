@@ -83,6 +83,13 @@ function AuthHydrator({ children }: { children: ReactNode }) {
 }
 
 import { ThemeProvider } from '@/contexts/ThemeContext';
+import { useAgentActivityRelay } from '@/hooks/useAgentActivityRelay';
+
+/** Mounted once for the whole app so the relay survives navigation between layouts. */
+function AgentActivityRelay() {
+  useAgentActivityRelay();
+  return null;
+}
 
 export function Providers({ children }: { children: ReactNode }) {
   return (
@@ -90,7 +97,10 @@ export function Providers({ children }: { children: ReactNode }) {
       <ThemeProvider>
         <ToastProvider>
           <KeycloakBootstrap>
-            <AuthHydrator>{children}</AuthHydrator>
+            <AuthHydrator>
+              <AgentActivityRelay />
+              {children}
+            </AuthHydrator>
           </KeycloakBootstrap>
         </ToastProvider>
       </ThemeProvider>

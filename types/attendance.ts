@@ -6,6 +6,18 @@
 export enum SessionAction {
   CLOCK_IN = 'clock_in',
   CLOCK_OUT = 'clock_out',
+  BREAK_START = 'break_start',
+  BREAK_END = 'break_end',
+}
+
+// Response shape for a break_start/break_end action - one row per break.
+export interface BreakLog {
+  id: number;
+  employeeId: string;
+  sessionId: number;
+  breakStart: string | null;
+  breakEnd: string | null;
+  durationSec: number | null;
 }
 
 export interface AttendanceSession {
@@ -27,6 +39,8 @@ export interface AttendanceHistoryDay {
   lastLogoutAt: string | null;
   totalDurationSec: number;
   status: 'active' | 'ended' | 'none';
+  /** Set only on the day holding the currently-open session, if a break is open on it. */
+  openBreakStartedAt: string | null;
 }
 
 // Admin/report view (GET /employees/attendances) - one row per employee per day.
