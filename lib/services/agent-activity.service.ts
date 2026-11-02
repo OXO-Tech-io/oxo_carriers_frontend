@@ -12,7 +12,7 @@ export const agentActivityService = {
   /** Employee's own tab relays frames from the local agent here. */
   ingest: async (logs: AgentLogPayload[]): Promise<{ received: number; stored: number; rejected: number }> => {
     const res = await api.post<ApiResponse<{ received: number; stored: number; rejected: number }>>(
-      '/agent-activity/logs',
+      '/employee-activities/logs',
       { logs },
     );
     return extractData(res);
@@ -20,12 +20,12 @@ export const agentActivityService = {
 
   /** Admin view. */
   getLogs: async (params: AgentActivityLogsParams = {}): Promise<AgentActivityLogsPage> => {
-    const res = await api.get<ApiResponse<AgentActivityLogsPage>>('/agent-activity/logs', { params });
+    const res = await api.get<ApiResponse<AgentActivityLogsPage>>('/employee-activities/logs', { params });
     return extractData(res);
   },
 
   getSummary: async (params: Pick<AgentActivityLogsParams, 'from' | 'to'> = {}): Promise<AgentActivitySummary[]> => {
-    const res = await api.get<ApiResponse<AgentActivitySummary[]>>('/agent-activity/summary', { params });
+    const res = await api.get<ApiResponse<AgentActivitySummary[]>>('/employee-activities/summaries', { params });
     return extractData(res);
   },
 };
