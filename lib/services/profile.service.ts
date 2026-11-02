@@ -1,6 +1,7 @@
 import api from '@/lib/api';
 import type { ApiResponse } from '@/types/api';
 import { mapDbUserToAppUser, type DbUserResponse } from '@/lib/mappers/user.mapper';
+import { useAuthStore } from '@/store/authStore';
 import type { User } from '@/types';
 import type {
   EmployeeEducation,
@@ -21,34 +22,38 @@ export interface ListChangeRequestsParams {
   userId?: number;
 }
 
+// Education, work history and the experience summary are served per employee at
+// /employees/:userId/..., so the "my" variants need the signed-in user's id.
+const currentUserId = (): number => {
+  const id = useAuthStore.getState().user?.id;
+  if (!id) throw new Error('Not signed in');
+  return id;
+};
+
 export const profileService = {
   getMyProfile: async (): Promise<User | null> => {
     const res = await api.get<ApiResponse<DbUserResponse>>('/auth/me');
     return mapDbUserToAppUser(res.data.data);
   },
 
-  getMyEducation: async (): Promise<EmployeeEducation[]> => {
-    const res = await api.get<ApiResponse<EmployeeEducation[]>>('/employee-education');
-    return res.data.data;
-  },
+  getMyEducation: async (): Promise<EmployeeEducation[]> => profileService.getEducationForUser(currentUserId()),
 
   getEducationForUser: async (userId: number): Promise<EmployeeEducation[]> => {
-    const res = await api.get<ApiResponse<EmployeeEducation[]>>('/employee-education', {
-      params: { userId },
-    });
+    const res = await api.get<ApiResponse<EmployeeEducation[]>>(`/employees/${userId}/educations`);
     return res.data.data;
   },
 
-  getMyWorkHistory: async (): Promise<EmployeeWorkHistory[]> => {
-    const res = await api.get<ApiResponse<EmployeeWorkHistory[]>>('/employee-work-history');
-    return res.data.data;
-  },
+  getMyWorkHistory: async (): Promise<EmployeeWorkHistory[]> => profileService.getWorkHistoryForUser(currentUserId()),
 
   getWorkHistoryForUser: async (userId: number): Promise<EmployeeWorkHistory[]> => {
-    const res = await api.get<ApiResponse<EmployeeWorkHistory[]>>('/employee-work-history', {
-      params: { userId },
-    });
+    const res = await api.get<ApiResponse<EmployeeWorkHistory[]>>(`/employees/${userId}/work-histories`);
     return res.data.data;
+  },
+
+  // OCD-603/604: HR loading another employee's profile for the Edit Profile wizard.
+  getUserById: async (userId: number): Promise<User | null> => {
+    const res = await api.get<{ success: boolean; user: DbUserResponse }>(`/users/${userId}`);
+    return mapDbUserToAppUser(res.data.user);
   },
 
   // PII now rides along on GET /users/:id (the personal-details route was folded into it).
@@ -82,15 +87,11 @@ export const profileService = {
     return res.data.data;
   },
 
-  getMyExperienceSummary: async (): Promise<ExperienceSummary> => {
-    const res = await api.get<ApiResponse<ExperienceSummary>>('/employee-work-history/experience-summary');
-    return res.data.data;
-  },
+  getMyExperienceSummary: async (): Promise<ExperienceSummary> =>
+    profileService.getExperienceSummaryForUser(currentUserId()),
 
   getExperienceSummaryForUser: async (userId: number): Promise<ExperienceSummary> => {
-    const res = await api.get<ApiResponse<ExperienceSummary>>('/employee-work-history/experience-summary', {
-      params: { userId },
-    });
+    const res = await api.get<ApiResponse<ExperienceSummary>>(`/employees/${userId}/work-histories/experience-summaries`);
     return res.data.data;
   },
 
@@ -120,6 +121,7 @@ export const profileService = {
     formData.append('changes', JSON.stringify(rest.changes));
     if (rest.comments) formData.append('comments', rest.comments);
     if (rest.previousRequestId !== undefined) formData.append('previousRequestId', String(rest.previousRequestId));
+    if (rest.targetEmployeeId) formData.append('targetEmployeeId', rest.targetEmployeeId);
     files.forEach((file) => formData.append('documents', file));
     const res = await api.post<ApiResponse<ProfileChangeRequest>>('/profile-change-requests', formData, {
       headers: { 'Content-Type': 'multipart/form-data' },

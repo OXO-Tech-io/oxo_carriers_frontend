@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import Link from 'next/link';
 import api from '@/lib/api';
 import { useToast } from '@/contexts/ToastContext';
 
@@ -12,6 +13,9 @@ interface EditEmployeeModalProps {
    * fields below. Everyone else who can open this modal only gets read-only
    * profile visibility (OCD-476). */
   canEdit: boolean;
+  /** HR Manager / HR Executive only (OCD-603/604): opens the full Edit Profile
+   * wizard for this employee; the changes go through approval. */
+  canEditFullProfile?: boolean;
   onSaved?: () => void;
 }
 
@@ -50,6 +54,7 @@ export default function EditEmployeeModal({
   onClose,
   employeeUserId,
   canEdit,
+  canEditFullProfile = false,
   onSaved,
 }: EditEmployeeModalProps) {
   const toast = useToast();
@@ -305,6 +310,21 @@ export default function EditEmployeeModal({
                     </p>
                   </Field>
                 </div>
+
+                {canEditFullProfile && employee && (
+                  <div className="rounded-lg border border-[#E4E7EC] bg-[#F9FAFB] p-3 flex flex-wrap items-center justify-between gap-3">
+                    <p className="text-xs font-medium text-[#475467]">
+                      Update this employee's full profile (statutory, remittance, family, education, work history). Changes
+                      are applied only after approval.
+                    </p>
+                    <Link
+                      href={`/profile/wizard?userId=${employee.id}`}
+                      className="px-3 py-2 text-xs font-semibold text-[#465FFF] bg-white border border-[#465FFF] rounded-lg hover:bg-[#F5F7FF] transition-colors"
+                    >
+                      Edit Full Profile
+                    </Link>
+                  </div>
+                )}
 
                 <div className="flex items-center justify-end space-x-3 pt-2">
                   <button

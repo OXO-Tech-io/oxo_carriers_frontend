@@ -15,6 +15,7 @@ import {
   validatePhoneNumber,
   validatePostalCode,
   validateLocationName,
+  validateGnDivision,
   validateAddressLine,
   NIC_PATTERN,
   NIC_FORMAT_HINT,
@@ -61,6 +62,7 @@ export default function StepStatutory({ form, email, designation, currentEmploye
     setValue,
     setError,
     clearErrors,
+    trigger,
     formState: { errors },
   } = form;
   const { fields, append, remove } = useFieldArray({
@@ -240,7 +242,7 @@ export default function StepStatutory({ form, email, designation, currentEmploye
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <Field label="City" required error={errors.permanentCity?.message}>
             <input
-              {...register('permanentCity', { required: 'City is required', validate: { validateLocationName, noEmoji } })}
+              {...register('permanentCity', { required: 'City is required', validate: { validateLocationName, noEmoji }, onChange: () => void trigger('permanentCity') })}
               className={inputClass}
             />
           </Field>
@@ -249,6 +251,7 @@ export default function StepStatutory({ form, email, designation, currentEmploye
               {...register('permanentDistrict', {
                 required: 'District is required',
                 validate: { validateLocationName, noEmoji },
+                onChange: () => void trigger('permanentDistrict'),
               })}
               className={inputClass}
             />
@@ -257,14 +260,15 @@ export default function StepStatutory({ form, email, designation, currentEmploye
             <input
               {...register('gramaNiladariDivision', {
                 required: 'Grama Niladhari Division is required',
-                validate: { validateLocationName, noEmoji },
+                validate: { validateGnDivision, noEmoji },
+                onChange: () => void trigger('gramaNiladariDivision'),
               })}
               className={inputClass}
             />
           </Field>
           <Field label="Electorate" required error={errors.electorate?.message}>
             <input
-              {...register('electorate', { required: 'Electorate is required', validate: { validateLocationName, noEmoji } })}
+              {...register('electorate', { required: 'Electorate is required', validate: { validateLocationName, noEmoji }, onChange: () => void trigger('electorate') })}
               className={inputClass}
             />
           </Field>
@@ -297,7 +301,7 @@ export default function StepStatutory({ form, email, designation, currentEmploye
         </Field>
         <Field label="Birth Place" required error={errors.birthPlace?.message}>
           <input
-            {...register('birthPlace', { required: 'Birth place is required', validate: { validateLocationName, noEmoji } })}
+            {...register('birthPlace', { required: 'Birth place is required', validate: { validateLocationName, noEmoji }, onChange: () => void trigger('birthPlace') })}
             className={inputClass}
           />
         </Field>

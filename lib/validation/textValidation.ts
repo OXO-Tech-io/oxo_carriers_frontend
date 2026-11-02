@@ -12,6 +12,8 @@
 const EMOJI_REGEX =
   /[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}\u{1F1E6}-\u{1F1FF}\u{2B00}-\u{2BFF}\u{FE0F}\u{200D}\u{1F000}-\u{1F0FF}]/u;
 
+import { validateAccountNumberForBank } from './bankAccountRules';
+
 export function containsEmoji(value: string): boolean {
   return EMOJI_REGEX.test(value);
 }
@@ -92,13 +94,25 @@ export function validatePostalCode(value: string): string | true {
 // Grama Niladhari Division, Electorate) - letters (incl. accented/local
 // script), spaces, apostrophes, periods and hyphens only. No digits or other
 // special characters.
-export const LOCATION_NAME_PATTERN = /^[\p{L}\s'.-]+$/u;
+// \p{M} keeps Sinhala/Tamil combining vowel signs valid.
+export const LOCATION_NAME_PATTERN = /^[\p{L}\p{M}\s'.-]+$/u;
 
 export function validateLocationName(value: string): string | true {
   if (typeof value !== 'string' || !value) return true;
   return LOCATION_NAME_PATTERN.test(value)
     ? true
     : 'Only letters, spaces, apostrophes, periods and hyphens are allowed.';
+}
+
+// Grama Niladhari Division - same as a location name but digits are allowed
+// too (divisions are commonly numbered, e.g. "123A Kollupitiya").
+export const GN_DIVISION_PATTERN = /^[\p{L}\p{M}\p{N}\s'.-]+$/u;
+
+export function validateGnDivision(value: string): string | true {
+  if (typeof value !== 'string' || !value) return true;
+  return GN_DIVISION_PATTERN.test(value)
+    ? true
+    : 'Only letters, numbers, spaces, apostrophes, periods and hyphens are allowed.';
 }
 
 // Free-form address lines - more permissive than LOCATION_NAME_PATTERN since
@@ -123,14 +137,12 @@ export function validateBankName(value: string): string | true {
     : 'Only letters, spaces, apostrophes, periods and hyphens are allowed.';
 }
 
-// Bank account number - numeric only, reasonable length bounds.
-export const BANK_ACCOUNT_NUMBER_PATTERN = /^\d{6,20}$/;
-
-export function validateBankAccountNumber(value: string): string | true {
+// Bank account number - numeric only. OCD-598: length (and, for some banks,
+// prefix) depends on the selected bank, and unknown banks fall back to a
+// generic digit range - both loaded from the backend, see bankAccountRules.ts.
+export function validateBankAccountNumber(value: string, bankName?: string | null): string | true {
   if (typeof value !== 'string' || !value) return true;
-  return BANK_ACCOUNT_NUMBER_PATTERN.test(value)
-    ? true
-    : 'Bank account number must contain 6-20 numeric digits only.';
+  return validateAccountNumberForBank(value, bankName);
 }
 
 // Branch code - alphanumeric, short.

@@ -435,6 +435,19 @@ export type ProfileChangeRequestStatus =
   | 'returned_for_modification'
   | 'cancelled';
 
+// OCD-603/604/605: stage a pending request is waiting at. Employee and HR
+// Executive requests go HR Manager -> Administrator; HR Manager requests go
+// straight to the Administrator.
+export type ProfileApprovalStage = 'hr_manager' | 'admin';
+
+export const PROFILE_CHANGE_STATUS_BADGES: Record<ProfileChangeRequestStatus, { label: string; className: string }> = {
+  pending_approval: { label: 'Pending', className: 'bg-amber-50 text-amber-700 border-amber-200' },
+  approved: { label: 'Approved', className: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
+  rejected: { label: 'Rejected', className: 'bg-red-50 text-red-700 border-red-200' },
+  returned_for_modification: { label: 'Returned', className: 'bg-orange-50 text-orange-700 border-orange-200' },
+  cancelled: { label: 'Cancelled', className: 'bg-[var(--gray-50)] text-[var(--gray-500)] border-[var(--gray-200)]' },
+};
+
 export interface ProfileChangeRequestEmployee {
   id: number;
   firstName: string;
@@ -462,6 +475,10 @@ export interface ProfileChangeRequest {
   reviewerComments: string | null;
   decidedAt: string | null;
   previousRequestId: number | null;
+  approvalStage?: ProfileApprovalStage | null;
+  submittedByRole?: string | null;
+  hrManagerComments?: string | null;
+  hrManagerApprovedAt?: string | null;
   createdAt: string;
   updatedAt: string;
   // OCD-478: supporting documents (NIC copy, address proof, etc.) uploaded
@@ -473,6 +490,9 @@ export interface SubmitProfileChangeRequestInput {
   changes: ProfileChangeItem[];
   comments?: string;
   previousRequestId?: number;
+  // OCD-603/604: employeeId of the employee being edited, when HR submits on
+  // their behalf. Omitted for self-service requests.
+  targetEmployeeId?: string;
   // OCD-478: optional supporting documents attached to the change request -
   // when present, the request is sent as multipart/form-data instead of JSON.
   files?: File[];
