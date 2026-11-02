@@ -1,7 +1,7 @@
-import { UseFormReturn, useFieldArray, useFormState } from "react-hook-form";
+import { UseFormReturn, useFieldArray, useFormState, useWatch } from "react-hook-form";
 import { Button } from "@/components/ui/Button";
 import { RepeatableCard } from "@/components/profile/wizard/shared";
-import { EMPLOYMENT_TYPE_OPTIONS } from "@/types/profile";
+import { CAREER_PATH_OPTIONS, employmentTypeDescription, employmentTypeOptionsFor } from "@/types/profile";
 import { noEmoji } from "@/lib/validation/textValidation";
 import { Field, inputClass } from "./shared";
 import { EmployeeWizardValues } from "./wizardTypes";
@@ -27,6 +27,7 @@ export default function StepWorkHistory({ form }: Readonly<StepProps>) {
   // "Emoji characters are not allowed" / date-order message would show.
   const { errors } = useFormState({ control, name: "workHistory" });
   const { fields, append, remove } = useFieldArray({ control, name: "workHistory" });
+  const watched = useWatch({ control, name: "workHistory" });
 
   return (
     <div className="space-y-4">
@@ -40,7 +41,8 @@ export default function StepWorkHistory({ form }: Readonly<StepProps>) {
             append({
               organization: "",
               positionHeld: "",
-              employmentType: "regular",
+              employmentType: "",
+              careerPath: "",
               startDate: "",
               endDate: "",
               remarks: "",
@@ -72,9 +74,28 @@ export default function StepWorkHistory({ form }: Readonly<StepProps>) {
                 className={inputClass}
               />
             </Field>
-            <Field label="Employment Type">
-              <select {...register(`workHistory.${index}.employmentType`)} className={inputClass}>
-                {EMPLOYMENT_TYPE_OPTIONS.map((opt) => (
+            <Field
+              label="Employment Type"
+              required
+              error={errors.workHistory?.[index]?.employmentType?.message}
+              hint={employmentTypeDescription(watched?.[index]?.employmentType)}
+            >
+              <select
+                {...register(`workHistory.${index}.employmentType`, { required: "Employment type is required" })}
+                className={inputClass}
+              >
+                <option value="">Select</option>
+                {employmentTypeOptionsFor(watched?.[index]?.employmentType === "regular" ? "regular" : null).map((opt) => (
+                  <option key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </option>
+                ))}
+              </select>
+            </Field>
+            <Field label="Career Path" hint="Used for the Experience in Related Field figure">
+              <select {...register(`workHistory.${index}.careerPath`)} className={inputClass}>
+                <option value="">Select</option>
+                {CAREER_PATH_OPTIONS.map((opt) => (
                   <option key={opt.value} value={opt.value}>
                     {opt.label}
                   </option>

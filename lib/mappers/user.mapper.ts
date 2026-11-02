@@ -18,6 +18,7 @@ export interface DbUserResponse {
   employeeCategory?: string | null;
   department?: string | null;
   position?: string | null;
+  careerPath?: string | null;
   hireDate?: string | null;
   managerId?: number | null;
   hourlyRate?: number | string | null;
@@ -64,6 +65,7 @@ export function mapDbUserToAppUser(raw: DbUserResponse | null | undefined): User
     employee_category: (raw.employeeCategory as User['employee_category']) ?? null,
     department: raw.department ?? '',
     position: raw.position ?? '',
+    career_path: raw.careerPath ?? null,
     hire_date: raw.hireDate ?? '',
     manager_id: raw.managerId ?? undefined,
     hourly_rate: raw.hourlyRate !== null && raw.hourlyRate !== undefined ? Number(raw.hourlyRate) : null,

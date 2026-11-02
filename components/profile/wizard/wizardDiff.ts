@@ -144,6 +144,7 @@ export function workHistoryToValue(w: WizardWorkHistory): WorkHistoryValue {
     organization: w.organization,
     positionHeld: w.positionHeld,
     employmentType: (w.employmentType || 'regular') as WorkHistoryValue['employmentType'],
+    careerPath: w.careerPath || null,
     startDate: w.startDate,
     endDate: w.endDate || null,
     remarks: w.remarks || null,

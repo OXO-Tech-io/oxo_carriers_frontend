@@ -2,7 +2,7 @@
 
 import { Briefcase, Pencil, Trash2 } from 'lucide-react';
 import { format } from 'date-fns';
-import type { EmployeeWorkHistory } from '@/types/profile';
+import { careerPathLabel, employmentTypeLabel, type EmployeeWorkHistory } from '@/types/profile';
 import { DATE_FORMATS } from '@/lib/constants';
 
 function formatRange(startDate: string, endDate: string | null) {
@@ -55,11 +55,16 @@ export function WorkHistoryTimeline({ entries, onEdit, onDelete }: WorkHistoryTi
                     {entry.positionHeld}
                     {entry.employmentType !== 'regular' && (
                       <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider bg-[var(--primary-light)] text-[var(--primary)]">
-                        {entry.employmentType}
+                        {employmentTypeLabel(entry.employmentType)}
                       </span>
                     )}
                   </p>
                   <p className="text-xs font-semibold text-[var(--primary)] mt-0.5">{entry.organization}</p>
+                  {entry.careerPath && (
+                    <p className="text-[11px] font-medium text-[var(--gray-500)] mt-0.5">
+                      {careerPathLabel(entry.careerPath)}
+                    </p>
+                  )}
                   <p className="text-[11px] font-medium text-[var(--gray-400)] mt-1">
                     {formatRange(entry.startDate, entry.endDate)}
                   </p>

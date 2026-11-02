@@ -1,6 +1,6 @@
 import { UseFormReturn } from "react-hook-form";
 import { UserRole } from "@/types";
-import { WORK_LOCATION_OPTIONS } from "@/types/profile";
+import { CAREER_PATH_OPTIONS, WORK_LOCATION_OPTIONS } from "@/types/profile";
 import { noEmoji, noFutureDate } from "@/lib/validation/textValidation";
 import { Field, inputClass } from "./shared";
 import { EmployeeWizardValues } from "./wizardTypes";
@@ -41,6 +41,16 @@ export default function StepEmployment({ form }: StepProps) {
             {...register("position", { required: "Position is required", validate: noEmoji })}
             className={inputClass}
           />
+        </Field>
+        <Field label="Related Career Path" error={errors.career_path?.message}>
+          <select {...register("career_path")} className={inputClass}>
+            <option value="">Select</option>
+            {CAREER_PATH_OPTIONS.map((opt) => (
+              <option key={opt.value} value={opt.value}>
+                {opt.label}
+              </option>
+            ))}
+          </select>
         </Field>
       </div>
       <Field label="Work Location" required error={errors.work_location?.message}>

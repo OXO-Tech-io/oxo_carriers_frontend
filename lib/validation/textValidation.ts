@@ -44,6 +44,19 @@ export function noEmoji(value: unknown): string | true {
 // only at submit.
 export const EMAIL_PATTERN = /^[^\s@.]+(?:\.[^\s@.]+)*@[^\s@.]+(?:\.[^\s@.]+)+$/;
 
+// Office (work/login) emails must belong to the company domain. Skips empty
+// and malformed values so the required/pattern rules report those instead.
+export const OFFICE_EMAIL_DOMAIN = 'oxoholdings.group';
+
+export function validateOfficeEmailDomain(value: unknown): true | string {
+  if (typeof value !== 'string') return true;
+  const email = value.trim();
+  if (!email || !EMAIL_PATTERN.test(email)) return true;
+  return email.toLowerCase().endsWith(`@${OFFICE_EMAIL_DOMAIN}`)
+    ? true
+    : `Office email must be an @${OFFICE_EMAIL_DOMAIN} address`;
+}
+
 // --- The validators below were added for OCD-416/417/419/420/427/429/433
 // (shared profile-wizard steps: components/profile/wizard/Step*.tsx). Kept
 // here alongside the emoji/email helpers above so both the Create Employee

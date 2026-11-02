@@ -94,6 +94,7 @@ export interface User {
   employee_category?: "internal" | "client_side" | null;
   department: string;
   position: string;
+  career_path?: string | null;
   hire_date: string;
   manager_id?: number;
   hourly_rate?: number | null;
