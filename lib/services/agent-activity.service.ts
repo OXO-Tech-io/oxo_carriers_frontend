@@ -31,7 +31,7 @@ export const agentActivityService = {
   },
 
   getSummary: async (params: Pick<AgentActivityLogsParams, 'from' | 'to'> = {}): Promise<AgentActivitySummary[]> => {
-    const res = await api.get<ApiResponse<AgentActivitySummary[]>>('/employee-activities/summary', { params });
+    const res = await api.get<ApiResponse<AgentActivitySummary[]>>('/employee-activities/summaries', { params });
     return extractData(res);
   },
 
