@@ -12,7 +12,7 @@ import type {
   ProfileChangeRequest,
   QualificationLevel,
 } from '@/types/profile';
-import { QUALIFICATION_LEVEL_OPTIONS } from '@/types/profile';
+import { QUALIFICATION_LEVEL_OPTIONS, employmentTypeLabel } from '@/types/profile';
 import { format } from 'date-fns';
 import { DATE_FORMATS } from '@/lib/constants';
 import { resolveFileUrl } from '@/lib/constants';
@@ -209,7 +209,7 @@ function ChangeItemCard({ item }: { item: ProfileChangeItem }) {
             {rec.positionHeld}
             {rec.employmentType !== 'regular' && (
               <span className="ml-1.5 text-[9px] font-bold uppercase tracking-wider text-[var(--primary)]">
-                ({rec.employmentType})
+                ({employmentTypeLabel(rec.employmentType)})
               </span>
             )}
           </p>

@@ -1,6 +1,6 @@
 import { UserRole } from "@/types";
 import { buildDefaultValues, type WizardFormValues } from "@/components/profile/wizard/wizardTypes";
-import type { EmploymentType, QualificationLevel, UserTitle } from "@/types/profile";
+import type { CareerPath, EmploymentType, QualificationLevel, UserTitle } from "@/types/profile";
 
 // Extends the profile wizard's own form shape (statutory info, nominees,
 // remittance, dependents, emergency contacts, welfare) so the same Step*
@@ -21,6 +21,7 @@ export interface EmployeeWizardValues extends WizardFormValues {
   employee_category: "" | "internal" | "client_side";
   department: string;
   position: string;
+  career_path: "" | CareerPath;
   work_location: "" | "office" | "remote" | "hybrid";
   primarySchoolAttended: string;
   secondarySchoolAttended: string;
@@ -63,6 +64,7 @@ export interface WizardWorkHistory {
   organization: string;
   positionHeld: string;
   employmentType: EmploymentType | "";
+  careerPath: CareerPath | "";
   startDate: string;
   endDate: string;
   remarks: string;
@@ -87,6 +89,7 @@ export const defaultEmployeeWizardValues: EmployeeWizardValues = {
   employee_category: "",
   department: "",
   position: "",
+  career_path: "",
   work_location: "",
   primarySchoolAttended: "",
   secondarySchoolAttended: "",
