@@ -24,8 +24,29 @@ export const agentActivityService = {
     return extractData(res);
   },
 
+  /** Image bytes (auth'd, so not an <img src>). Caller owns the returned blob. */
+  getScreenshot: async (id: number): Promise<Blob> => {
+    const res = await api.get<Blob>(`/agent-activity/screenshots/${id}`, { responseType: 'blob' });
+    return res.data;
+  },
+
   getSummary: async (params: Pick<AgentActivityLogsParams, 'from' | 'to'> = {}): Promise<AgentActivitySummary[]> => {
     const res = await api.get<ApiResponse<AgentActivitySummary[]>>('/agent-activity/summary', { params });
+    return extractData(res);
+  },
+
+  /** Issues a device token for the agent's direct API upload. Plaintext is returned once; older tokens are revoked. */
+  issueDeviceToken: async (employeeId: string): Promise<{ token: string; deviceId: string }> => {
+    const res = await api.post<ApiResponse<{ token: string; deviceId: string }>>(
+      `/agent-activity/devices/${encodeURIComponent(employeeId)}/token`,
+    );
+    return extractData(res);
+  },
+
+  revokeDeviceToken: async (employeeId: string): Promise<{ revoked: number }> => {
+    const res = await api.delete<ApiResponse<{ revoked: number }>>(
+      `/agent-activity/devices/${encodeURIComponent(employeeId)}/token`,
+    );
     return extractData(res);
   },
 };

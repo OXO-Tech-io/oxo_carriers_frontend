@@ -9,7 +9,8 @@ import type { AgentActivityFrame, AgentLogPayload } from '@/types/agent-activity
 // that can reach it: stay connected to its local socket and forward each activity.log
 // frame to the HRIS backend, which attributes it to the employee via their device ID.
 // Absent/stopped agents are normal (non-Windows, not installed) - every failure here
-// is silent and must never affect the rest of the app.
+// is silent and must never affect the rest of the app. Screenshots are not relayed here:
+// the agent uploads them to the API itself (device token -> signed GCS URL).
 const AGENT_WS_URL = 'ws://localhost:5959/agent/';
 const FLUSH_INTERVAL_MS = 5000;
 const MAX_BATCH = 100;
@@ -47,7 +48,6 @@ export function useAgentActivityRelay(): void {
     let retryTimer: ReturnType<typeof setTimeout> | undefined;
     let queue: AgentLogPayload[] = [];
     let flushing = false;
-
     const flush = async () => {
       if (flushing || stopped || queue.length === 0) return;
       flushing = true;

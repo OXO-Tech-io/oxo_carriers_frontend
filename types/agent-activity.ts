@@ -47,6 +47,10 @@ export interface AgentActivityLog {
   mouseEventCount: number;
   keyEventCount: number;
   mediaState: string | null;
+  /** Set on `screenshot` events - fetch the image with agentActivityService.getScreenshot. */
+  screenshotId: number | null;
+  /** Short-lived signed GCS URL for the image; null for legacy rows - then use getScreenshot. */
+  screenshotUrl: string | null;
 }
 
 export interface AgentActivityLogsPage {
