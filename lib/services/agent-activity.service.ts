@@ -38,14 +38,14 @@ export const agentActivityService = {
   /** Issues a device token for the agent's direct API upload. Plaintext is returned once; older tokens are revoked. */
   issueDeviceToken: async (employeeId: string): Promise<{ token: string; deviceId: string }> => {
     const res = await api.post<ApiResponse<{ token: string; deviceId: string }>>(
-      `/employee-activities/devices/${encodeURIComponent(employeeId)}/token`,
+      `/employee-activities/devices/${encodeURIComponent(employeeId)}/tokens`,
     );
     return extractData(res);
   },
 
   revokeDeviceToken: async (employeeId: string): Promise<{ revoked: number }> => {
     const res = await api.delete<ApiResponse<{ revoked: number }>>(
-      `/employee-activities/devices/${encodeURIComponent(employeeId)}/token`,
+      `/employee-activities/devices/${encodeURIComponent(employeeId)}/tokens`,
     );
     return extractData(res);
   },
