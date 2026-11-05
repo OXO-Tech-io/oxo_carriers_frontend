@@ -41,6 +41,10 @@ export interface EmployeeWizardValues extends WizardFormValues {
   bank_branch: string;
   company_name: string;
   contact_number: string;
+  // Identifies the local-PC agent this employee's in/out/break events should be
+  // pushed to over the attendance WebSocket. Optional - left blank until a
+  // device is assigned to this employee.
+  device_id: string;
   // Admin-only additions (StepEducation.tsx/StepWorkHistory.tsx) - written
   // directly at creation time, unlike the employee's own self-service
   // education/work-history change requests (see EducationChangeModal.tsx).
@@ -100,6 +104,7 @@ export const defaultEmployeeWizardValues: EmployeeWizardValues = {
   bank_branch: "",
   company_name: "",
   contact_number: "",
+  device_id: "",
   education: [],
   workHistory: [],
   declarationAccepted: false,
