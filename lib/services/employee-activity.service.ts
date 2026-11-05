@@ -2,13 +2,13 @@ import api from '@/lib/api';
 import { extractData } from '@/lib/services/http';
 import type { ApiResponse } from '@/types/api';
 import type {
-  AgentActivityLogsPage,
-  AgentActivityLogsParams,
-  AgentActivitySummary,
+  EmployeeActivityLogsPage,
+  EmployeeActivityLogsParams,
+  EmployeeActivitySummary,
   AgentLogPayload,
-} from '@/types/agent-activity';
+} from '@/types/employee-activity';
 
-export const agentActivityService = {
+export const employeeActivityService = {
   /** Employee's own tab relays frames from the local agent here. */
   ingest: async (logs: AgentLogPayload[]): Promise<{ received: number; stored: number; rejected: number }> => {
     const res = await api.post<ApiResponse<{ received: number; stored: number; rejected: number }>>(
@@ -18,9 +18,29 @@ export const agentActivityService = {
     return extractData(res);
   },
 
+  /** Screenshot handed over by the local agent; stored under the signed-in employee's assigned device. */
+  uploadScreenshot: async (input: {
+    eventId: number;
+    deviceId: string;
+    mimeType: string;
+    fileName: string;
+    capturedAt: string;
+    blob: Blob;
+  }): Promise<{ stored: boolean }> => {
+    const form = new FormData();
+    form.append('eventId', String(input.eventId));
+    form.append('deviceId', input.deviceId);
+    form.append('mimeType', input.mimeType);
+    form.append('fileName', input.fileName);
+    form.append('capturedAt', input.capturedAt);
+    form.append('file', input.blob, input.fileName);
+    const res = await api.post<ApiResponse<{ stored: boolean }>>('/employee-activities/screenshots', form);
+    return extractData(res);
+  },
+
   /** Admin view. */
-  getLogs: async (params: AgentActivityLogsParams = {}): Promise<AgentActivityLogsPage> => {
-    const res = await api.get<ApiResponse<AgentActivityLogsPage>>('/employee-activities/logs', { params });
+  getLogs: async (params: EmployeeActivityLogsParams = {}): Promise<EmployeeActivityLogsPage> => {
+    const res = await api.get<ApiResponse<EmployeeActivityLogsPage>>('/employee-activities/logs', { params });
     return extractData(res);
   },
 
@@ -30,8 +50,8 @@ export const agentActivityService = {
     return res.data;
   },
 
-  getSummary: async (params: Pick<AgentActivityLogsParams, 'from' | 'to'> = {}): Promise<AgentActivitySummary[]> => {
-    const res = await api.get<ApiResponse<AgentActivitySummary[]>>('/employee-activities/summaries', { params });
+  getSummary: async (params: Pick<EmployeeActivityLogsParams, 'from' | 'to'> = {}): Promise<EmployeeActivitySummary[]> => {
+    const res = await api.get<ApiResponse<EmployeeActivitySummary[]>>('/employee-activities/summaries', { params });
     return extractData(res);
   },
 

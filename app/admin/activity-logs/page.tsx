@@ -13,10 +13,10 @@ import {
 import { useAuth } from "@/hooks/useAuth";
 import api from "@/lib/api";
 import {
-  useAgentActivityLogsQuery,
-  useAgentActivitySummaryQuery,
-} from "@/hooks/queries/use-agent-activity-query";
-import { agentActivityService } from "@/lib/services/agent-activity.service";
+  useEmployeeActivityLogsQuery,
+  useEmployeeActivitySummaryQuery,
+} from "@/hooks/queries/use-employee-activity-query";
+import { employeeActivityService } from "@/lib/services/employee-activity.service";
 import { Badge, Card, Modal, Pagination } from "@/components/ui";
 import type { BadgeVariant } from "@/components/ui";
 
@@ -72,7 +72,7 @@ function useScreenshotUrl(screenshotId: number, signedUrl?: string | null) {
     if (!useFallback) return;
     let objectUrl: string | null = null;
     let cancelled = false;
-    agentActivityService
+    employeeActivityService
       .getScreenshot(screenshotId)
       .then((blob) => {
         if (cancelled) return;
@@ -257,8 +257,8 @@ export default function AdminActivityLogsPage() {
 
   const pageSize = tab === "screenshots" ? GALLERY_PAGE_SIZE : PAGE_SIZE;
 
-  const summaryQuery = useAgentActivitySummaryQuery({ from, to }, canView);
-  const logsQuery = useAgentActivityLogsQuery(
+  const summaryQuery = useEmployeeActivitySummaryQuery({ from, to }, canView);
+  const logsQuery = useEmployeeActivityLogsQuery(
     {
       from,
       to,
