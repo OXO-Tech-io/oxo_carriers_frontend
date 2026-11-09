@@ -16,13 +16,10 @@ import {
   FolderIcon,
   PencilSquareIcon,
 } from "@heroicons/react/24/outline";
-import { UserRole, EmployeeStatus, Vendor } from "@/types";
+import { UserRole, EmployeeStatus } from "@/types";
 import CreateUserModal, {
   CreateEmployeeProfilePayload,
 } from "@/components/modals/CreateUserModal";
-import CreateServiceProviderModal, {
-  CreateServiceProviderPayload,
-} from "@/components/modals/CreateServiceProviderModal";
 import ResetPasswordModal from "@/components/modals/ResetPasswordModal";
 import { EmployeeNotesModal } from "@/components/modals/EmployeeNotesModal";
 import { DocumentVaultModal } from "@/components/modals/DocumentVaultModal";
@@ -58,10 +55,6 @@ interface User {
   hire_date?: string;
   requiredActions: string[];
   created_at: string;
-}
-
-function isVendor(item: User | Vendor): item is Vendor {
-  return "company_name" in item && !("role" in item);
 }
 
 function statusLabel(status?: EmployeeStatus): string {
@@ -100,14 +93,14 @@ const STATUS_STEPS: StepSliderOption<EmployeeStatus>[] = [
 ];
 
 export default function AdminUsersPage() {
-  const { user: currentUser, isHR, isFinance, isSuperAdmin } = useAuth();
+  const { user: currentUser, isHR, isSuperAdmin } = useAuth();
   const toast = useToast();
-  const canAccessUsers = isSuperAdmin || isHR || isFinance;
-  const [listItems, setListItems] = useState<(User | Vendor)[]>([]);
+  // Service providers have their own page (/admin/service-providers); this
+  // page is employees only.
+  const canAccessUsers = isSuperAdmin || isHR;
+  const [listItems, setListItems] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [showCreateModal, setShowCreateModal] = useState(false);
-  const [showCreateServiceProviderModal, setShowCreateServiceProviderModal] =
-    useState(false);
   const [showResetModal, setShowResetModal] = useState(false);
   const [showNotesModal, setShowNotesModal] = useState(false);
   const [showDocumentVaultModal, setShowDocumentVaultModal] = useState(false);
@@ -144,40 +137,33 @@ export default function AdminUsersPage() {
   useEffect(() => {
     if (canAccessUsers) {
       fetchUsers();
-      if (!isFinance) fetchDepartments();
+      fetchDepartments();
     }
     // filterRole/filterDepartment are applied client-side (see filteredItems
     // below), not refetched - the backend doesn't support those filters.
-  }, [canAccessUsers, isFinance, searchTerm]);
+  }, [canAccessUsers, searchTerm]);
 
   const fetchUsers = async () => {
     try {
       setLoading(true);
-      if (isFinance) {
-        const params = new URLSearchParams();
-        if (searchTerm) params.append("search", searchTerm);
-        const response = await api.get(`/vendors?${params.toString()}`);
-        setListItems(response.data.vendors || []);
-      } else {
-        // The backend only supports filtering by `search` - role/department
-        // filters are applied client-side below.
-        const params = new URLSearchParams();
-        if (searchTerm) params.append("search", searchTerm);
-        const response = await api.get(`/users?${params.toString()}`);
-        const rows: KeycloakUserRow[] = response.data.users || [];
-        const mapped = rows
-          .filter((row) => row.employee)
-          .map((row) => {
-            const employee = mapDbUserToAppUser(row.employee)!;
-            return {
-              ...employee,
-              role: employee.role as UserRole,
-              status: employee.status as EmployeeStatus | undefined,
-              requiredActions: row.requiredActions ?? [],
-            };
-          });
-        setListItems(mapped);
-      }
+      // The backend only supports filtering by `search` - role/department
+      // filters are applied client-side below.
+      const params = new URLSearchParams();
+      if (searchTerm) params.append("search", searchTerm);
+      const response = await api.get(`/users?${params.toString()}`);
+      const rows: KeycloakUserRow[] = response.data.users || [];
+      const mapped = rows
+        .filter((row) => row.employee)
+        .map((row) => {
+          const employee = mapDbUserToAppUser(row.employee)!;
+          return {
+            ...employee,
+            role: employee.role as UserRole,
+            status: employee.status as EmployeeStatus | undefined,
+            requiredActions: row.requiredActions ?? [],
+          };
+        });
+      setListItems(mapped);
     } catch (err: any) {
       console.error("Failed to fetch:", err);
       toast.error(
@@ -260,27 +246,6 @@ export default function AdminUsersPage() {
     fetchUsers();
   };
 
-  const handleCreateServiceProvider = async (
-    data: CreateServiceProviderPayload,
-  ) => {
-    try {
-      const response = await api.post("/vendors", data);
-      toast.success(
-        "Vendor created",
-        response.data.message ||
-          "Service provider account created successfully",
-      );
-      setShowCreateServiceProviderModal(false);
-      fetchUsers();
-    } catch (err: any) {
-      toast.error(
-        "Failed to create vendor",
-        err.response?.data?.message || "Please check the form and try again",
-      );
-      throw err;
-    }
-  };
-
   const handleResetPassword = async () => {
     if (!selectedUser) return;
     try {
@@ -341,7 +306,6 @@ export default function AdminUsersPage() {
   };
 
   const filteredItems = listItems.filter((item) => {
-    if (isVendor(item)) return true;
     if (filterRole && item.role !== filterRole) return false;
     if (filterDepartment && item.department !== filterDepartment) return false;
     return true;
@@ -366,63 +330,33 @@ export default function AdminUsersPage() {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold text-[var(--foreground)]">
-            {isFinance ? "Service Providers" : "Employee Management"}
+            Employee Management
           </h1>
           <p className="mt-2 text-[var(--gray-400)]">
-            {isFinance
-              ? "Create and manage service provider accounts"
-              : "Create and manage employee accounts"}
+            Create and manage employee accounts
           </p>
         </div>
-        {(isHR || isFinance || isSuperAdmin) && (
-          <div className="flex items-center gap-2">
-            {isFinance && (
-              <button
-                onClick={() => setShowCreateServiceProviderModal(true)}
-                className="inline-flex items-center space-x-2 px-4 py-2.5 bg-[var(--primary)] text-white rounded-xl font-semibold hover:bg-[var(--primary-hover)] transition-colors shadow-sm hover:shadow-md"
-              >
-                <PlusIcon className="h-5 w-5" />
-                <span>Create Service Provider</span>
-              </button>
-            )}
-            {(isHR || isSuperAdmin) && (
-              <>
-                <button
-                  onClick={() => setShowCreateModal(true)}
-                  className="inline-flex items-center space-x-2 px-4 py-2.5 bg-[var(--primary)] text-white rounded-xl font-semibold hover:bg-[var(--primary-hover)] transition-colors shadow-sm hover:shadow-md"
-                >
-                  <PlusIcon className="h-5 w-5" />
-                  <span>Create Employee</span>
-                </button>
-                <button
-                  onClick={() => setShowCreateServiceProviderModal(true)}
-                  className="inline-flex items-center space-x-2 px-4 py-2.5 bg-[var(--card-bg)] border border-[var(--gray-200)] text-[var(--gray-600)] rounded-xl font-semibold hover:bg-[var(--gray-25)] transition-colors shadow-sm"
-                >
-                  <PlusIcon className="h-5 w-5" />
-                  <span>Create Service Provider</span>
-                </button>
-              </>
-            )}
-          </div>
-        )}
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setShowCreateModal(true)}
+            className="inline-flex items-center space-x-2 px-4 py-2.5 bg-[var(--primary)] text-white rounded-xl font-semibold hover:bg-[var(--primary-hover)] transition-colors shadow-sm hover:shadow-md"
+          >
+            <PlusIcon className="h-5 w-5" />
+            <span>Create Employee</span>
+          </button>
+        </div>
       </div>
 
       {/* Filters */}
       <div className="bg-[var(--card-bg)] rounded-2xl shadow-sm border border-[var(--gray-100)] p-4">
-        <div
-          className={`grid grid-cols-1 gap-4 ${isHR || isSuperAdmin ? "md:grid-cols-3" : ""}`}
-        >
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
           <div className="relative">
             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
               <MagnifyingGlassIcon className="h-5 w-5 text-[var(--gray-300)]" />
             </div>
             <input
               type="text"
-              placeholder={
-                isFinance
-                  ? "Search service providers..."
-                  : "Search employees..."
-              }
+              placeholder="Search employees..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="block w-full pl-10 pr-3 py-2.5 border border-[var(--gray-200)] rounded-lg text-sm text-[var(--foreground)] placeholder:text-[var(--gray-300)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)] focus:border-transparent"
@@ -446,9 +380,6 @@ export default function AdminUsersPage() {
                 </option>
                 <option value={UserRole.EMPLOYEE}>Employee</option>
                 <option value={UserRole.CONSULTANT}>Consultant</option>
-                <option value={UserRole.SERVICE_PROVIDER}>
-                  Service Provider
-                </option>
               </select>
               <select
                 value={filterDepartment}
@@ -479,79 +410,43 @@ export default function AdminUsersPage() {
               <thead className="bg-[var(--gray-25)]">
                 <tr>
                   <th className="px-6 py-4 text-left text-xs font-bold text-[var(--gray-600)] uppercase tracking-wider">
-                    {isFinance ? "Company" : "Employee"}
+                    Employee
                   </th>
-                  {!isFinance && (
-                    <>
-                      <th className="px-6 py-4 text-left text-xs font-bold text-[var(--gray-600)] uppercase tracking-wider">
-                        Role
-                      </th>
-                      <th className="px-6 py-4 text-left text-xs font-bold text-[var(--gray-600)] uppercase tracking-wider">
-                        Department
-                      </th>
-                      <th className="px-6 py-4 text-left text-xs font-bold text-[var(--gray-600)] uppercase tracking-wider">
-                        Position
-                      </th>
-                      <th className="px-6 py-4 text-left text-xs font-bold text-[var(--gray-600)] uppercase tracking-wider">
-                        Onboarding
-                      </th>
-                      <th className="px-6 py-4 text-left text-xs font-bold text-[var(--gray-600)] uppercase tracking-wider">
-                        Account Status
-                      </th>
-                    </>
-                  )}
-                  {isFinance && (
-                    <th className="px-6 py-4 text-left text-xs font-bold text-[var(--gray-600)] uppercase tracking-wider">
-                      Contact
-                    </th>
-                  )}
-                  {!isFinance && (
-                    <th className="px-6 py-4 text-right text-xs font-bold text-[var(--gray-600)] uppercase tracking-wider">
-                      Actions
-                    </th>
-                  )}
+                  <th className="px-6 py-4 text-left text-xs font-bold text-[var(--gray-600)] uppercase tracking-wider">
+                    Role
+                  </th>
+                  <th className="px-6 py-4 text-left text-xs font-bold text-[var(--gray-600)] uppercase tracking-wider">
+                    Department
+                  </th>
+                  <th className="px-6 py-4 text-left text-xs font-bold text-[var(--gray-600)] uppercase tracking-wider">
+                    Position
+                  </th>
+                  <th className="px-6 py-4 text-left text-xs font-bold text-[var(--gray-600)] uppercase tracking-wider">
+                    Onboarding
+                  </th>
+                  <th className="px-6 py-4 text-left text-xs font-bold text-[var(--gray-600)] uppercase tracking-wider">
+                    Account Status
+                  </th>
+                  <th className="px-6 py-4 text-right text-xs font-bold text-[var(--gray-600)] uppercase tracking-wider">
+                    Actions
+                  </th>
                 </tr>
               </thead>
               <tbody className="bg-[var(--card-bg)] divide-y divide-[var(--gray-100)]">
                 {filteredItems.length === 0 ? (
                   <tr>
-                    <td
-                      colSpan={isFinance ? 2 : 7}
-                      className="px-6 py-12 text-center"
-                    >
+                    <td colSpan={7} className="px-6 py-12 text-center">
                       <UserGroupIcon className="h-12 w-12 text-[var(--gray-300)] mx-auto mb-4" />
                       <p className="text-sm font-medium text-[var(--gray-600)]">
-                        {isFinance ? "No vendors found" : "No employees found"}
+                        No employees found
                       </p>
                       <p className="text-sm text-[var(--gray-300)] mt-1">
-                        {isFinance
-                          ? "Try adjusting your search"
-                          : "Try adjusting your search or filters"}
+                        Try adjusting your search or filters
                       </p>
                     </td>
                   </tr>
                 ) : (
-                  filteredItems.map((item) =>
-                    isVendor(item) ? (
-                      <tr
-                        key={item.id}
-                        className="hover:bg-[var(--gray-25)] transition-colors"
-                      >
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div>
-                            <p className="text-sm font-semibold text-[var(--foreground)]">
-                              {item.company_name}
-                            </p>
-                            <p className="text-xs text-[var(--gray-400)]">
-                              {item.email}
-                            </p>
-                          </div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-[var(--gray-400)]">
-                          {item.contact_number || "—"}
-                        </td>
-                      </tr>
-                    ) : (
+                  filteredItems.map((item) => (
                       <tr
                         key={item.id}
                         className="hover:bg-[var(--gray-25)] transition-colors"
@@ -609,7 +504,7 @@ export default function AdminUsersPage() {
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                           <div className="flex items-center justify-end space-x-2">
-                            {canViewEditProfile && !isVendor(item) && (
+                            {canViewEditProfile && (
                               <button
                                 onClick={() => {
                                   setSelectedUser(item);
@@ -633,7 +528,7 @@ export default function AdminUsersPage() {
                                 <DocumentTextIcon className="h-5 w-5" />
                               </button>
                             )}
-                            {canManageDocumentVault && !isVendor(item) && (
+                            {canManageDocumentVault && (
                               <button
                                 onClick={() => {
                                   setSelectedUser(item);
@@ -667,8 +562,7 @@ export default function AdminUsersPage() {
                           </div>
                         </td>
                       </tr>
-                    ),
-                  )
+                  ))
                 )}
               </tbody>
             </table>
@@ -684,13 +578,6 @@ export default function AdminUsersPage() {
         currentUserRole={currentUser?.role as UserRole | undefined}
       />
 
-      {/* Create Service Provider Modal */}
-      <CreateServiceProviderModal
-        isOpen={showCreateServiceProviderModal}
-        onClose={() => setShowCreateServiceProviderModal(false)}
-        onSubmit={handleCreateServiceProvider}
-      />
-
       {/* Reset Password Modal */}
       <ResetPasswordModal
         isOpen={showResetModal}
@@ -703,7 +590,7 @@ export default function AdminUsersPage() {
       />
 
       {/* Employee Notes Modal (HR Team can add-only; HR Manager can view/edit) */}
-      {selectedUser && !isVendor(selectedUser) && (
+      {selectedUser && (
         <EmployeeNotesModal
           isOpen={showNotesModal}
           onClose={() => {
@@ -716,7 +603,7 @@ export default function AdminUsersPage() {
       )}
 
       {/* Document Vault Modal */}
-      {selectedUser && !isVendor(selectedUser) && (
+      {selectedUser && (
         <DocumentVaultModal
           isOpen={showDocumentVaultModal}
           onClose={() => {
@@ -737,7 +624,7 @@ export default function AdminUsersPage() {
           setShowEditEmployeeModal(false);
           setSelectedUser(null);
         }}
-        employeeUserId={selectedUser && !isVendor(selectedUser) ? selectedUser.id : null}
+        employeeUserId={selectedUser ? selectedUser.id : null}
         canEdit={canViewEditProfile}
         canEditFullProfile={isHR}
         onSaved={fetchUsers}

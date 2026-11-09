@@ -82,20 +82,28 @@ const navigation: MenuItem[] = [
       "vouchers.view",
       "vouchers.create",
       "vouchers.review",
-      "vouchers.resubmit",
+      "vouchers.admin_review",
       "vouchers.bank_upload",
       "vouchers.mark_paid",
     ],
     requiredLevel: "read",
     children: [
-      { name: "Approved Vouchers", href: "/vouchers?status=approved" },
-      { name: "Reject Vouchers", href: "/vouchers?status=rejected" },
       {
-        name: "Information Request",
-        href: "/vouchers?status=information_request",
+        name: "Manager Review",
+        href: "/vouchers?status=pending_manager_review",
       },
-      { name: "Payment Upload", href: "/vouchers?status=bank_upload" },
-      { name: "Paid Voucher", href: "/vouchers?status=paid" },
+      {
+        name: "Approval Queue",
+        href: "/vouchers?status=pending_admin_review",
+      },
+      { name: "Approved Vouchers", href: "/vouchers?status=approved" },
+      { name: "Rejected Vouchers", href: "/vouchers?status=rejected" },
+      { name: "Unpaid", href: "/vouchers?payment_status=unpaid" },
+      {
+        name: "Uploaded for Payment",
+        href: "/vouchers?payment_status=uploaded_for_payment",
+      },
+      { name: "Paid Vouchers", href: "/vouchers?payment_status=paid" },
     ],
   },
   {
@@ -170,6 +178,13 @@ const adminNavigation: MenuItem[] = [
     href: "/admin/users",
     icon: Users,
     permissionKeys: ["users"],
+    requiredLevel: "read",
+  },
+  {
+    name: "Service Providers",
+    href: "/admin/service-providers",
+    icon: Briefcase,
+    permissionKeys: ["vendors"],
     requiredLevel: "read",
   },
   {
@@ -333,6 +348,7 @@ function NavItems({
 }>) {
   const searchParams = useSearchParams();
   const currentStatus = searchParams.get("status");
+  const currentPaymentStatus = searchParams.get("payment_status");
 
   // OCD-430: nested routes (e.g. "/admin/facilities/calendar" for "Booking
   // Calendar") are string-prefixed by a sibling item's href ("/admin/facilities"
@@ -398,19 +414,24 @@ function NavItems({
                 {item.children.map((child: any) => {
                   const childUrl = new URL(child.href, "http://localhost");
                   const childStatus = childUrl.searchParams.get("status");
+                  const childPaymentStatus =
+                    childUrl.searchParams.get("payment_status");
                   const isChildActive =
                     pathname === childUrl.pathname &&
-                    currentStatus === childStatus;
+                    currentStatus === childStatus &&
+                    currentPaymentStatus === childPaymentStatus;
 
                   return (
                     <Link
                       key={child.href}
                       href={child.href}
+                      aria-current={isChildActive ? "page" : undefined}
                       className={`
-                        block rounded-lg px-3 py-2 text-xs font-semibold transition-all duration-200
+                        relative block rounded-lg px-3 py-2 text-xs font-semibold transition-all duration-200
+                        outline-none focus-visible:ring-2 focus-visible:ring-[var(--sidebar-indicator)]
                         ${
                           isChildActive
-                            ? "text-[var(--sidebar-indicator)]"
+                            ? "bg-[var(--sidebar-active-bg)] text-[var(--sidebar-indicator)] before:absolute before:-left-[1.3125rem] before:top-1/2 before:h-4 before:w-0.5 before:-translate-y-1/2 before:rounded-full before:bg-[var(--sidebar-indicator)]"
                             : "text-[var(--sidebar-text)] hover:bg-[var(--sidebar-hover)] hover:text-[var(--sidebar-text-active)]"
                         }
                       `}
