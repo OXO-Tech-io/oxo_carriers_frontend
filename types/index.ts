@@ -10,12 +10,20 @@ export enum UserRole {
   SERVICE_PROVIDER = "service_provider",
 }
 
+// Approval lifecycle (mirrors the backend). Executive-created vouchers start at
+// PENDING_MANAGER_REVIEW, manager-created ones at PENDING_ADMIN_REVIEW; the
+// Administrator's approval makes a voucher APPROVED and starts its payment status.
 export enum VoucherStatus {
-  PENDING_REVIEW = "pending_review",
+  PENDING_MANAGER_REVIEW = "pending_manager_review",
+  PENDING_ADMIN_REVIEW = "pending_admin_review",
   APPROVED = "approved",
   REJECTED = "rejected",
-  INFORMATION_REQUEST = "information_request",
-  BANK_UPLOAD = "bank_upload",
+}
+
+// Only set on APPROVED vouchers.
+export enum VoucherPaymentStatus {
+  UNPAID = "unpaid",
+  UPLOADED_FOR_PAYMENT = "uploaded_for_payment",
   PAID = "paid",
 }
 
@@ -43,10 +51,15 @@ export interface PaymentVoucher {
   description: string | null;
   invoice_url: string | null;
   status: VoucherStatus;
-  executive_comment: string | null;
-  reviewed_by: number | null;
-  reviewed_at: string | null;
-  resubmitted_at: string | null;
+  payment_status: VoucherPaymentStatus | null;
+  created_by_role?: string | null;
+  manager_reviewed_by: number | null;
+  manager_reviewed_at: string | null;
+  admin_reviewed_by: number | null;
+  admin_reviewed_at: string | null;
+  rejection_reason: string | null;
+  rejected_by: number | null;
+  rejected_at: string | null;
   bank_upload_by: number | null;
   bank_upload_at: string | null;
   paid_by: number | null;
@@ -59,8 +72,16 @@ export interface PaymentVoucher {
   sp_last_name?: string;
   sp_company_name?: string;
   sp_email?: string;
-  reviewed_by_first_name?: string;
-  reviewed_by_last_name?: string;
+  manager_reviewed_by_first_name?: string;
+  manager_reviewed_by_last_name?: string;
+  admin_reviewed_by_first_name?: string;
+  admin_reviewed_by_last_name?: string;
+  rejected_by_first_name?: string;
+  rejected_by_last_name?: string;
+  bank_upload_by_first_name?: string;
+  bank_upload_by_last_name?: string;
+  paid_by_first_name?: string;
+  paid_by_last_name?: string;
 }
 
 export type UserTitle = 'mr' | 'ms' | 'mrs' | 'dr' | 'prof';

@@ -29,7 +29,6 @@ import {
 import {
   useCreateVoucherMutation,
   useReviewVoucherMutation,
-  useResubmitVoucherMutation,
   useMarkVoucherBankUploadedMutation,
   useMarkVoucherPaidMutation,
 } from "@/hooks/mutations/use-voucher-mutations";
@@ -96,7 +95,6 @@ const {
   voucherServiceMock: {
     createVoucher: vi.fn(),
     reviewVoucher: vi.fn(),
-    resubmitVoucher: vi.fn(),
     markVoucherBankUploaded: vi.fn(),
     markVoucherPaid: vi.fn(),
   },
@@ -195,7 +193,6 @@ describe("mutation hooks", () => {
 
     voucherServiceMock.createVoucher.mockResolvedValue({ id: 1 });
     voucherServiceMock.reviewVoucher.mockResolvedValue({ id: 1 });
-    voucherServiceMock.resubmitVoucher.mockResolvedValue({ id: 1 });
     voucherServiceMock.markVoucherBankUploaded.mockResolvedValue({ id: 1 });
     voucherServiceMock.markVoucherPaid.mockResolvedValue({ id: 1 });
 
@@ -354,7 +351,6 @@ describe("mutation hooks", () => {
       id: 1,
       payload: { action: "approve" as const },
     });
-    await runMutation(useResubmitVoucherMutation, 1);
     await runMutation(useMarkVoucherBankUploadedMutation, 1);
     await runMutation(useMarkVoucherPaidMutation, 1);
 
@@ -365,7 +361,6 @@ describe("mutation hooks", () => {
     expect(voucherServiceMock.reviewVoucher).toHaveBeenCalledWith(1, {
       action: "approve",
     });
-    expect(voucherServiceMock.resubmitVoucher).toHaveBeenCalledWith(1);
     expect(voucherServiceMock.markVoucherBankUploaded).toHaveBeenCalledWith(1);
     expect(voucherServiceMock.markVoucherPaid).toHaveBeenCalledWith(1);
   });

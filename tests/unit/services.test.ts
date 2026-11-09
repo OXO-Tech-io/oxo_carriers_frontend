@@ -223,8 +223,8 @@ describe("frontend services", () => {
     apiMock.put.mockResolvedValueOnce(asResponse({ data: { id: 1 } }));
     await voucherService.reviewVoucher(1, { action: "approve" });
 
-    apiMock.put.mockResolvedValueOnce(asResponse({ data: { id: 1 } }));
-    await voucherService.resubmitVoucher(1);
+    apiMock.get.mockResolvedValueOnce(asResponse({ data: [] }));
+    await voucherService.listApprovalQueue();
 
     apiMock.put.mockResolvedValueOnce(asResponse({ data: { id: 1 } }));
     await voucherService.markVoucherBankUploaded(1);
@@ -243,7 +243,7 @@ describe("frontend services", () => {
     expect(apiMock.put).toHaveBeenCalledWith("/vouchers/1/reviews", {
       action: "approve",
     });
-    expect(apiMock.put).toHaveBeenCalledWith("/vouchers/1/resubmissions");
+    expect(apiMock.get).toHaveBeenCalledWith("/vouchers/approval-queue");
     expect(apiMock.put).toHaveBeenCalledWith("/vouchers/1/bank-uploads");
     expect(apiMock.put).toHaveBeenCalledWith("/vouchers/1/payments");
   });

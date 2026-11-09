@@ -7,11 +7,11 @@ const { useAuthMock, ingestMock } = vi.hoisted(() => ({
 }));
 
 vi.mock("@/hooks/useAuth", () => ({ useAuth: useAuthMock }));
-vi.mock("@/lib/services/agent-activity.service", () => ({
-  agentActivityService: { ingest: ingestMock },
+vi.mock("@/lib/services/employee-activity.service", () => ({
+  employeeActivityService: { ingest: ingestMock },
 }));
 
-import { useAgentActivityRelay } from "@/hooks/useAgentActivityRelay";
+import { useEmployeeActivityRelay } from "@/hooks/useEmployeeActivityRelay";
 
 class FakeWebSocket {
   static instances: FakeWebSocket[] = [];
@@ -52,7 +52,7 @@ const flushTick = async () => {
   });
 };
 
-describe("useAgentActivityRelay", () => {
+describe("useEmployeeActivityRelay", () => {
   beforeEach(() => {
     vi.useFakeTimers();
     FakeWebSocket.instances = [];
@@ -69,18 +69,18 @@ describe("useAgentActivityRelay", () => {
 
   it("does not connect to the agent when the user has no employee id", () => {
     useAuthMock.mockReturnValue({ user: null });
-    renderHook(() => useAgentActivityRelay());
+    renderHook(() => useEmployeeActivityRelay());
     expect(FakeWebSocket.instances).toHaveLength(0);
   });
 
   it("connects to the local agent socket", () => {
-    renderHook(() => useAgentActivityRelay());
+    renderHook(() => useEmployeeActivityRelay());
     expect(FakeWebSocket.instances).toHaveLength(1);
     expect(FakeWebSocket.instances[0].url).toBe("ws://localhost:5959/agent/");
   });
 
   it("batches activity.log frames and forwards them, dropping mediaTitle", async () => {
-    renderHook(() => useAgentActivityRelay());
+    renderHook(() => useEmployeeActivityRelay());
     const ws = FakeWebSocket.instances[0];
 
     ws.emit(activityFrame());
@@ -107,7 +107,7 @@ describe("useAgentActivityRelay", () => {
   });
 
   it("ignores frames that are not activity.log (e.g. screenshot.captured)", async () => {
-    renderHook(() => useAgentActivityRelay());
+    renderHook(() => useEmployeeActivityRelay());
     const ws = FakeWebSocket.instances[0];
 
     ws.emit({ type: "screenshot.captured", ts: "x", data: { eventId: 9, contentBase64: "AAAA" } });
@@ -118,7 +118,7 @@ describe("useAgentActivityRelay", () => {
   });
 
   it("ignores malformed and incomplete frames", async () => {
-    renderHook(() => useAgentActivityRelay());
+    renderHook(() => useEmployeeActivityRelay());
     const ws = FakeWebSocket.instances[0];
 
     ws.emit("not json");
@@ -131,7 +131,7 @@ describe("useAgentActivityRelay", () => {
 
   it("keeps the batch and retries after a transient server error", async () => {
     ingestMock.mockRejectedValueOnce({ response: { status: 500 } });
-    renderHook(() => useAgentActivityRelay());
+    renderHook(() => useEmployeeActivityRelay());
     FakeWebSocket.instances[0].emit(activityFrame());
 
     await flushTick();
@@ -144,7 +144,7 @@ describe("useAgentActivityRelay", () => {
 
   it("stops relaying and closes the socket when the backend refuses (403)", async () => {
     ingestMock.mockRejectedValueOnce({ response: { status: 403 } });
-    renderHook(() => useAgentActivityRelay());
+    renderHook(() => useEmployeeActivityRelay());
     const ws = FakeWebSocket.instances[0];
     ws.emit(activityFrame());
 
@@ -160,7 +160,7 @@ describe("useAgentActivityRelay", () => {
   });
 
   it("reconnects with backoff when the agent socket closes", async () => {
-    renderHook(() => useAgentActivityRelay());
+    renderHook(() => useEmployeeActivityRelay());
     FakeWebSocket.instances[0].onclose?.();
 
     await act(async () => {
@@ -171,7 +171,7 @@ describe("useAgentActivityRelay", () => {
   });
 
   it("closes the socket and stops reconnecting on unmount", async () => {
-    const { unmount } = renderHook(() => useAgentActivityRelay());
+    const { unmount } = renderHook(() => useEmployeeActivityRelay());
     const ws = FakeWebSocket.instances[0];
 
     unmount();

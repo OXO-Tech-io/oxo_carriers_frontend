@@ -7,6 +7,7 @@ export interface VoucherFilters {
   page?: number;
   limit?: number;
   status?: string;
+  payment_status?: string;
   search?: string;
 }
 
@@ -35,7 +36,8 @@ export interface CreateVoucherInput {
 }
 
 export interface ReviewVoucherInput {
-  action: "approve" | "reject" | "information_request";
+  action: "approve" | "reject";
+  /** Rejection reason - mandatory when action is "reject". */
   comment?: string;
 }
 
@@ -47,6 +49,14 @@ export const voucherService = {
       ApiResponse<VoucherListResponse> | VoucherListResponse
     >("/vouchers", { params: filters });
     return extractData<VoucherListResponse>(res as never);
+  },
+
+  /** Administrator's queue: vouchers awaiting final approval. */
+  listApprovalQueue: async (): Promise<PaymentVoucher[]> => {
+    const res = await api.get<ApiResponse<PaymentVoucher[]> | PaymentVoucher[]>(
+      "/vouchers/approval-queue",
+    );
+    return extractData<PaymentVoucher[]>(res as never);
   },
 
   listServiceProviders: async (): Promise<ServiceProviderOption[]> => {
@@ -77,13 +87,6 @@ export const voucherService = {
     return extractData<PaymentVoucher>(res as never);
   },
 
-  resubmitVoucher: async (id: number): Promise<PaymentVoucher> => {
-    const res = await api.put<ApiResponse<PaymentVoucher> | PaymentVoucher>(
-      `/vouchers/${id}/resubmissions`,
-    );
-    return extractData<PaymentVoucher>(res as never);
-  },
-
   markVoucherBankUploaded: async (id: number): Promise<PaymentVoucher> => {
     const res = await api.put<ApiResponse<PaymentVoucher> | PaymentVoucher>(
       `/vouchers/${id}/bank-uploads`,
@@ -94,6 +97,21 @@ export const voucherService = {
   markVoucherPaid: async (id: number): Promise<PaymentVoucher> => {
     const res = await api.put<ApiResponse<PaymentVoucher> | PaymentVoucher>(
       `/vouchers/${id}/payments`,
+    );
+    return extractData<PaymentVoucher>(res as never);
+  },
+
+  /** Excel file of approved vouchers that are not paid yet (Unpaid + Uploaded for Payment). */
+  downloadApprovedUnpaidExport: async (): Promise<Blob> => {
+    const res = await api.get<Blob>("/vouchers/exports/approved-unpaid", {
+      responseType: "blob",
+    });
+    return res.data;
+  },
+
+  revertVoucherPayment: async (id: number): Promise<PaymentVoucher> => {
+    const res = await api.put<ApiResponse<PaymentVoucher> | PaymentVoucher>(
+      `/vouchers/${id}/payment-reversals`,
     );
     return extractData<PaymentVoucher>(res as never);
   },

@@ -34,17 +34,6 @@ export const useReviewVoucherMutation = () => {
   });
 };
 
-export const useResubmitVoucherMutation = () => {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: (id: number) => voucherService.resubmitVoucher(id),
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ["vouchers"] });
-    },
-  });
-};
-
 export const useMarkVoucherBankUploadedMutation = () => {
   const queryClient = useQueryClient();
 
