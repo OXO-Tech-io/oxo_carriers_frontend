@@ -2,14 +2,16 @@
 
 import { useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
-import { agentActivityService } from '@/lib/services/agent-activity.service';
-import type { AgentActivityFrame, AgentLogPayload } from '@/types/agent-activity';
+import { employeeActivityService } from '@/lib/services/employee-activity.service';
+import type { AgentActivityFrame, AgentLogPayload, AgentScreenshotFrameData } from '@/types/employee-activity';
 
 // The agent only listens on the employee's own machine, so this tab is the only thing
 // that can reach it: stay connected to its local socket and forward each activity.log
 // frame to the HRIS backend, which attributes it to the employee via their device ID.
 // Absent/stopped agents are normal (non-Windows, not installed) - every failure here
-// is silent and must never affect the rest of the app.
+// is silent and must never affect the rest of the app. Screenshots come through here first
+// (`screenshot.upload` frame -> API as this employee -> `screenshot.ack`); if no tab answers,
+// the agent falls back to uploading them itself (device token -> signed GCS URL).
 const AGENT_WS_URL = 'ws://localhost:5959/agent/';
 const FLUSH_INTERVAL_MS = 5000;
 const MAX_BATCH = 100;
@@ -33,7 +35,14 @@ const toPayload = (frame: AgentActivityFrame): AgentLogPayload | null => {
   };
 };
 
-export function useAgentActivityRelay(): void {
+const base64ToBlob = (base64: string, mimeType: string): Blob => {
+  const binary = atob(base64);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+  return new Blob([bytes], { type: mimeType });
+};
+
+export function useEmployeeActivityRelay(): void {
   const { user } = useAuth();
   const employeeId = user?.employee_id;
 
@@ -47,13 +56,12 @@ export function useAgentActivityRelay(): void {
     let retryTimer: ReturnType<typeof setTimeout> | undefined;
     let queue: AgentLogPayload[] = [];
     let flushing = false;
-
     const flush = async () => {
       if (flushing || stopped || queue.length === 0) return;
       flushing = true;
       const batch = queue.splice(0, MAX_BATCH);
       try {
-        await agentActivityService.ingest(batch);
+        await employeeActivityService.ingest(batch);
       } catch (error) {
         const status = (error as { response?: { status?: number } })?.response?.status;
         if (status === 403 || status === 400) {
@@ -66,6 +74,29 @@ export function useAgentActivityRelay(): void {
         }
       } finally {
         flushing = false;
+      }
+    };
+
+    // Answer with "ok" only once the API has the image; anything else makes the agent upload it itself.
+    const relayScreenshot = async (data: AgentScreenshotFrameData, deviceId: string | undefined, ws: WebSocket | null) => {
+      let status = 'failed';
+      try {
+        if (typeof data?.eventId === 'number' && data.dataBase64 && deviceId && !stopped) {
+          await employeeActivityService.uploadScreenshot({
+            eventId: data.eventId,
+            deviceId,
+            mimeType: data.mimeType,
+            fileName: data.fileName,
+            capturedAt: data.capturedAt,
+            blob: base64ToBlob(data.dataBase64, data.mimeType),
+          });
+          status = 'ok';
+        }
+      } catch {
+        // Leave it to the agent's direct upload.
+      }
+      if (ws && ws.readyState === WebSocket.OPEN && typeof data?.eventId === 'number') {
+        ws.send(JSON.stringify({ type: 'screenshot.ack', eventId: data.eventId, status }));
       }
     };
 
@@ -82,6 +113,10 @@ export function useAgentActivityRelay(): void {
       socket.onmessage = (event) => {
         try {
           const frame = JSON.parse(String(event.data)) as AgentActivityFrame;
+          if (frame.type === 'screenshot.upload') {
+            void relayScreenshot(frame.data as unknown as AgentScreenshotFrameData, frame.deviceId, socket);
+            return;
+          }
           if (frame.type !== 'activity.log') return;
           const payload = toPayload(frame);
           if (payload) queue = [...queue, payload].slice(-MAX_QUEUE);

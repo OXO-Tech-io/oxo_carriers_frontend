@@ -1,6 +1,7 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  reactCompiler: true,
+  // Babel-based compiler slows every dev compile; only enable for production builds.
+  reactCompiler: process.env.NODE_ENV === 'production',
   
   // MUST USE 'export' for cPanel hosting
   output: 'export',
