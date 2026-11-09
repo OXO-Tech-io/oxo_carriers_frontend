@@ -739,6 +739,7 @@ export default function AdminUsersPage() {
         }}
         employeeUserId={selectedUser && !isVendor(selectedUser) ? selectedUser.id : null}
         canEdit={canViewEditProfile}
+        canEditFullProfile={isHR}
         onSaved={fetchUsers}
       />
 

@@ -7,22 +7,36 @@ import { Modal } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
 import { useToast } from '@/contexts/ToastContext';
 import { useSubmitProfileChangeMutation } from '@/hooks/mutations/use-submit-profile-change-mutation';
+import { useBankAccountRulesQuery } from '@/hooks/queries/use-bank-account-rules-query';
+import { validateLocationName, validateBankAccountNumber } from '@/lib/validation/textValidation';
 import type { User } from '@/types';
 import { TITLE_OPTIONS, type EmployeePii, type ProfileChangeItem } from '@/types/profile';
 
-const requestSchema = z.object({
+const LOCATION_NAME_ERROR = 'Only letters, spaces, apostrophes, periods and hyphens are allowed.';
+
+const requestSchema =z.object({
   title: z.string().optional(),
   contactNumber: z.string().min(1, 'Telephone number is required'),
   addressLine1: z.string().min(1, 'Address line 1 is required'),
   addressLine2: z.string().optional(),
-  city: z.string().min(1, 'City is required'),
-  district: z.string().min(1, 'District is required'),
+  city: z
+    .string()
+    .min(1, 'City is required')
+    .refine((v) => validateLocationName(v) === true, { message: LOCATION_NAME_ERROR }),
+  district: z
+    .string()
+    .min(1, 'District is required')
+    .refine((v) => validateLocationName(v) === true, { message: LOCATION_NAME_ERROR }),
   bankName: z.string().optional(),
   accountHolderName: z.string().optional(),
   accountNumber: z.string().optional(),
   bankBranch: z.string().optional(),
   bankBranchCode: z.string().optional(),
   swiftCode: z.string().optional(),
+}).superRefine((data, ctx) => {
+  // OCD-598: numeric-only, per-bank length rules.
+  const result = validateBankAccountNumber(data.accountNumber ?? '', data.bankName);
+  if (result !== true) ctx.addIssue({ code: 'custom', message: result, path: ['accountNumber'] });
 });
 
 type RequestFormValues = z.infer<typeof requestSchema>;
@@ -37,6 +51,8 @@ interface ProfileChangeRequestModalProps {
 export default function ProfileChangeRequestModal({ isOpen, onClose, user, pii }: ProfileChangeRequestModalProps) {
   const toast = useToast();
   const submitChange = useSubmitProfileChangeMutation();
+  // Loads the per-bank rules the schema's account number check reads.
+  useBankAccountRulesQuery();
 
   const {
     register,
@@ -260,6 +276,7 @@ export default function ProfileChangeRequestModal({ isOpen, onClose, user, pii }
                 {...register('accountNumber')}
                 className="block w-full px-3.5 py-2 border border-[var(--gray-100)] rounded-xl text-xs font-semibold text-[var(--foreground)] bg-[var(--card-bg)] focus:outline-none"
               />
+              {errors.accountNumber && <p className="mt-1 text-xs text-red-500">{errors.accountNumber.message}</p>}
             </div>
             <div>
               <label className="block text-[10px] font-semibold text-[var(--gray-400)] mb-1.5">Bank Branch</label>

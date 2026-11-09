@@ -83,3 +83,26 @@ describe("StepStatutory - Date of Birth / Age (OCD-417)", () => {
     expect(await screen.findByText("Date cannot be a future date. Please enter a valid date.")).toBeTruthy();
   });
 });
+
+describe("StepStatutory - location fields reject pasted values (OCD-597)", () => {
+  const field = (name: string) => document.querySelector(`input[name="${name}"]`) as HTMLInputElement;
+
+  it.each(["permanentCity", "permanentDistrict", "electorate", "birthPlace"])(
+    "shows an error immediately when invalid text is pasted into %s",
+    async (name) => {
+      render(<Harness />);
+      fireEvent.paste(field(name), { clipboardData: { getData: () => "Colombo 7 @#" } });
+      fireEvent.change(field(name), { target: { value: "Colombo 7 @#" } });
+      expect(await screen.findByText("Only letters, spaces, apostrophes, periods and hyphens are allowed.")).toBeTruthy();
+    },
+  );
+
+  it("allows digits but not symbols or emoji in Grama Niladari Division", async () => {
+    render(<Harness />);
+    fireEvent.change(field("gramaNiladariDivision"), { target: { value: "123A Kollupitiya" } });
+    await new Promise((r) => setTimeout(r, 50));
+    expect(screen.queryByText(/Only letters, numbers/)).toBeNull();
+    fireEvent.change(field("gramaNiladariDivision"), { target: { value: "GN \u{1F600}" } });
+    expect(await screen.findByText(/Only letters, numbers/)).toBeTruthy();
+  });
+});

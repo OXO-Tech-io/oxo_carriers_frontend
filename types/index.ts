@@ -94,6 +94,7 @@ export interface User {
   employee_category?: "internal" | "client_side" | null;
   department: string;
   position: string;
+  career_path?: string | null;
   hire_date: string;
   manager_id?: number;
   hourly_rate?: number | null;
@@ -195,10 +196,12 @@ export interface LeaveRequest {
   status:
     | "pending"
     | "team_leader_approved"
+    | "hr_manager_approved"
     | "hr_approved"
     | "rejected"
     | "cancelled";
   team_leader_approval_date?: string;
+  hr_manager_approval_date?: string;
   hr_approval_date?: string;
   rejection_reason?: string;
   attachment_url?: string;

@@ -32,13 +32,104 @@ export const QUALIFICATION_LEVEL_OPTIONS: { value: QualificationLevel; label: st
   { value: 'phd', label: 'PhD' },
 ];
 
-export type EmploymentType = 'regular' | 'intern' | 'trainee';
+// Values match the backend's employment_type enum. 'regular' is the legacy
+// value from before the level-based list below: it stays valid for existing
+// records but is no longer offered for new/edited ones (see
+// employmentTypeOptionsFor).
+export type EmploymentType =
+  | 'regular'
+  | 'intern'
+  | 'trainee'
+  | 'apprentice'
+  | 'entry_level'
+  | 'mid_level'
+  | 'senior'
+  | 'staff_principal_lead'
+  | 'mid_management'
+  | 'executive';
 
-export const EMPLOYMENT_TYPE_OPTIONS: { value: EmploymentType; label: string }[] = [
-  { value: 'regular', label: 'Regular' },
-  { value: 'intern', label: 'Intern' },
-  { value: 'trainee', label: 'Trainee' },
+export interface EmploymentTypeOption {
+  value: EmploymentType;
+  label: string;
+  description: string;
+}
+
+export const EMPLOYMENT_TYPE_OPTIONS: EmploymentTypeOption[] = [
+  {
+    value: 'intern',
+    label: 'Intern',
+    description: 'A student or recent graduate gaining short-term, hands-on experience in a field (can be paid or unpaid).',
+  },
+  {
+    value: 'trainee',
+    label: 'Trainee',
+    description:
+      'Someone undergoing a structured, longer-term training or vocational program inside a company with the goal of moving into a permanent role.',
+  },
+  {
+    value: 'apprentice',
+    label: 'Apprentice',
+    description:
+      'Combines on-the-job training with formal trade or technical education over several years (common in electrical, trade, or craft fields).',
+  },
+  {
+    value: 'entry_level',
+    label: 'Entry-Level (Junior)',
+    description: 'Staff members who handle routine tasks, learn core operations, and require guidance.',
+  },
+  {
+    value: 'mid_level',
+    label: 'Mid-Level (Intermediate)',
+    description: 'Independent workers who execute job duties and projects without needing daily supervision.',
+  },
+  {
+    value: 'senior',
+    label: 'Senior',
+    description:
+      'Experienced professionals with deep technical or operational mastery who often mentor juniors and lead small initiatives.',
+  },
+  {
+    value: 'staff_principal_lead',
+    label: 'Staff / Principal / Lead',
+    description:
+      'High-level individual contributors who set technical direction or solve complex enterprise problems without stepping into people management.',
+  },
+  {
+    value: 'mid_management',
+    label: 'First-Level / Middle Management',
+    description:
+      'Supervisors, project managers, or directors who manage daily operations and bridge lower tiers with executives.',
+  },
+  {
+    value: 'executive',
+    label: 'Executive / C-Level (Senior Management)',
+    description: 'High-ranking leaders (such as CEO, CFO, or CTO) who drive company-wide vision and strategy.',
+  },
 ];
+
+const LEGACY_EMPLOYMENT_TYPE_OPTION: EmploymentTypeOption = {
+  value: 'regular',
+  label: 'Regular (legacy)',
+  description: 'Recorded before employment levels were introduced - choose a level to update it.',
+};
+
+// The dropdown list for a record: the current options, plus the legacy
+// 'regular' choice only when the record being edited already has it.
+export function employmentTypeOptionsFor(current?: string | null): EmploymentTypeOption[] {
+  return current === 'regular' ? [LEGACY_EMPLOYMENT_TYPE_OPTION, ...EMPLOYMENT_TYPE_OPTIONS] : EMPLOYMENT_TYPE_OPTIONS;
+}
+
+function findEmploymentTypeOption(value?: string | null): EmploymentTypeOption | undefined {
+  return [LEGACY_EMPLOYMENT_TYPE_OPTION, ...EMPLOYMENT_TYPE_OPTIONS].find((o) => o.value === value);
+}
+
+export function employmentTypeLabel(value?: string | null): string {
+  return findEmploymentTypeOption(value)?.label ?? '';
+}
+
+export function employmentTypeDescription(value?: string | null): string {
+  return findEmploymentTypeOption(value)?.description ?? '';
+}
 
 export type BloodType = 'A+' | 'A-' | 'B+' | 'B-' | 'AB+' | 'AB-' | 'O+' | 'O-' | 'unknown';
 
@@ -93,6 +184,37 @@ export const WORK_LOCATION_OPTIONS: { value: WorkLocation; label: string }[] = [
   { value: 'hybrid', label: 'Hybrid' },
 ];
 
+// "Related Career Path" next to Designation - values match the backend's
+// CAREER_PATHS (src/common/constants/careerPaths.ts).
+export type CareerPath =
+  | 'pm'
+  | 'ba'
+  | 'ui_ux'
+  | 'qa'
+  | 'software_development'
+  | 'sales'
+  | 'finance'
+  | 'marketing'
+  | 'hr'
+  | 'other';
+
+export const CAREER_PATH_OPTIONS: { value: CareerPath; label: string }[] = [
+  { value: 'pm', label: 'PM - Project Management' },
+  { value: 'ba', label: 'BA - Business Analyst' },
+  { value: 'ui_ux', label: 'UI/UX - User Interface / User Experience Design' },
+  { value: 'qa', label: 'QA - Quality Assurance' },
+  { value: 'software_development', label: 'Software Development' },
+  { value: 'sales', label: 'Sales' },
+  { value: 'finance', label: 'Finance' },
+  { value: 'marketing', label: 'Marketing' },
+  { value: 'hr', label: 'HR - Human Resources' },
+  { value: 'other', label: 'Other' },
+];
+
+export function careerPathLabel(value?: string | null): string {
+  return CAREER_PATH_OPTIONS.find((o) => o.value === value)?.label ?? '';
+}
+
 export interface EmployeeEducation {
   id: number;
   userId: number;
@@ -112,6 +234,7 @@ export interface EmployeeWorkHistory {
   organization: string;
   positionHeld: string;
   employmentType: EmploymentType;
+  careerPath: CareerPath | null;
   startDate: string;
   endDate: string | null; // null = "Present"
   remarks: string | null;
@@ -262,6 +385,7 @@ export interface WorkHistoryValue {
   organization: string;
   positionHeld: string;
   employmentType?: EmploymentType;
+  careerPath?: CareerPath | null;
   startDate: string;
   endDate?: string | null;
   remarks?: string | null;
@@ -273,12 +397,27 @@ export interface EmergencyContactRecordValue {
   contactNumber: string;
 }
 
+export interface ExperienceDuration {
+  years: number;
+  months: number;
+  days: number;
+  totalDays: number;
+}
+
 export interface ExperienceSummary {
-  totalExperienceYears: number;
-  totalExperienceExclInternshipYears: number;
-  postDegreeExperienceYears: number;
-  postDegreeExperienceExclInternshipYears: number;
+  total: ExperienceDuration;
+  totalExclInternship: ExperienceDuration;
+  postDegree: ExperienceDuration;
+  postDegreeExclInternship: ExperienceDuration;
   hasDegreeDate: boolean;
+  /** YYYY-MM-01 of the first degree's graduation month. */
+  degreeCompletionDate: string | null;
+  degreeDateSource: 'education' | 'profile' | null;
+  currentCareerPath: CareerPath | null;
+  byCareerPath: Record<CareerPath, ExperienceDuration>;
+  entryCount: number;
+  uncategorizedEntryCount: number;
+  asOf: string;
 }
 
 export type ScalarPiiField =
@@ -435,6 +574,19 @@ export type ProfileChangeRequestStatus =
   | 'returned_for_modification'
   | 'cancelled';
 
+// OCD-603/604/605: stage a pending request is waiting at. Employee and HR
+// Executive requests go HR Manager -> Administrator; HR Manager requests go
+// straight to the Administrator.
+export type ProfileApprovalStage = 'hr_manager' | 'admin';
+
+export const PROFILE_CHANGE_STATUS_BADGES: Record<ProfileChangeRequestStatus, { label: string; className: string }> = {
+  pending_approval: { label: 'Pending', className: 'bg-amber-50 text-amber-700 border-amber-200' },
+  approved: { label: 'Approved', className: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
+  rejected: { label: 'Rejected', className: 'bg-red-50 text-red-700 border-red-200' },
+  returned_for_modification: { label: 'Returned', className: 'bg-orange-50 text-orange-700 border-orange-200' },
+  cancelled: { label: 'Cancelled', className: 'bg-[var(--gray-50)] text-[var(--gray-500)] border-[var(--gray-200)]' },
+};
+
 export interface ProfileChangeRequestEmployee {
   id: number;
   firstName: string;
@@ -462,6 +614,10 @@ export interface ProfileChangeRequest {
   reviewerComments: string | null;
   decidedAt: string | null;
   previousRequestId: number | null;
+  approvalStage?: ProfileApprovalStage | null;
+  submittedByRole?: string | null;
+  hrManagerComments?: string | null;
+  hrManagerApprovedAt?: string | null;
   createdAt: string;
   updatedAt: string;
   // OCD-478: supporting documents (NIC copy, address proof, etc.) uploaded
@@ -473,6 +629,9 @@ export interface SubmitProfileChangeRequestInput {
   changes: ProfileChangeItem[];
   comments?: string;
   previousRequestId?: number;
+  // OCD-603/604: employeeId of the employee being edited, when HR submits on
+  // their behalf. Omitted for self-service requests.
+  targetEmployeeId?: string;
   // OCD-478: optional supporting documents attached to the change request -
   // when present, the request is sent as multipart/form-data instead of JSON.
   files?: File[];

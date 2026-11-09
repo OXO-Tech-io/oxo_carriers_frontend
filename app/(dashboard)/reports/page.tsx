@@ -239,7 +239,7 @@ export default function ReportsPage() {
       const leaveData: LeaveReport = {
         totalRequests: requests.length,
         approved: requests.filter((r: any) => r.status === 'hr_approved').length,
-        pending: requests.filter((r: any) => r.status === 'pending' || r.status === 'team_leader_approved').length,
+        pending: requests.filter((r: any) => r.status === 'pending' || r.status === 'team_leader_approved' || r.status === 'hr_manager_approved').length,
         rejected: requests.filter((r: any) => r.status === 'rejected').length,
         byType: []
       };

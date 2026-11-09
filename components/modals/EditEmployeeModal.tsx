@@ -1,8 +1,10 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import Link from 'next/link';
 import api from '@/lib/api';
 import { useToast } from '@/contexts/ToastContext';
+import { CAREER_PATH_OPTIONS, careerPathLabel, type CareerPath } from '@/types/profile';
 
 interface EditEmployeeModalProps {
   isOpen: boolean;
@@ -12,6 +14,9 @@ interface EditEmployeeModalProps {
    * fields below. Everyone else who can open this modal only gets read-only
    * profile visibility (OCD-476). */
   canEdit: boolean;
+  /** HR Manager / HR Executive only (OCD-603/604): opens the full Edit Profile
+   * wizard for this employee; the changes go through approval. */
+  canEditFullProfile?: boolean;
   onSaved?: () => void;
 }
 
@@ -29,6 +34,7 @@ interface EmployeeDetail {
   status?: string | null;
   department?: string | null;
   position?: string | null;
+  careerPath?: string | null;
   workLocation?: 'office' | 'remote' | 'hybrid' | null;
   employeeCategory?: 'internal' | 'client_side' | null;
   hireDate?: string | null;
@@ -50,6 +56,7 @@ export default function EditEmployeeModal({
   onClose,
   employeeUserId,
   canEdit,
+  canEditFullProfile = false,
   onSaved,
 }: EditEmployeeModalProps) {
   const toast = useToast();
@@ -62,6 +69,7 @@ export default function EditEmployeeModal({
     email: '',
     department: '',
     position: '',
+    career_path: '' as '' | CareerPath,
     work_location: '' as '' | 'office' | 'remote' | 'hybrid',
     employee_category: '' as '' | 'internal' | 'client_side',
     hire_date: '',
@@ -87,6 +95,7 @@ export default function EditEmployeeModal({
           email: user.email || '',
           department: user.department || '',
           position: user.position || '',
+          career_path: (user.careerPath || '') as '' | CareerPath,
           work_location: user.workLocation || '',
           employee_category: user.employeeCategory || '',
           hire_date: user.hireDate ? user.hireDate.slice(0, 10) : '',
@@ -117,6 +126,7 @@ export default function EditEmployeeModal({
         email: form.email,
         department: form.department,
         position: form.position,
+        career_path: form.career_path || undefined,
         work_location: form.work_location || undefined,
         employee_category: form.employee_category || undefined,
         hire_date: form.hire_date || undefined,
@@ -235,6 +245,24 @@ export default function EditEmployeeModal({
                       <ReadOnly value={employee?.position} />
                     )}
                   </Field>
+                  <Field label="Related Career Path">
+                    {canEdit ? (
+                      <select
+                        value={form.career_path}
+                        onChange={(e) => setForm((f) => ({ ...f, career_path: e.target.value as '' | CareerPath }))}
+                        className="w-full px-3.5 py-2.5 border border-[#D0D5DD] rounded-lg text-sm text-[#101828] focus:outline-none focus:ring-2 focus:ring-[#465FFF] focus:border-transparent bg-white"
+                      >
+                        <option value="">Select</option>
+                        {CAREER_PATH_OPTIONS.map((opt) => (
+                          <option key={opt.value} value={opt.value}>
+                            {opt.label}
+                          </option>
+                        ))}
+                      </select>
+                    ) : (
+                      <ReadOnly value={careerPathLabel(employee?.careerPath)} />
+                    )}
+                  </Field>
 
                   <Field label="Work Location">
                     {canEdit ? (
@@ -305,6 +333,21 @@ export default function EditEmployeeModal({
                     </p>
                   </Field>
                 </div>
+
+                {canEditFullProfile && employee && (
+                  <div className="rounded-lg border border-[#E4E7EC] bg-[#F9FAFB] p-3 flex flex-wrap items-center justify-between gap-3">
+                    <p className="text-xs font-medium text-[#475467]">
+                      Update this employee's full profile (statutory, remittance, family, education, work history). Changes
+                      are applied only after approval.
+                    </p>
+                    <Link
+                      href={`/profile/wizard?userId=${employee.id}`}
+                      className="px-3 py-2 text-xs font-semibold text-[#465FFF] bg-white border border-[#465FFF] rounded-lg hover:bg-[#F5F7FF] transition-colors"
+                    >
+                      Edit Full Profile
+                    </Link>
+                  </div>
+                )}
 
                 <div className="flex items-center justify-end space-x-3 pt-2">
                   <button

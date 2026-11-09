@@ -47,7 +47,23 @@ export default function AdminLeaveManagementPage() {
     { status: TAB_STATUS[activeTab] },
     { enabled: canAccess }
   );
-  const requests = leaveRequestsQuery.data ?? [];
+  // Requests the HR Manager has already approved still wait for the Administrator,
+  // so they stay in the Pending Approvals list (as read-only for the HR Manager).
+  const awaitingAdminQuery = useLeaveRequestsQuery(
+    { status: 'hr_manager_approved' },
+    { enabled: canAccess && activeTab === 'pending' }
+  );
+  const requests =
+    activeTab === 'pending'
+      ? [...(leaveRequestsQuery.data ?? []), ...(awaitingAdminQuery.data ?? [])]
+          .filter((r, i, all) => all.findIndex((x) => x.id === r.id) === i)
+          .sort(
+          (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+        )
+      : (leaveRequestsQuery.data ?? []);
+  // The HR Manager gives the first approval only; the Administrator confirms the leave.
+  const canApprove = (request: LeaveRequest) =>
+    isSuperAdmin || (isHRManager && request.status !== 'hr_manager_approved');
   // Falls back to the first request whenever the selected one isn't in the
   // current list - e.g. right after switching tabs, or after an approve/
   // reject mutation refetches and the acted-on request drops off the list.
@@ -65,11 +81,15 @@ export default function AdminLeaveManagementPage() {
     if (!approveTarget) return;
     setError('');
     try {
-      await approveLeaveMutation.mutateAsync({
+      const updated = await approveLeaveMutation.mutateAsync({
         id: approveTarget.id,
         input: { approvedBy: 'hr' },
       });
-      setSuccess('Leave request approved successfully');
+      setSuccess(
+        updated.status === 'hr_manager_approved'
+          ? 'Approved by the HR Manager. The Administrator also needs to approve this leave request before it is confirmed for the employee.'
+          : 'Leave request approved successfully'
+      );
       setApproveTarget(null);
     } catch (err) {
       const message =
@@ -278,14 +298,25 @@ export default function AdminLeaveManagementPage() {
                     </div>
                   </div>
 
+                  {activeTab === 'pending' && selected.status === 'hr_manager_approved' && !isSuperAdmin && (
+                    <p className="max-w-[12rem] text-[11px] font-semibold text-[var(--gray-400)]">
+                      Approved by the HR Manager. Awaiting Administrator approval.
+                    </p>
+                  )}
                   {activeTab === 'pending' && (
                     <div className="flex md:flex-col gap-2 shrink-0 justify-end">
+                      {canApprove(selected) && (
                       <button
                         onClick={() => setApproveTarget(selected)}
                         className="px-4 py-2 text-xs font-bold text-white bg-emerald-500 hover:bg-emerald-600 rounded-xl transition-colors cursor-pointer"
                       >
-                        {selected.status === 'team_leader_approved' ? 'Final Approve' : 'Approve'}
+                        {isSuperAdmin && selected.status === 'hr_manager_approved'
+                          ? 'Final Approve'
+                          : selected.status === 'team_leader_approved'
+                            ? 'Final Approve'
+                            : 'Approve'}
                       </button>
+                      )}
                       <button
                         onClick={() => setRejectTarget(selected)}
                         className="px-4 py-2 text-xs font-bold text-white bg-red-500 hover:bg-red-600 rounded-xl transition-colors cursor-pointer"
@@ -306,7 +337,7 @@ export default function AdminLeaveManagementPage() {
         onClose={() => setApproveTarget(null)}
         onConfirm={handleConfirmApprove}
         title="Approve Leave Request"
-        message={`Are you sure you want to approve ${approveTarget?.user ? `${approveTarget.user.first_name} ${approveTarget.user.last_name}'s` : 'this'} leave request?`}
+        message={`Are you sure you want to approve ${approveTarget?.user ? `${approveTarget.user.first_name} ${approveTarget.user.last_name}'s` : 'this'} leave request?${isSuperAdmin ? '' : ' The Administrator must also approve it before the leave is confirmed for the employee.'}`}
         confirmLabel="Approve"
         isLoading={approveLeaveMutation.isPending}
       />

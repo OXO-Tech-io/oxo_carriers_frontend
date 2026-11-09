@@ -7,6 +7,7 @@ import type {
   EmployeePii,
   EmployeeWelfareInfo,
   EmployeeWorkHistory,
+  CareerPath,
   EmploymentType,
   MaritalStatus,
   QualificationLevel,
@@ -66,6 +67,7 @@ export interface WizardWorkHistory {
   organization: string;
   positionHeld: string;
   employmentType: EmploymentType | '';
+  careerPath: CareerPath | '';
   startDate: string;
   endDate: string;
   remarks: string;
@@ -272,6 +274,7 @@ export function buildDefaultValues(source: WizardSourceData): WizardFormValues {
       organization: w.organization ?? '',
       positionHeld: w.positionHeld ?? '',
       employmentType: w.employmentType,
+      careerPath: w.careerPath ?? '',
       startDate: w.startDate ?? '',
       endDate: w.endDate ?? '',
       remarks: w.remarks ?? '',
