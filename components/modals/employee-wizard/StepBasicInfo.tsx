@@ -3,7 +3,7 @@ import { UseFormReturn } from "react-hook-form";
 import api from "@/lib/api";
 import { UserRole } from "@/types";
 import { TITLE_OPTIONS } from "@/types/profile";
-import { EMAIL_PATTERN, noEmoji } from "@/lib/validation/textValidation";
+import { EMAIL_PATTERN, noEmoji, validateOfficeEmailDomain } from "@/lib/validation/textValidation";
 import { Field, inputClass, selectClass } from "./shared";
 import { EmployeeWizardValues } from "./wizardTypes";
 
@@ -194,6 +194,7 @@ export default function StepBasicInfo({ form, currentUserRole }: StepProps) {
               {...register("email", {
                 required: "Email is required",
                 pattern: { value: EMAIL_PATTERN, message: "Enter a valid email address" },
+                validate: validateOfficeEmailDomain,
                 onBlur: (e) => void checkEmailAvailability(e.target.value),
               })}
               className={inputClass}

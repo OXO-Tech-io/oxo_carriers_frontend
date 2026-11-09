@@ -1,6 +1,7 @@
 import { UseFormReturn } from "react-hook-form";
 import { UserRole } from "@/types";
 import { useLeaveTypesQuery } from "@/hooks/queries/use-leave-types-query";
+import { careerPathLabel } from "@/types/profile";
 import { EmployeeWizardValues, calculateLeaveEntitlement } from "./wizardTypes";
 
 const DECLARATION_REQUIRED_MESSAGE = "Please confirm the declaration before creating this employee";
@@ -70,6 +71,10 @@ export default function StepReview({ form, showDeclarationError }: Readonly<Step
               <div>
                 <dt className="text-[var(--gray-500)]">Position</dt>
                 <dd className="font-medium text-[var(--foreground)]">{values.position || "—"}</dd>
+              </div>
+              <div>
+                <dt className="text-[var(--gray-500)]">Related Career Path</dt>
+                <dd className="font-medium text-[var(--foreground)]">{careerPathLabel(values.career_path) || "—"}</dd>
               </div>
             </>
           )}

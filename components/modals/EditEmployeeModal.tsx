@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import api from '@/lib/api';
 import { useToast } from '@/contexts/ToastContext';
+import { CAREER_PATH_OPTIONS, careerPathLabel, type CareerPath } from '@/types/profile';
 
 interface EditEmployeeModalProps {
   isOpen: boolean;
@@ -33,6 +34,7 @@ interface EmployeeDetail {
   status?: string | null;
   department?: string | null;
   position?: string | null;
+  careerPath?: string | null;
   workLocation?: 'office' | 'remote' | 'hybrid' | null;
   employeeCategory?: 'internal' | 'client_side' | null;
   hireDate?: string | null;
@@ -67,6 +69,7 @@ export default function EditEmployeeModal({
     email: '',
     department: '',
     position: '',
+    career_path: '' as '' | CareerPath,
     work_location: '' as '' | 'office' | 'remote' | 'hybrid',
     employee_category: '' as '' | 'internal' | 'client_side',
     hire_date: '',
@@ -92,6 +95,7 @@ export default function EditEmployeeModal({
           email: user.email || '',
           department: user.department || '',
           position: user.position || '',
+          career_path: (user.careerPath || '') as '' | CareerPath,
           work_location: user.workLocation || '',
           employee_category: user.employeeCategory || '',
           hire_date: user.hireDate ? user.hireDate.slice(0, 10) : '',
@@ -122,6 +126,7 @@ export default function EditEmployeeModal({
         email: form.email,
         department: form.department,
         position: form.position,
+        career_path: form.career_path || undefined,
         work_location: form.work_location || undefined,
         employee_category: form.employee_category || undefined,
         hire_date: form.hire_date || undefined,
@@ -238,6 +243,24 @@ export default function EditEmployeeModal({
                       />
                     ) : (
                       <ReadOnly value={employee?.position} />
+                    )}
+                  </Field>
+                  <Field label="Related Career Path">
+                    {canEdit ? (
+                      <select
+                        value={form.career_path}
+                        onChange={(e) => setForm((f) => ({ ...f, career_path: e.target.value as '' | CareerPath }))}
+                        className="w-full px-3.5 py-2.5 border border-[#D0D5DD] rounded-lg text-sm text-[#101828] focus:outline-none focus:ring-2 focus:ring-[#465FFF] focus:border-transparent bg-white"
+                      >
+                        <option value="">Select</option>
+                        {CAREER_PATH_OPTIONS.map((opt) => (
+                          <option key={opt.value} value={opt.value}>
+                            {opt.label}
+                          </option>
+                        ))}
+                      </select>
+                    ) : (
+                      <ReadOnly value={careerPathLabel(employee?.careerPath)} />
                     )}
                   </Field>
 

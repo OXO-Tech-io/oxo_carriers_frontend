@@ -43,6 +43,7 @@ import { WorkHistoryTimeline } from '@/components/profile/WorkHistoryTimeline';
 import { ExperienceSummaryCard } from '@/components/profile/ExperienceSummaryCard';
 import { useToast } from '@/contexts/ToastContext';
 import {
+  careerPathLabel,
   PROFILE_CHANGE_STATUS_BADGES,
   QUALIFICATION_LEVEL_OPTIONS,
   TITLE_OPTIONS,
@@ -633,6 +634,16 @@ export default function ProfilePage() {
                       <div>
                         <p className="text-[10px] font-bold text-[var(--gray-400)] uppercase tracking-wider">Job Designation</p>
                         <p className="text-sm font-bold text-[var(--foreground)] mt-1">{displayUser?.position || 'Specialist'}</p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-start gap-3.5">
+                      <div className="p-2 bg-[var(--primary-light)] text-[var(--primary)] rounded-xl mt-0.5">
+                        <User className="h-4 w-4" />
+                      </div>
+                      <div>
+                        <p className="text-[10px] font-bold text-[var(--gray-400)] uppercase tracking-wider">Related Career Path</p>
+                        <p className="text-sm font-bold text-[var(--foreground)] mt-1">{careerPathLabel(displayUser?.career_path) || '—'}</p>
                       </div>
                     </div>
 

@@ -501,6 +501,8 @@ export default function StepStatutory({ form, email, designation, currentEmploye
               type="button"
               variant="outline"
               size="sm"
+              disabled={totalProportion >= 100}
+              title={totalProportion >= 100 ? 'Total nominee proportion is already 100%.' : undefined}
               onClick={() => append({ id: null, nameWithInitials: '', nic: '', relationship: '', proportionPercent: '' })}
             >
               Add Nominee

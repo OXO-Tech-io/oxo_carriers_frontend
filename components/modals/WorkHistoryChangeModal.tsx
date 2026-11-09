@@ -7,13 +7,18 @@ import { Modal } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
 import { useToast } from '@/contexts/ToastContext';
 import { useSubmitProfileChangeMutation } from '@/hooks/mutations/use-submit-profile-change-mutation';
-import { EMPLOYMENT_TYPE_OPTIONS, type EmployeeWorkHistory, type ProfileChangeItem } from '@/types/profile';
+import {
+  CAREER_PATH_OPTIONS,
+  employmentTypeDescription,
+  employmentTypeOptionsFor,
+  type EmployeeWorkHistory, type ProfileChangeItem } from '@/types/profile';
 
 const workHistorySchema = z
   .object({
     organization: z.string().min(1, 'Organization is required'),
     positionHeld: z.string().min(1, 'Position held is required'),
-    employmentType: z.enum(['regular', 'intern', 'trainee']),
+    employmentType: z.string().min(1, 'Employment type is required'),
+    careerPath: z.string().optional(),
     startDate: z.string().min(1, 'Start date is required'),
     endDate: z.string().optional(),
     isCurrent: z.boolean(),
@@ -50,6 +55,7 @@ export default function WorkHistoryChangeModal({ isOpen, onClose, initialData }:
           organization: initialData.organization,
           positionHeld: initialData.positionHeld,
           employmentType: initialData.employmentType,
+          careerPath: initialData.careerPath ?? '',
           startDate: initialData.startDate,
           endDate: initialData.endDate ?? '',
           isCurrent: !initialData.endDate,
@@ -58,7 +64,8 @@ export default function WorkHistoryChangeModal({ isOpen, onClose, initialData }:
       : {
           organization: '',
           positionHeld: '',
-          employmentType: 'regular',
+          employmentType: '',
+          careerPath: '',
           startDate: '',
           endDate: '',
           isCurrent: false,
@@ -67,12 +74,14 @@ export default function WorkHistoryChangeModal({ isOpen, onClose, initialData }:
   });
 
   const isCurrent = watch('isCurrent');
+  const employmentType = watch('employmentType');
 
   const handleFormSubmit: SubmitHandler<WorkHistoryFormValues> = async (data) => {
     const after = {
       organization: data.organization,
       positionHeld: data.positionHeld,
-      employmentType: data.employmentType,
+      employmentType: data.employmentType as EmployeeWorkHistory['employmentType'],
+      careerPath: (data.careerPath || null) as EmployeeWorkHistory['careerPath'],
       startDate: data.startDate,
       endDate: data.isCurrent ? null : data.endDate || null,
       remarks: data.remarks || null,
@@ -87,6 +96,7 @@ export default function WorkHistoryChangeModal({ isOpen, onClose, initialData }:
             organization: initialData!.organization,
             positionHeld: initialData!.positionHeld,
             employmentType: initialData!.employmentType,
+            careerPath: initialData!.careerPath ?? null,
             startDate: initialData!.startDate,
             endDate: initialData!.endDate,
             remarks: initialData!.remarks,
@@ -161,7 +171,29 @@ export default function WorkHistoryChangeModal({ isOpen, onClose, initialData }:
             {...register('employmentType')}
             className="block w-full px-3.5 py-2.5 border border-[var(--gray-100)] rounded-xl text-sm font-semibold text-[var(--foreground)] bg-[var(--card-bg)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)]"
           >
-            {EMPLOYMENT_TYPE_OPTIONS.map((opt) => (
+            <option value="">Select</option>
+            {employmentTypeOptionsFor(initialData?.employmentType).map((opt) => (
+              <option key={opt.value} value={opt.value}>
+                {opt.label}
+              </option>
+            ))}
+          </select>
+          {errors.employmentType && <p className="mt-1 text-xs text-red-500">{errors.employmentType.message}</p>}
+          {employmentType && (
+            <p className="mt-1.5 text-[11px] font-medium text-[var(--gray-400)]">{employmentTypeDescription(employmentType)}</p>
+          )}
+        </div>
+
+        <div>
+          <label className="block text-[10px] font-bold text-[var(--gray-400)] uppercase tracking-wider mb-2">
+            Career Path
+          </label>
+          <select
+            {...register('careerPath')}
+            className="block w-full px-3.5 py-2.5 border border-[var(--gray-100)] rounded-xl text-sm font-semibold text-[var(--foreground)] bg-[var(--card-bg)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)]"
+          >
+            <option value="">Select</option>
+            {CAREER_PATH_OPTIONS.map((opt) => (
               <option key={opt.value} value={opt.value}>
                 {opt.label}
               </option>
