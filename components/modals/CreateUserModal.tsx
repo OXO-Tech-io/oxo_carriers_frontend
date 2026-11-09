@@ -130,6 +130,7 @@ interface CreateUserModalProps {
     contact_number?: string;
     // OCD-477: parity with My Profile's Education tab.
     undergraduate_degree_completion_date?: string;
+    device_id?: string;
     profile?: CreateEmployeeProfilePayload;
   }) => Promise<void>;
   currentUserRole?: UserRole;
@@ -430,6 +431,7 @@ export default function CreateUserModal({
             swift_code: values.swiftCode,
             company_name: values.company_name,
             contact_number: values.mobileNumber,
+            device_id: values.device_id || undefined,
             profile: {
               statutory: {
                 nationalId: values.nationalId,
