@@ -2,6 +2,7 @@ import api from '@/lib/api';
 import { extractData } from '@/lib/services/http';
 import type { ApiResponse } from '@/types/api';
 import type {
+  AgentPresence,
   EmployeeActivityLogsPage,
   EmployeeActivityLogsParams,
   EmployeeActivitySummary,
@@ -60,6 +61,23 @@ export const employeeActivityService = {
     const res = await api.post<ApiResponse<{ token: string; deviceId: string }>>(
       `/employee-activities/devices/${encodeURIComponent(employeeId)}/tokens`,
     );
+    return extractData(res);
+  },
+
+  /** Self-service: token for the signed-in employee's own assigned device, to hand to the local agent. */
+  issueOwnDeviceToken: async (deviceId: string): Promise<{ token: string; deviceId: string }> => {
+    const res = await api.post<ApiResponse<{ token: string; deviceId: string }>>('/employee-activities/devices/me/tokens', { deviceId });
+    return extractData(res);
+  },
+
+  /** Employee's own tab: agent socket is up (ping every few seconds) or down. */
+  reportPresence: async (deviceId: string, connected: boolean): Promise<void> => {
+    await api.post('/employee-activities/devices/me/presence', { deviceId, connected });
+  },
+
+  /** Admin view: employees whose agent socket is connected right now. */
+  getPresence: async (): Promise<AgentPresence[]> => {
+    const res = await api.get<ApiResponse<AgentPresence[]>>('/employee-activities/presence');
     return extractData(res);
   },
 

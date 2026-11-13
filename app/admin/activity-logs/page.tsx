@@ -13,6 +13,7 @@ import {
 import { useAuth } from "@/hooks/useAuth";
 import api from "@/lib/api";
 import {
+  useAgentPresenceQuery,
   useEmployeeActivityLogsQuery,
   useEmployeeActivitySummaryQuery,
 } from "@/hooks/queries/use-employee-activity-query";
@@ -50,6 +51,35 @@ const EVENT_VARIANT: Record<string, BadgeVariant> = {
 
 const eventLabel = (type: string) =>
   type.replace(/_/g, " ").replace(/^./, (c) => c.toUpperCase());
+
+// Green = the employee's HRIS tab currently has a live WebSocket to this device's agent.
+function ConnectionDot({ connected, withLabel = false }: { connected: boolean; withLabel?: boolean }) {
+  const label = connected ? "Agent connected" : "Agent not connected";
+  return (
+    <span
+      className="inline-flex items-center gap-1.5"
+      title={label}
+      role="status"
+      aria-label={label}
+      data-testid="connection-dot"
+      data-connected={connected}
+    >
+      <span className="relative flex h-2.5 w-2.5">
+        {connected && (
+          <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-green-400 opacity-60" />
+        )}
+        <span
+          className={`relative inline-flex h-2.5 w-2.5 rounded-full ${connected ? "bg-green-500" : "bg-red-500"}`}
+        />
+      </span>
+      {withLabel && (
+        <span className={`text-[11px] font-semibold ${connected ? "text-green-600" : "text-red-500"}`}>
+          {connected ? "Connected" : "Not connected"}
+        </span>
+      )}
+    </span>
+  );
+}
 
 const inputClass =
   "mt-1 block rounded-lg border border-[var(--gray-200)] bg-[var(--card-bg)] p-2 text-sm text-[var(--foreground)]";
@@ -271,7 +301,13 @@ export default function AdminActivityLogsPage() {
     canView,
   );
 
+  const presenceQuery = useAgentPresenceQuery(canView);
   const summaries = summaryQuery.data ?? [];
+  const isConnected = (empId: string, devId: string) =>
+    (presenceQuery.data ?? []).some(
+      (p) => p.employeeId === empId && p.deviceId.toLowerCase() === devId.toLowerCase(),
+    );
+  const connectedCount = summaries.filter((s) => isConnected(s.employeeId, s.deviceId)).length;
   // Distinct devices (narrowed to the chosen employee) for the Device filter.
   const deviceOptions = Array.from(
     new Set(
@@ -465,9 +501,17 @@ export default function AdminActivityLogsPage() {
       </Card>
 
       <div>
-        <h2 className="text-lg font-bold text-[var(--foreground)]">Devices</h2>
+        <div className="flex flex-wrap items-center gap-x-3">
+          <h2 className="text-lg font-bold text-[var(--foreground)]">Devices</h2>
+          {summaries.length > 0 && (
+            <span className="text-xs font-semibold text-[var(--gray-500)]">
+              {connectedCount} of {summaries.length} connected
+            </span>
+          )}
+        </div>
         <p className="mb-3 text-xs text-[var(--gray-400)]">
-          Employees who reported activity in this range.
+          Employees who reported activity in this range. The dot shows whether
+          the device's agent WebSocket is connected right now.
         </p>
         {summaryQuery.isLoading ? (
           <p className="text-sm text-[var(--gray-400)]">Loading...</p>
@@ -514,6 +558,10 @@ export default function AdminActivityLogsPage() {
                         >
                           {s.deviceId}
                         </p>
+                        <ConnectionDot
+                          connected={isConnected(s.employeeId, s.deviceId)}
+                          withLabel
+                        />
                         <p className="pt-1 text-xs text-[var(--gray-500)]">
                           {s.eventCount} events · {s.windowCount} window
                           switches · {s.idleCount} idle
@@ -603,7 +651,12 @@ export default function AdminActivityLogsPage() {
                         {log.employeeId}
                       </td>
                       <td className="px-4 py-3 font-mono text-xs text-[var(--gray-500)]">
-                        {log.deviceId}
+                        <span className="inline-flex items-center gap-2">
+                          <ConnectionDot
+                            connected={isConnected(log.employeeId, log.deviceId)}
+                          />
+                          {log.deviceId}
+                        </span>
                       </td>
                       <td className="px-4 py-3">
                         <Badge variant={EVENT_VARIANT[log.eventType] ?? "gray"}>

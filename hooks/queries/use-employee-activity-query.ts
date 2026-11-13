@@ -14,6 +14,15 @@ export const useEmployeeActivityLogsQuery = (params: EmployeeActivityLogsParams,
     placeholderData: keepPreviousData,
   });
 
+// Presence expires on the server after 45s, so poll a bit faster than the other views.
+export const useAgentPresenceQuery = (enabled = true) =>
+  useQuery({
+    queryKey: ['employee-activity', 'presence'],
+    queryFn: () => employeeActivityService.getPresence(),
+    enabled,
+    refetchInterval: 5_000,
+  });
+
 export const useEmployeeActivitySummaryQuery = (params: Pick<EmployeeActivityLogsParams, 'from' | 'to'>, enabled = true) =>
   useQuery({
     queryKey: ['employee-activity', 'summary', params],

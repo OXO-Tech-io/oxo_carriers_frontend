@@ -17,6 +17,7 @@ const FLUSH_INTERVAL_MS = 5000;
 const MAX_BATCH = 100;
 const MAX_QUEUE = 500;
 const MAX_RETRY_MS = 30_000;
+const PRESENCE_INTERVAL_MS = 15_000;
 
 // Forwards windowTitle (shown to admins) but deliberately drops mediaTitle.
 const toPayload = (frame: AgentActivityFrame): AgentLogPayload | null => {
@@ -51,6 +52,8 @@ export function useEmployeeActivityRelay(): void {
 
     let disposed = false;
     let stopped = false; // backend refused us (e.g. no device ID assigned) - stop retrying
+    let tokenBusy = false;
+    let tokenGaveUp = false; // backend refused to issue a token (e.g. no device ID) - don't keep asking
     let socket: WebSocket | null = null;
     let retryMs = 1000;
     let retryTimer: ReturnType<typeof setTimeout> | undefined;
@@ -100,6 +103,44 @@ export function useEmployeeActivityRelay(): void {
       }
     };
 
+    // The agent uploads screenshots itself (signed URL) once it holds a device token. When it says it
+    // has none, issue one for this employee's own device and hand it over the same local socket.
+    const provisionToken = async (deviceId: string | undefined, ws: WebSocket | null) => {
+      if (tokenBusy || tokenGaveUp || stopped || !deviceId) return;
+      tokenBusy = true;
+      try {
+        const { token } = await employeeActivityService.issueOwnDeviceToken(deviceId);
+        if (ws && ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify({ type: 'device.token', deviceId, token }));
+      } catch (error) {
+        const status = (error as { response?: { status?: number } })?.response?.status;
+        if (status === 400 || status === 403) tokenGaveUp = true;
+      } finally {
+        tokenBusy = false;
+      }
+    };
+
+    // Tell the backend whether this tab's socket to the agent is up, so admins can see a
+    // connected/not-connected dot per device. Best effort: failures are ignored.
+    let presenceDeviceId: string | undefined;
+    let presenceTimer: ReturnType<typeof setInterval> | undefined;
+    const sendPresence = (connected: boolean) => {
+      if (!presenceDeviceId || stopped) return;
+      employeeActivityService.reportPresence(presenceDeviceId, connected).catch(() => undefined);
+    };
+    const startPresence = (deviceId: string | undefined) => {
+      if (!deviceId || presenceTimer) return;
+      presenceDeviceId = deviceId;
+      sendPresence(true);
+      presenceTimer = setInterval(() => {
+        if (socket?.readyState === WebSocket.OPEN) sendPresence(true);
+      }, PRESENCE_INTERVAL_MS);
+    };
+    const stopPresence = () => {
+      if (presenceTimer) clearInterval(presenceTimer);
+      presenceTimer = undefined;
+      sendPresence(false);
+    };
+
     const connect = () => {
       if (disposed || stopped) return;
       try {
@@ -109,10 +150,16 @@ export function useEmployeeActivityRelay(): void {
       }
       socket.onopen = () => {
         retryMs = 1000;
+        socket?.send(JSON.stringify({ type: 'device.token.status' }));
       };
       socket.onmessage = (event) => {
         try {
           const frame = JSON.parse(String(event.data)) as AgentActivityFrame;
+          startPresence(frame.deviceId);
+          if (frame.type === 'device.token.status') {
+            if ((frame.data as unknown as { hasToken?: boolean })?.hasToken === false) void provisionToken(frame.deviceId, socket);
+            return;
+          }
           if (frame.type === 'screenshot.upload') {
             void relayScreenshot(frame.data as unknown as AgentScreenshotFrameData, frame.deviceId, socket);
             return;
@@ -126,6 +173,7 @@ export function useEmployeeActivityRelay(): void {
       };
       socket.onerror = () => socket?.close();
       socket.onclose = () => {
+        stopPresence();
         if (disposed || stopped) return;
         retryTimer = setTimeout(connect, retryMs);
         retryMs = Math.min(retryMs * 2, MAX_RETRY_MS);
@@ -137,6 +185,7 @@ export function useEmployeeActivityRelay(): void {
 
     return () => {
       disposed = true;
+      stopPresence();
       clearInterval(flushTimer);
       if (retryTimer) clearTimeout(retryTimer);
       socket?.close();

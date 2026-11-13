@@ -2,23 +2,25 @@ import React from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import AdminActivityLogsPage from "@/app/admin/activity-logs/page";
-import type { AgentActivityLog, AgentActivitySummary } from "@/types/agent-activity";
+import type { EmployeeActivityLog, EmployeeActivitySummary } from "@/types/employee-activity";
 
-const { useAuthMock, apiGetMock, useLogsQueryMock, useSummaryQueryMock } = vi.hoisted(() => ({
+const { useAuthMock, apiGetMock, useLogsQueryMock, useSummaryQueryMock, usePresenceQueryMock } = vi.hoisted(() => ({
   useAuthMock: vi.fn(),
   apiGetMock: vi.fn(),
   useLogsQueryMock: vi.fn(),
   useSummaryQueryMock: vi.fn(),
+  usePresenceQueryMock: vi.fn(),
 }));
 
 vi.mock("@/hooks/useAuth", () => ({ useAuth: useAuthMock }));
 vi.mock("@/lib/api", () => ({ default: { get: apiGetMock } }));
-vi.mock("@/hooks/queries/use-agent-activity-query", () => ({
-  useAgentActivityLogsQuery: useLogsQueryMock,
-  useAgentActivitySummaryQuery: useSummaryQueryMock,
+vi.mock("@/hooks/queries/use-employee-activity-query", () => ({
+  useEmployeeActivityLogsQuery: useLogsQueryMock,
+  useEmployeeActivitySummaryQuery: useSummaryQueryMock,
+  useAgentPresenceQuery: usePresenceQueryMock,
 }));
 
-const makeSummary = (overrides: Partial<AgentActivitySummary> = {}): AgentActivitySummary => ({
+const makeSummary = (overrides: Partial<EmployeeActivitySummary> = {}): EmployeeActivitySummary => ({
   employeeId: "E1",
   firstName: "Asha",
   lastName: "Perera",
@@ -30,7 +32,7 @@ const makeSummary = (overrides: Partial<AgentActivitySummary> = {}): AgentActivi
   ...overrides,
 });
 
-const makeLog = (overrides: Partial<AgentActivityLog> = {}): AgentActivityLog => ({
+const makeLog = (overrides: Partial<EmployeeActivityLog> = {}): EmployeeActivityLog => ({
   id: 1,
   employeeId: "E1",
   firstName: "Asha",
@@ -52,6 +54,7 @@ describe("AdminActivityLogsPage", () => {
     vi.clearAllMocks();
     useAuthMock.mockReturnValue({ user: { id: 1 }, isSuperAdmin: true });
     useSummaryQueryMock.mockReturnValue({ data: [makeSummary()], isLoading: false });
+    usePresenceQueryMock.mockReturnValue({ data: [], isLoading: false });
     useLogsQueryMock.mockReturnValue({ data: { total: 1, logs: [makeLog()] }, isLoading: false });
   });
 
@@ -64,7 +67,7 @@ describe("AdminActivityLogsPage", () => {
 
     expect(screen.getByText("Checking permission access...")).toBeInTheDocument();
     resolve({ data: { permissionLevels: { attendance: "read" } } });
-    await waitFor(() => expect(screen.getByText("Activity Logs")).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByRole("heading", { name: "Activity Logs" })).toBeInTheDocument());
   });
 
   it("denies access when the user has no attendance permission", async () => {

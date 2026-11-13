@@ -15,3 +15,4 @@ export * from "./use-salary-mutations";
 export * from "./use-submit-profile-change-mutation";
 export * from "./use-user-mutations";
 export * from "./use-voucher-mutations";
+export * from "./use-linkedin-mutations";

@@ -45,6 +45,7 @@ import {
   Clock,
   FolderOpen,
   Archive,
+  Link2,
 } from "lucide-react";
 
 type AccessLevel = "read" | "write";
@@ -176,6 +177,12 @@ const adminNavigation: MenuItem[] = [
     name: "Permissions",
     href: "/admin/permissions",
     icon: ShieldCheck,
+    superAdminOnly: true,
+  },
+  {
+    name: "LinkedIn Sync",
+    href: "/admin/linkedin",
+    icon: Link2,
     superAdminOnly: true,
   },
   {

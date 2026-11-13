@@ -9,9 +9,9 @@ vi.mock("@/lib/api", () => ({
   default: { get: getMock, post: postMock },
 }));
 
-import { agentActivityService } from "@/lib/services/agent-activity.service";
+import { employeeActivityService } from "@/lib/services/employee-activity.service";
 
-describe("agentActivityService", () => {
+describe("employeeActivityService", () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
@@ -34,7 +34,7 @@ describe("agentActivityService", () => {
       },
     ];
 
-    const result = await agentActivityService.ingest(logs);
+    const result = await employeeActivityService.ingest(logs);
 
     expect(postMock).toHaveBeenCalledWith("/employee-activities/logs", { logs });
     expect(result).toEqual({ received: 2, stored: 2, rejected: 0 });
@@ -45,7 +45,7 @@ describe("agentActivityService", () => {
     getMock.mockResolvedValue({ data: { success: true, data: page } });
     const params = { employeeId: "E1", eventType: "idle_start", limit: 25, offset: 50 };
 
-    const result = await agentActivityService.getLogs(params);
+    const result = await employeeActivityService.getLogs(params);
 
     expect(getMock).toHaveBeenCalledWith("/employee-activities/logs", { params });
     expect(result).toEqual(page);
@@ -54,7 +54,7 @@ describe("agentActivityService", () => {
   it("getLogs defaults to no params", async () => {
     getMock.mockResolvedValue({ data: { data: { total: 0, logs: [] } } });
 
-    await agentActivityService.getLogs();
+    await employeeActivityService.getLogs();
 
     expect(getMock).toHaveBeenCalledWith("/employee-activities/logs", { params: {} });
   });
@@ -63,7 +63,7 @@ describe("agentActivityService", () => {
     const summaries = [{ employeeId: "E1", eventCount: 3 }];
     getMock.mockResolvedValue({ data: { success: true, data: summaries } });
 
-    const result = await agentActivityService.getSummary({ from: "2026-11-01", to: "2026-11-02" });
+    const result = await employeeActivityService.getSummary({ from: "2026-11-01", to: "2026-11-02" });
 
     expect(getMock).toHaveBeenCalledWith("/employee-activities/summaries", {
       params: { from: "2026-11-01", to: "2026-11-02" },
@@ -75,9 +75,9 @@ describe("agentActivityService", () => {
     getMock.mockResolvedValue({ data: { data: [] } });
     postMock.mockResolvedValue({ data: { data: {} } });
 
-    await agentActivityService.getSummary();
-    await agentActivityService.getLogs();
-    await agentActivityService.ingest([]);
+    await employeeActivityService.getSummary();
+    await employeeActivityService.getLogs();
+    await employeeActivityService.ingest([]);
 
     const urls = [...getMock.mock.calls, ...postMock.mock.calls].map((c) => c[0] as string);
     expect(urls.every((u) => u.startsWith("/employee-activities/"))).toBe(true);
@@ -86,6 +86,6 @@ describe("agentActivityService", () => {
   it("propagates API errors to the caller", async () => {
     getMock.mockRejectedValue(new Error("Network Error"));
 
-    await expect(agentActivityService.getLogs()).rejects.toThrow("Network Error");
+    await expect(employeeActivityService.getLogs()).rejects.toThrow("Network Error");
   });
 });

@@ -80,6 +80,13 @@ export interface EmployeeActivitySummary {
   windowCount: number;
 }
 
+/** An employee whose HRIS tab currently has a live WebSocket to their local agent. */
+export interface AgentPresence {
+  employeeId: string;
+  deviceId: string;
+  lastSeenAt: string;
+}
+
 export interface EmployeeActivityLogsParams {
   employeeId?: string;
   deviceId?: string;

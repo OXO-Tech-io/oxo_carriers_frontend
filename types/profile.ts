@@ -649,3 +649,39 @@ export interface AppNotification {
   readAt: string | null;
   createdAt: string;
 }
+
+/** Newest LinkedIn role is OXO Tech (green), another company (red), or nothing synced yet (pending). */
+export type LinkedinFlag = 'green' | 'red' | 'pending';
+
+/** Connection + sync state of one employee's LinkedIn (admin-only). */
+export interface LinkedinStatus {
+  connected: boolean;
+  profileUrl: string | null;
+  connectedAt: string | null;
+  syncPending: boolean;
+  lastSyncedAt: string | null;
+  syncError: string | null;
+  latestCompany: string | null;
+  latestTitle: string | null;
+  /** Start date (YYYY-MM-DD) of the newest role on LinkedIn. */
+  linkedinUpdateDate: string | null;
+  hireDate: string | null;
+  /** Months from the OXO join date to the LinkedIn role start date. */
+  monthsAfterJoining: number | null;
+  /** LinkedIn shows a role that started after the OXO join date. */
+  updatedAfterJoining: boolean;
+  flag: LinkedinFlag;
+  /** 0-100: share of the OXO tenure that LinkedIn reflects. */
+  coveragePercent: number | null;
+  tenureMonths: number | null;
+}
+
+/** GET /linkedin-sync/overview - one row per active employee. */
+export interface LinkedinOverviewRow extends LinkedinStatus {
+  id: number;
+  employeeId: string | null;
+  name: string;
+  email: string;
+  department: string | null;
+  position: string | null;
+}
