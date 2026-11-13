@@ -1,6 +1,6 @@
 'use client';
 
-import { Suspense, useState } from 'react';
+import { Suspense, useMemo, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useForm, type UseFormReturn } from 'react-hook-form';
 import { Card } from '@/components/ui/Card';
@@ -20,6 +20,8 @@ import { useEmployeeWelfareInfoQuery } from '@/hooks/queries/use-employee-welfar
 import { useEmployeeEducationQuery } from '@/hooks/queries/use-employee-education-query';
 import { useEmployeeWorkHistoryQuery } from '@/hooks/queries/use-employee-work-history-query';
 import { useSubmitProfileChangeMutation } from '@/hooks/mutations/use-submit-profile-change-mutation';
+import { useChangeRequestDetailQuery } from '@/hooks/queries/use-change-request-detail-query';
+import type { ProfileChangeItem } from '@/types/profile';
 import StepStatutory from '@/components/profile/wizard/StepStatutory';
 import StepRemittance from '@/components/profile/wizard/StepRemittance';
 import StepDependents from '@/components/profile/wizard/StepDependents';
@@ -33,7 +35,12 @@ import StepEducation from '@/components/modals/employee-wizard/StepEducation';
 import StepWorkHistory from '@/components/modals/employee-wizard/StepWorkHistory';
 import type { EmployeeWizardValues } from '@/components/modals/employee-wizard/wizardTypes';
 import { buildDefaultValues, type WizardFormValues } from '@/components/profile/wizard/wizardTypes';
-import { buildWizardChanges } from '@/components/profile/wizard/wizardDiff';
+import {
+  applyChangesToDefaults,
+  buildWizardChanges,
+  clearPendingBasicChanges,
+  readPendingBasicChanges,
+} from '@/components/profile/wizard/wizardDiff';
 import { UserRole } from '@/types';
 import {
   PROFILE_WIZARD_STEP_KEYS as STEP,
@@ -64,6 +71,7 @@ const STEPS: StepDefinition[] = [
 // (OCD-413/416/417/419/420/427/429/433).
 const STEP_FIELD_NAMES: (keyof WizardFormValues)[][] = [
   [
+    'personalEmail',
     'nationalId',
     'legalName',
     'initialsName',
@@ -154,6 +162,16 @@ function ProfileWizardLoader() {
     (isHR || isSuperAdmin) && Number.isInteger(requestedUserId) && requestedUserId > 0 && requestedUserId !== me?.id
       ? requestedUserId
       : undefined;
+  // OCD-658: ?resubmit=<id> reopens a request that was returned for modification so the original
+  // requester can edit it and submit it again.
+  const resubmitId = Number(searchParams.get('resubmit'));
+  const { data: resubmitRequest, isLoading: resubmitLoading } = useChangeRequestDetailQuery(
+    Number.isInteger(resubmitId) && resubmitId > 0 ? resubmitId : undefined
+  );
+  const resubmitting =
+    !!resubmitRequest && resubmitRequest.status === 'returned_for_modification' && resubmitRequest.submittedBy === me?.id
+      ? resubmitRequest
+      : undefined;
   const { data: myProfile } = useProfileQuery({ enabled: !targetUserId });
   const { data: targetProfile, isError: targetFailed } = useUserByIdQuery(targetUserId);
   const profile = targetUserId ? targetProfile : myProfile;
@@ -179,6 +197,7 @@ function ProfileWizardLoader() {
   });
 
   const isLoading =
+    (!!searchParams.get('resubmit') && resubmitLoading) ||
     !profile ||
     piiLoading ||
     nomineesLoading ||
@@ -216,17 +235,52 @@ function ProfileWizardLoader() {
   }
 
   return (
+    <WizardFormLoaded
+      profile={profile}
+      source={{ user: profile, pii, nominees, dependents, emergencyContacts, welfareInfo, education, workHistory }}
+      resubmitting={resubmitting}
+      targetUserId={targetUserId}
+      me={me}
+      onDone={() => router.push(targetUserId ? '/admin/users' : '/profile')}
+    />
+  );
+}
+
+function WizardFormLoaded({
+  profile,
+  source,
+  resubmitting,
+  targetUserId,
+  me,
+  onDone,
+}: {
+  profile: NonNullable<ReturnType<typeof useProfileQuery>['data']>;
+  source: Parameters<typeof buildDefaultValues>[0];
+  resubmitting?: { id: number; changes: ProfileChangeItem[]; comments: string | null };
+  targetUserId?: number;
+  me?: { id: number; role?: string } | null;
+  onDone: () => void;
+}) {
+  // The diff baseline is always the employee's current data; when resubmitting, the form is merely
+  // pre-filled with the values from the returned request on top of it.
+  const baseline = useMemo(() => buildDefaultValues(source), [source]);
+  const { initialValues, carriedBasicChanges } = useMemo(() => {
+    if (resubmitting) {
+      const { values, basicChanges } = applyChangesToDefaults(baseline, resubmitting.changes);
+      return { initialValues: values, carriedBasicChanges: basicChanges };
+    }
+    // OCD-651: basic/company details edited in the Edit Employee modal, before choosing Edit Full Profile.
+    return { initialValues: baseline, carriedBasicChanges: readPendingBasicChanges(profile.id) };
+  }, [baseline, resubmitting, profile.id]);
+
+  return (
     <ProfileWizardForm
-      defaultValues={buildDefaultValues({
-        user: profile,
-        pii,
-        nominees,
-        dependents,
-        emergencyContacts,
-        welfareInfo,
-        education,
-        workHistory,
-      })}
+      defaultValues={baseline}
+      initialValues={initialValues}
+      carriedBasicChanges={carriedBasicChanges}
+      previousRequestId={resubmitting?.id}
+      initialReason={resubmitting?.comments ?? ''}
+      userId={profile.id}
       email={profile?.email ?? ''}
       designation={profile?.position ?? ''}
       // OCD-444: lets StepStatutory/StepRemittance's duplicate NIC/bank
@@ -239,13 +293,18 @@ function ProfileWizardLoader() {
           : undefined
       }
       submitterRole={me?.role}
-      onDone={() => router.push(targetUserId ? '/admin/users' : '/profile')}
+      onDone={onDone}
     />
   );
 }
 
 function ProfileWizardForm({
   defaultValues,
+  initialValues,
+  carriedBasicChanges,
+  previousRequestId,
+  initialReason,
+  userId,
   email,
   designation,
   currentEmployeeId,
@@ -254,6 +313,11 @@ function ProfileWizardForm({
   onDone,
 }: {
   defaultValues: WizardFormValues;
+  initialValues: WizardFormValues;
+  carriedBasicChanges: ProfileChangeItem[];
+  previousRequestId?: number;
+  initialReason: string;
+  userId: number;
   email: string;
   designation: string;
   currentEmployeeId?: string;
@@ -268,9 +332,9 @@ function ProfileWizardForm({
   // on the final step only - kept local to this component rather than added
   // to the RHF form since they don't belong to any wizard step's own field
   // set and aren't part of the diff sent per-field via buildWizardChanges.
-  const [reasonForChange, setReasonForChange] = useState('');
+  const [reasonForChange, setReasonForChange] = useState(initialReason);
   const [changeDocuments, setChangeDocuments] = useState<File[]>([]);
-  const form = useForm<WizardFormValues>({ defaultValues });
+  const form = useForm<WizardFormValues>({ defaultValues: initialValues });
   // EmployeeWizardValues extends WizardFormValues with the same field names/
   // types for education/workHistory (see wizardTypes.ts), so this cast lets
   // StepEducation/StepWorkHistory - written against EmployeeWizardValues for
@@ -334,7 +398,8 @@ function ProfileWizardForm({
     const valid = fieldNames.length === 0 ? true : await form.trigger(fieldNames as any);
     if (!valid) return;
 
-    const changes = buildWizardChanges(defaultValues, form.getValues());
+    // OCD-651: basic/company detail edits made before opening this wizard ride along in the same request.
+    const changes = [...carriedBasicChanges, ...buildWizardChanges(defaultValues, form.getValues())];
     if (changes.length === 0) {
       toast.info('No changes detected', 'Update at least one field before submitting.');
       return;
@@ -345,7 +410,9 @@ function ProfileWizardForm({
         comments: reasonForChange.trim() || undefined,
         files: changeDocuments.length ? changeDocuments : undefined,
         targetEmployeeId: targetEmployee?.employeeId || undefined,
+        previousRequestId,
       });
+      clearPendingBasicChanges(userId);
       toast.success(
         'Change request submitted',
         `The changes will be applied once ${approvalPathLabel(submitterRole)} approve${needsAdministratorOnly(submitterRole) ? 's' : ''} them.`
@@ -369,6 +436,17 @@ function ProfileWizardForm({
           Complete each tab and submit at the end. {targetEmployee ? 'The' : 'Your'} changes take effect only after{' '}
           {approvalPathLabel(submitterRole)} approve{needsAdministratorOnly(submitterRole) ? 's' : ''} them.
         </p>
+        {previousRequestId && (
+          <p className="text-xs font-semibold text-[var(--primary)] mt-1">
+            Resubmitting a request that was returned for modification - update the details below and submit again.
+          </p>
+        )}
+        {carriedBasicChanges.length > 0 && (
+          <p className="text-xs font-semibold text-[var(--primary)] mt-1">
+            {carriedBasicChanges.length} basic/company detail change{carriedBasicChanges.length > 1 ? 's' : ''} from the Edit
+            Employee form will be included in this request.
+          </p>
+        )}
       </div>
 
       <Card padding="lg">
@@ -378,7 +456,13 @@ function ProfileWizardForm({
       <Card padding="lg">
         <StepPanel stepKey={currentKey}>
           {currentKey === STEP.STATUTORY && (
-            <StepStatutory form={form} email={email} designation={designation} currentEmployeeId={currentEmployeeId} />
+            <StepStatutory
+              form={form}
+              email={email}
+              designation={designation}
+              currentEmployeeId={currentEmployeeId}
+              personalEmailUserId={userId}
+            />
           )}
           {currentKey === STEP.REMITTANCE && <StepRemittance form={form} currentEmployeeId={currentEmployeeId} />}
           {currentKey === STEP.DEPENDENTS && <StepDependents form={form} isMarried={isMarried} />}

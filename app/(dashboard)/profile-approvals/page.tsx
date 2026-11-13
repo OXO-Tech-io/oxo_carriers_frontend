@@ -13,7 +13,7 @@ import { useAllChangeRequestsQuery } from '@/hooks/queries/use-all-change-reques
 import { useApproveProfileChangeMutation } from '@/hooks/mutations/use-approve-profile-change-mutation';
 import { useRejectProfileChangeMutation } from '@/hooks/mutations/use-reject-profile-change-mutation';
 import { useReturnProfileChangeMutation } from '@/hooks/mutations/use-return-profile-change-mutation';
-import ProfileChangeDiffModal from '@/components/modals/ProfileChangeDiffModal';
+import ProfileChangeDiffModal, { fieldLabel } from '@/components/modals/ProfileChangeDiffModal';
 import ProfileChangeDecisionModal from '@/components/modals/ProfileChangeDecisionModal';
 import {
   PROFILE_CHANGE_STATUS_BADGES,
@@ -75,9 +75,9 @@ const WELFARE_FIELD_LABELS: Record<string, string> = {
 };
 
 function firstChangeLabel(first: ProfileChangeRequest['changes'][number]): string {
-  if (first.entityType === 'user_field') return USER_FIELD_LABELS[first.field] ?? first.field;
-  if (first.entityType === 'employee_pii_field') return PII_FIELD_LABELS[first.field] ?? first.field;
-  if (first.entityType === 'welfare_field') return WELFARE_FIELD_LABELS[first.field] ?? first.field;
+  if (first.entityType === 'user_field') return USER_FIELD_LABELS[first.field] ?? fieldLabel(first.field);
+  if (first.entityType === 'employee_pii_field') return PII_FIELD_LABELS[first.field] ?? fieldLabel(first.field);
+  if (first.entityType === 'welfare_field') return WELFARE_FIELD_LABELS[first.field] ?? fieldLabel(first.field);
   if (first.entityType === 'education') return `Education (${first.operation})`;
   if (first.entityType === 'work_history') return `Work History (${first.operation})`;
   if (first.entityType === 'nominee') return `Nominee (${first.operation})`;

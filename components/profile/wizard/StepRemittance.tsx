@@ -13,6 +13,7 @@ import {
   validateBankName,
   validateBankAccountNumber,
   validateBankBranchCode,
+  BANK_BRANCH_CODE_HINT,
   validateSwiftCode,
   MOBILE_NUMBER_HINT,
 } from '@/lib/validation/textValidation';
@@ -212,7 +213,7 @@ export default function StepRemittance({ form, currentEmployeeId }: StepProps) {
               className={inputClass}
             />
           </Field>
-          <Field label="Branch Code" error={errors.bankBranchCode?.message} hint="3-10 alphanumeric characters">
+          <Field label="Branch Code" error={errors.bankBranchCode?.message} hint={BANK_BRANCH_CODE_HINT}>
             <input
               {...register('bankBranchCode', {
                 validate: validateBankBranchCode,

@@ -314,16 +314,34 @@ export default function CreateUserModal({
             : null;
     if (!check) return false;
     const value = String(form.getValues(check.field) || "").trim();
-    if (!value) return false;
-    try {
-      const res = await api.get(check.url, { params: { [check.param]: value } });
-      if (!res.data?.exists) return false;
-      form.setError(check.field, { type: "manual", message: check.message });
-      return true;
-    } catch {
-      // Non-blocking - the server-side check at submission is the real gate.
-      return false;
+    let duplicate = false;
+    if (value) {
+      try {
+        const res = await api.get(check.url, { params: { [check.param]: value } });
+        if (res.data?.exists) {
+          form.setError(check.field, { type: "manual", message: check.message });
+          duplicate = true;
+        }
+      } catch {
+        // Non-blocking - the server-side check at submission is the real gate.
+      }
     }
+    // OCD-620: the personal email is checked against the same pool of work + personal emails.
+    if (stepKey === "basic") {
+      const personal = String(form.getValues("personalEmail") || "").trim();
+      if (personal) {
+        try {
+          const res = await api.get("/users/email-availability", { params: { email: personal } });
+          if (res.data?.exists) {
+            form.setError("personalEmail", { type: "manual", message: check.message });
+            duplicate = true;
+          }
+        } catch {
+          // Non-blocking - see above.
+        }
+      }
+    }
+    return duplicate;
   };
 
   const goNext = async () => {

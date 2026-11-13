@@ -12,13 +12,36 @@ import type {
   ProfileChangeRequest,
   QualificationLevel,
 } from '@/types/profile';
-import { QUALIFICATION_LEVEL_OPTIONS, employmentTypeLabel } from '@/types/profile';
+import { QUALIFICATION_LEVEL_OPTIONS, employmentTypeLabel, careerPathLabel } from '@/types/profile';
 import { format } from 'date-fns';
 import { DATE_FORMATS } from '@/lib/constants';
 import { resolveFileUrl } from '@/lib/constants';
 import { Paperclip } from 'lucide-react';
 
 const FIELD_LABELS: Record<string, string> = {
+  firstName: 'First Name',
+  lastName: 'Last Name',
+  email: 'Account Email',
+  personalEmail: 'Personal Email Address',
+  department: 'Department',
+  position: 'Position',
+  careerPath: 'Related Career Path',
+  workLocation: 'Work Location',
+  employeeCategory: 'Employee Type',
+  hireDate: 'Hire Date',
+  deviceId: 'Device ID',
+  calling_name: 'Calling Name',
+  spouse_nic: 'Spouse NIC',
+  spouse_contact_number: 'Spouse Contact Number',
+  spouse_occupation: 'Spouse Occupation & Workplace',
+  mother_occupation: "Mother's Occupation & Workplace",
+  mother_contact_number: "Mother's Contact Number",
+  father_occupation: "Father's Occupation & Workplace",
+  father_contact_number: "Father's Contact Number",
+  secondary_contact_number: 'Secondary Contact Number',
+  medical_conditions: 'Medical Conditions',
+  allergies: 'Allergies',
+  additional_notes: 'Additional Notes',
   contactNumber: 'Telephone Number',
   undergraduateDegreeCompletionDate: 'Undergraduate Degree Completion Date',
   bank_account: 'Bank Account',
@@ -70,6 +93,30 @@ function formatDate(value?: string | null) {
   }
 }
 
+const VALUE_LABELS: Record<string, Record<string, string>> = {
+  workLocation: { office: 'Office', remote: 'Remote', hybrid: 'Hybrid' },
+  employeeCategory: { internal: 'Internal', client_side: 'Client Side' },
+  sex: { male: 'Male', female: 'Female' },
+  maritalStatus: { married: 'Married', single: 'Single' },
+};
+
+const DATE_VALUE_FIELDS = ['undergraduateDegreeCompletionDate', 'hireDate'];
+
+function formatScalar(field: string, value?: string | null) {
+  if (!value) return '—';
+  if (DATE_VALUE_FIELDS.includes(field)) return formatDate(value);
+  return VALUE_LABELS[field]?.[value] ?? value;
+}
+
+// Fallback for any field without an explicit label: never show the raw snake_case / camelCase key.
+export function fieldLabel(field: string) {
+  if (FIELD_LABELS[field]) return FIELD_LABELS[field];
+  return field
+    .replace(/_/g, ' ')
+    .replace(/([a-z])([A-Z])/g, '$1 $2')
+    .replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
 function qualificationLabel(level?: QualificationLevel) {
   return QUALIFICATION_LEVEL_OPTIONS.find((o) => o.value === level)?.label ?? level ?? '—';
 }
@@ -85,6 +132,10 @@ function BankAccountBlock({ value }: { value: BankAccountValue }) {
       <dd className="text-xs font-semibold text-[var(--foreground)]">{value.accountNumber || '—'}</dd>
       <dt className="text-[10px] font-bold text-[var(--gray-400)] uppercase">Branch</dt>
       <dd className="text-xs font-semibold text-[var(--foreground)]">{value.bankBranch || '—'}</dd>
+      <dt className="text-[10px] font-bold text-[var(--gray-400)] uppercase">Branch Code</dt>
+      <dd className="text-xs font-semibold text-[var(--foreground)]">{value.bankBranchCode || '—'}</dd>
+      <dt className="text-[10px] font-bold text-[var(--gray-400)] uppercase">SWIFT Code</dt>
+      <dd className="text-xs font-semibold text-[var(--foreground)]">{value.swiftCode || '—'}</dd>
     </dl>
   );
 }
@@ -138,6 +189,14 @@ function DependentBlock({ value }: { value: DependentValue }) {
       <dd className="text-xs font-semibold text-[var(--foreground)]">{formatDate(value.dateOfBirth)}</dd>
       <dt className="text-[10px] font-bold text-[var(--gray-400)] uppercase">Relationship</dt>
       <dd className="text-xs font-semibold text-[var(--foreground)] capitalize">{value.relationship}</dd>
+      <dt className="text-[10px] font-bold text-[var(--gray-400)] uppercase">Mobile Number</dt>
+      <dd className="text-xs font-semibold text-[var(--foreground)]">{value.mobileNumber || '—'}</dd>
+      {value.relationship === 'child' && (
+        <>
+          <dt className="text-[10px] font-bold text-[var(--gray-400)] uppercase">School (Child)</dt>
+          <dd className="text-xs font-semibold text-[var(--foreground)]">{value.school || '—'}</dd>
+        </>
+      )}
     </dl>
   );
 }
@@ -152,11 +211,11 @@ function ChangeItemCard({ item }: { item: ProfileChangeItem }) {
     beforeNode = <BankAccountBlock value={item.before} />;
     afterNode = <BankAccountBlock value={item.after} />;
   } else if (item.entityType === 'user_field') {
-    label = FIELD_LABELS[item.field] ?? item.field;
-    beforeNode = <span>{item.field === 'undergraduateDegreeCompletionDate' ? formatDate(item.before) : item.before || '—'}</span>;
-    afterNode = <span>{item.field === 'undergraduateDegreeCompletionDate' ? formatDate(item.after) : item.after || '—'}</span>;
+    label = fieldLabel(item.field);
+    beforeNode = <span>{formatScalar(item.field, item.before)}</span>;
+    afterNode = <span>{formatScalar(item.field, item.after)}</span>;
   } else if (item.entityType === 'employee_pii_field') {
-    label = FIELD_LABELS[item.field] ?? item.field;
+    label = fieldLabel(item.field);
     if (item.field === 'address' || item.field === 'residing_address') {
       beforeNode = item.before ? <AddressBlock value={item.before} /> : <span className="text-[var(--gray-400)]">—</span>;
       afterNode = item.after ? <AddressBlock value={item.after} /> : <span className="text-[var(--gray-400)]">—</span>;
@@ -165,7 +224,7 @@ function ChangeItemCard({ item }: { item: ProfileChangeItem }) {
       afterNode = <span>{item.after || '—'}</span>;
     }
   } else if (item.entityType === 'welfare_field') {
-    label = FIELD_LABELS[item.field] ?? item.field;
+    label = fieldLabel(item.field);
     beforeNode = <span>{item.field === 'anniversary_date' ? formatDate(item.before) : item.before || '—'}</span>;
     afterNode = <span>{item.field === 'anniversary_date' ? formatDate(item.after) : item.after || '—'}</span>;
   } else if (item.entityType === 'nominee') {
@@ -194,6 +253,10 @@ function ChangeItemCard({ item }: { item: ProfileChangeItem }) {
           <p className="font-semibold">{rec.qualificationTitle}</p>
           <p>{qualificationLabel(rec.qualificationLevel)} · {rec.awardingInstitution}</p>
           <p className="text-[var(--gray-400)]">{rec.isOngoing ? 'Currently pursuing' : formatDate(rec.dateAwarded)}</p>
+          <p>
+            <span className="text-[10px] font-bold text-[var(--gray-400)] uppercase">Remarks: </span>
+            {rec.remarks || '—'}
+          </p>
         </div>
       ) : (
         <span className="text-[var(--gray-400)]">—</span>
@@ -216,6 +279,14 @@ function ChangeItemCard({ item }: { item: ProfileChangeItem }) {
           <p>{rec.organization}</p>
           <p className="text-[var(--gray-400)]">
             {formatDate(rec.startDate)} – {rec.endDate ? formatDate(rec.endDate) : 'Present'}
+          </p>
+          <p>
+            <span className="text-[10px] font-bold text-[var(--gray-400)] uppercase">Career Path: </span>
+            {rec.careerPath ? careerPathLabel(rec.careerPath) : '—'}
+          </p>
+          <p>
+            <span className="text-[10px] font-bold text-[var(--gray-400)] uppercase">Remarks: </span>
+            {rec.remarks || '—'}
           </p>
         </div>
       ) : (
@@ -260,6 +331,8 @@ interface ProfileChangeDiffModalProps {
   onReject?: () => void;
   onReturn?: () => void;
   isDeciding?: boolean;
+  /** OCD-658: shown for a request returned for modification - lets the original requester edit and resubmit it. */
+  onResubmit?: () => void;
 }
 
 export default function ProfileChangeDiffModal({
@@ -272,6 +345,7 @@ export default function ProfileChangeDiffModal({
   onReject,
   onReturn,
   isDeciding = false,
+  onResubmit,
 }: ProfileChangeDiffModalProps) {
   if (!request) return null;
 
@@ -306,9 +380,14 @@ export default function ProfileChangeDiffModal({
             </Button>
           </>
         ) : (
-          <Button variant="outline" onClick={onClose}>
-            Close
-          </Button>
+          <>
+            {onResubmit && request.status === 'returned_for_modification' && (
+              <Button onClick={onResubmit}>Modify &amp; Resubmit</Button>
+            )}
+            <Button variant="outline" onClick={onClose}>
+              Close
+            </Button>
+          </>
         )
       }
     >

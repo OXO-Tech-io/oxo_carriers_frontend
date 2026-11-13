@@ -32,44 +32,69 @@ export default function StepBasicInfo({ form, currentUserRole }: StepProps) {
   const role = watch("role");
   const isServiceProvider = role === UserRole.SERVICE_PROVIDER;
   const email = watch("email");
+  const personalEmail = watch("personalEmail");
 
   const [checkingEmail, setCheckingEmail] = useState(false);
+  const [checkingPersonalEmail, setCheckingPersonalEmail] = useState(false);
   const lastCheckedRef = useRef<string | null>(null);
+  const lastCheckedPersonalRef = useRef<string | null>(null);
 
-  const checkEmailAvailability = async (raw: string) => {
+  // OCD-620: both the work email and the personal email are checked against every employee's work AND
+  // personal email, so the same address can't end up owned by two profiles.
+  const checkEmailAvailability = async (field: "email" | "personalEmail", raw: string) => {
     const value = (raw || "").trim();
-    if (!value || !EMAIL_PATTERN.test(value) || lastCheckedRef.current === value) return;
-    setCheckingEmail(true);
+    const lastChecked = field === "email" ? lastCheckedRef : lastCheckedPersonalRef;
+    if (!value || !EMAIL_PATTERN.test(value) || lastChecked.current === value) return;
+    const setChecking = field === "email" ? setCheckingEmail : setCheckingPersonalEmail;
+    setChecking(true);
     try {
       const response = await api.get("/users/email-availability", { params: { email: value } });
       // Bail if the field changed while the request was in flight.
-      if (watch("email").trim() !== value) return;
-      lastCheckedRef.current = value;
+      if ((watch(field) || "").trim() !== value) return;
+      lastChecked.current = value;
       if (response.data?.exists) {
-        setError("email", {
+        setError(field, {
           type: "manual",
           message: "Email address already exists. Please use a different email address.",
         });
-      } else if (form.getFieldState("email").error?.type === "manual") {
-        clearErrors("email");
+      } else if (form.getFieldState(field).error?.type === "manual") {
+        clearErrors(field);
       }
     } catch {
       // Non-blocking: if the availability check itself fails (network,
       // auth, etc.) we don't want to trap the user on this step - the
       // "Next" re-check and the final-submission check still guard it.
     } finally {
-      setCheckingEmail(false);
+      setChecking(false);
     }
+  };
+
+  // OCD-621: Work Email and Personal Email Address must differ, whichever one is entered first.
+  const SAME_EMAIL_MESSAGE = "Work Email and Personal Email Address must be different.";
+  const differsFrom = (other: "email" | "personalEmail") => (value: string) => {
+    const a = (value || "").trim().toLowerCase();
+    const b = (form.getValues(other) || "").trim().toLowerCase();
+    return !a || !b || a !== b || SAME_EMAIL_MESSAGE;
   };
 
   // Debounced check while typing; the onBlur handler below runs the same
   // check immediately (OCD-595), and lastCheckedRef de-dupes the two.
   useEffect(() => {
     lastCheckedRef.current = null;
-    const timer = setTimeout(() => void checkEmailAvailability(email), EMAIL_CHECK_DEBOUNCE_MS);
+    const timer = setTimeout(() => void checkEmailAvailability("email", email), EMAIL_CHECK_DEBOUNCE_MS);
     return () => clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [email]);
+
+  useEffect(() => {
+    lastCheckedPersonalRef.current = null;
+    const timer = setTimeout(
+      () => void checkEmailAvailability("personalEmail", personalEmail),
+      EMAIL_CHECK_DEBOUNCE_MS
+    );
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [personalEmail]);
 
   return (
     <div className="space-y-4">
@@ -167,7 +192,7 @@ export default function StepBasicInfo({ form, currentUserRole }: StepProps) {
               {...register("email", {
                 required: "Email is required",
                 pattern: { value: EMAIL_PATTERN, message: "Enter a valid email address" },
-                onBlur: (e) => void checkEmailAvailability(e.target.value),
+                onBlur: (e) => void checkEmailAvailability("email", e.target.value),
               })}
               className={inputClass}
             />
@@ -194,18 +219,31 @@ export default function StepBasicInfo({ form, currentUserRole }: StepProps) {
               {...register("email", {
                 required: "Email is required",
                 pattern: { value: EMAIL_PATTERN, message: "Enter a valid email address" },
-                validate: validateOfficeEmailDomain,
-                onBlur: (e) => void checkEmailAvailability(e.target.value),
+                validate: { office: validateOfficeEmailDomain, differs: differsFrom("personalEmail") },
+                onBlur: (e) => void checkEmailAvailability("email", e.target.value),
+                onChange: () => {
+                  if (form.getValues("personalEmail")) void form.trigger("personalEmail");
+                },
               })}
               className={inputClass}
             />
           </Field>
-          <Field label="Personal Email Address" required error={errors.personalEmail?.message}>
+          <Field
+            label="Personal Email Address"
+            required
+            error={errors.personalEmail?.message}
+            hint={checkingPersonalEmail ? "Checking availability..." : undefined}
+          >
             <input
               type="email"
               {...register("personalEmail", {
                 required: "Personal email address is required",
                 pattern: { value: EMAIL_PATTERN, message: "Enter a valid email address" },
+                validate: differsFrom("email"),
+                onBlur: (e) => void checkEmailAvailability("personalEmail", e.target.value),
+                onChange: () => {
+                  if (form.getValues("email")) void form.trigger("email");
+                },
               })}
               placeholder="Personal contact email, separate from the login email above"
               className={inputClass}

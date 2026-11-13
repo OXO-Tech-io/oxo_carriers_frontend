@@ -444,7 +444,22 @@ export type ScalarPiiField =
 
 // Non-PII personal/statutory attributes that live on tbl_employee, not
 // tbl_employee_pii - travel as 'user_field' changes (see ProfileChangeItem).
+// OCD-647/650/651: basic/company details edited from the Edit Employee modal, and the
+// Personal Email Address, also travel through the approval workflow as user_field changes.
+export type BasicUserField =
+  | 'firstName'
+  | 'lastName'
+  | 'email'
+  | 'department'
+  | 'position'
+  | 'careerPath'
+  | 'workLocation'
+  | 'employeeCategory'
+  | 'hireDate'
+  | 'deviceId';
+
 export type ScalarUserField =
+  | 'personalEmail'
   | 'dateOfBirth'
   | 'nationality'
   | 'religion'
@@ -463,7 +478,7 @@ export type ScalarUserField =
 export type ProfileChangeItem =
   | {
       entityType: 'user_field';
-      field: 'title' | 'contactNumber' | 'undergraduateDegreeCompletionDate';
+      field: 'title' | 'contactNumber' | 'undergraduateDegreeCompletionDate' | BasicUserField;
       operation: 'update';
       before: string | null;
       after: string | null;

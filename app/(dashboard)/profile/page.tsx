@@ -2,6 +2,7 @@
 
 import { useRef, useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -38,7 +39,7 @@ import { useEmployeePersonalDetailsQuery } from '@/hooks/queries/use-employee-pe
 import { useMyChangeRequestsQuery } from '@/hooks/queries/use-my-change-requests-query';
 import { useMyDocumentsQuery } from '@/hooks/queries/use-documents-query';
 import { useUploadProfilePictureMutation } from '@/hooks/mutations/use-upload-profile-picture-mutation';
-import ProfileChangeDiffModal from '@/components/modals/ProfileChangeDiffModal';
+import ProfileChangeDiffModal, { fieldLabel } from '@/components/modals/ProfileChangeDiffModal';
 import { WorkHistoryTimeline } from '@/components/profile/WorkHistoryTimeline';
 import { ExperienceSummaryCard } from '@/components/profile/ExperienceSummaryCard';
 import { useToast } from '@/contexts/ToastContext';
@@ -73,6 +74,7 @@ function titleLabel(title?: string | null) {
 
 export default function ProfilePage() {
   const { user } = useAuth();
+  const router = useRouter();
   const toast = useToast();
   const [activeTab, setActiveTab] = useState<ProfileTab>('personal');
   const profilePictureInputRef = useRef<HTMLInputElement>(null);
@@ -96,7 +98,11 @@ export default function ProfilePage() {
   const { data: allVisibleChangeRequests = [], isLoading: changeRequestsLoading } = useMyChangeRequestsQuery();
   // GET /profile-change-requests returns every employee's requests to HR roles
   // (and ignores `userId`), so keep only the ones raised for the logged-in user.
-  const changeRequests = allVisibleChangeRequests.filter((r) => r.employee?.id === displayUser?.id);
+  // OCD-658/646/652: also keep requests this user raised on someone else's behalf (HR Manager / HR Executive),
+  // so returned/rejected ones land with the requester and can be modified and resubmitted.
+  const changeRequests = allVisibleChangeRequests.filter(
+    (r) => r.employee?.id === displayUser?.id || (!!user?.id && r.submittedBy === user.id)
+  );
   const documentsQuery = useMyDocumentsQuery();
   // Same set as the Documents page: everything shared with this employee.
   const myDocuments = documentsQuery.data ?? [];
@@ -199,11 +205,11 @@ export default function ProfilePage() {
         };
         let label: string;
         if (first.entityType === 'user_field') {
-          label = first.field === 'bank_account' ? 'Bank Account' : (USER_FIELD_LABELS[first.field] ?? first.field);
+          label = first.field === 'bank_account' ? 'Bank Account' : (USER_FIELD_LABELS[first.field] ?? fieldLabel(first.field));
         } else if (first.entityType === 'employee_pii_field') {
-          label = PII_LABELS[first.field] ?? first.field;
+          label = PII_LABELS[first.field] ?? fieldLabel(first.field);
         } else if (first.entityType === 'welfare_field') {
-          label = WELFARE_LABELS[first.field] ?? first.field;
+          label = WELFARE_LABELS[first.field] ?? fieldLabel(first.field);
         } else if (first.entityType === 'education') {
           label = 'Education';
         } else if (first.entityType === 'work_history') {
@@ -828,6 +834,16 @@ export default function ProfilePage() {
         onClose={() => setSelectedRequest(null)}
         request={selectedRequest}
         canDecide={false}
+        onResubmit={
+          selectedRequest && !!user?.id && selectedRequest.submittedBy === user.id
+            ? () => {
+                const ownerId = selectedRequest.employee?.id;
+                const params = new URLSearchParams({ resubmit: String(selectedRequest.id) });
+                if (ownerId && ownerId !== user.id) params.set('userId', String(ownerId));
+                router.push(`/profile/wizard?${params.toString()}`);
+              }
+            : undefined
+        }
       />
 
       {viewerAttachment && (

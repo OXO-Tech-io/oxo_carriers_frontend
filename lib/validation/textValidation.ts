@@ -158,14 +158,16 @@ export function validateBankAccountNumber(value: string, bankName?: string | nul
   return validateAccountNumberForBank(value, bankName);
 }
 
-// Branch code - alphanumeric, short.
-export const BANK_BRANCH_CODE_PATTERN = /^[A-Za-z0-9]{3,10}$/;
+// Branch code - Sri Lankan bank branch codes are numeric: exactly 3 digits, padded with
+// leading zeros (7 -> 007, 65 -> 065). Mirrors BANK_BRANCH_CODE_REGEX on the backend.
+export const BANK_BRANCH_CODE_PATTERN = /^\d{3}$/;
+export const BANK_BRANCH_CODE_HINT = 'Enter a 3-digit branch code (e.g., 007, 065, 123).';
 
 export function validateBankBranchCode(value: string): string | true {
   if (typeof value !== 'string' || !value) return true;
   return BANK_BRANCH_CODE_PATTERN.test(value)
     ? true
-    : 'Branch code must be 3-10 alphanumeric characters.';
+    : 'Branch code must be a 3-digit number (e.g., 007, 065, 123).';
 }
 
 // SWIFT/BIC code - 8 or 11 characters: 4-letter bank code, 2-letter country
