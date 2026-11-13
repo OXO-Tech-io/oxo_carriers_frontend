@@ -74,6 +74,8 @@ export interface WizardWorkHistory {
 }
 
 export interface WizardFormValues {
+  // OCD-647: Personal Email Address (statutory step); the account email is separate.
+  personalEmail: string;
   // Tab 1 - Statutory Employee Information
   nationalId: string;
   legalName: string;
@@ -168,6 +170,7 @@ export interface WizardSourceData {
 export function buildDefaultValues(source: WizardSourceData): WizardFormValues {
   const { user, pii, nominees, dependents, emergencyContacts, welfareInfo, education, workHistory } = source;
   return {
+    personalEmail: user?.personal_email ?? '',
     nationalId: pii?.nationalId ?? '',
     legalName: pii?.legalName ?? '',
     initialsName: pii?.initialsName ?? '',

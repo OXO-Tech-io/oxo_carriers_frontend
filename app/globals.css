@@ -546,3 +546,20 @@ input[type="week"] {
   box-shadow: none;
   font-weight: 500;
 }
+
+/* OCD-649: native <select> option lists. Without an explicit background/colour the popup keeps the browser's
+   light defaults in dark mode (text near-invisible on hover, selected value not highlighted). Driven by the
+   same theme variables as every field, so light and dark stay consistent. */
+select option {
+  background-color: var(--card-bg);
+  color: var(--foreground);
+}
+select option:hover,
+select option:focus {
+  background-color: var(--primary-light);
+  color: var(--foreground);
+}
+select option:checked {
+  background-color: var(--primary);
+  color: #FFFFFF;
+}

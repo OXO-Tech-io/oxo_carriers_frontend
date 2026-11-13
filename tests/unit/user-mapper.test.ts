@@ -40,6 +40,8 @@ describe("mapDbUserToAppUser", () => {
       employee_id: "E1",
       email: "a@a.com",
       title: "mr",
+      personal_email: null,
+      device_id: null,
       first_name: "John",
       last_name: "Doe",
       role: "employee",

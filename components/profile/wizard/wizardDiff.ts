@@ -46,6 +46,7 @@ const SCALAR_PII_FIELDS: { key: keyof WizardFormValues; field: ScalarPiiField }[
 // travel as 'user_field' changes even though they're edited on the same
 // statutory/welfare wizard steps as the PII fields above.
 const SCALAR_USER_FIELDS: { key: keyof WizardFormValues; field: ScalarUserField }[] = [
+  { key: 'personalEmail', field: 'personalEmail' },
   { key: 'dateOfBirth', field: 'dateOfBirth' },
   { key: 'nationality', field: 'nationality' },
   { key: 'religion', field: 'religion' },
@@ -303,4 +304,189 @@ export function buildWizardChanges(original: WizardFormValues, current: WizardFo
   changes.push(...diffRecords(original.workHistory, current.workHistory, workHistoryToValue, 'work_history'));
 
   return changes;
+}
+
+// ── OCD-650/651/658: carrying pending changes into the wizard ────────────────
+
+// Fields edited on the Edit Employee modal (basic/company details). They are not part of the wizard's
+// own form, so they are carried alongside it and merged into the final change request.
+const BASIC_USER_FIELDS: string[] = [
+  'firstName',
+  'lastName',
+  'email',
+  'department',
+  'position',
+  'careerPath',
+  'workLocation',
+  'employeeCategory',
+  'hireDate',
+  'deviceId',
+  'title',
+];
+
+export const isBasicUserFieldChange = (item: ProfileChangeItem): boolean =>
+  item.entityType === 'user_field' && BASIC_USER_FIELDS.includes(item.field);
+
+function applyRecordChange<TRow extends { id?: number | null }, TValue>(
+  rows: TRow[],
+  item: { operation: 'create' | 'update' | 'delete'; recordId: number | null; after?: TValue | null },
+  toRow: (id: number | null, value: TValue) => TRow
+): TRow[] {
+  if (item.operation === 'create') return [...rows, toRow(null, item.after as TValue)];
+  if (item.operation === 'delete') return rows.filter((r) => r.id !== item.recordId);
+  return rows.map((r) => (r.id === item.recordId ? toRow(item.recordId, item.after as TValue) : r));
+}
+
+/**
+ * Re-applies a previously submitted change bundle on top of the employee's current values, so a request
+ * returned for modification can be edited and resubmitted (OCD-658). Basic/company detail changes are
+ * returned separately because they have no wizard field.
+ */
+export function applyChangesToDefaults(
+  defaults: WizardFormValues,
+  changes: ProfileChangeItem[]
+): { values: WizardFormValues; basicChanges: ProfileChangeItem[] } {
+  const values: WizardFormValues = {
+    ...defaults,
+    nominees: [...defaults.nominees],
+    dependents: [...defaults.dependents],
+    emergencyContacts: [...defaults.emergencyContacts],
+    education: [...defaults.education],
+    workHistory: [...defaults.workHistory],
+  };
+  const basicChanges: ProfileChangeItem[] = [];
+  const set = (key: keyof WizardFormValues, value: unknown) => {
+    (values as unknown as Record<string, unknown>)[key] = value;
+  };
+  const text = (v: unknown) => (typeof v === 'string' ? v : '');
+
+  for (const item of changes) {
+    if (isBasicUserFieldChange(item)) {
+      basicChanges.push(item);
+      continue;
+    }
+    if (item.entityType === 'user_field') {
+      if (item.field === 'bank_account') {
+        const after = item.after as BankAccountValue;
+        values.bankName = after.bankName ?? '';
+        values.accountHolderName = after.accountHolderName ?? '';
+        values.accountNumber = after.accountNumber ?? '';
+        values.bankBranch = after.bankBranch ?? '';
+        values.bankBranchCode = after.bankBranchCode ?? '';
+        values.swiftCode = after.swiftCode ?? '';
+      } else if (item.field === 'contactNumber') {
+        values.mobileNumber = text(item.after);
+      } else if (item.field === 'undergraduateDegreeCompletionDate') {
+        values.undergraduateDegreeCompletionDate = text(item.after);
+      } else if (item.field === 'sex') {
+        values.sex = (item.after as WizardFormValues['sex']) ?? '';
+      } else if (item.field === 'maritalStatus') {
+        values.maritalStatus = (item.after as WizardFormValues['maritalStatus']) ?? '';
+      } else {
+        const entry = SCALAR_USER_FIELDS.find((f) => f.field === item.field);
+        if (entry) set(entry.key, text(item.after));
+      }
+    } else if (item.entityType === 'employee_pii_field') {
+      if (item.field === 'address') {
+        const a = item.after as AddressValue;
+        values.permanentAddressLine1 = a.addressLine1;
+        values.permanentAddressLine2 = a.addressLine2 ?? '';
+        values.permanentCity = a.city;
+        values.permanentDistrict = a.district;
+      } else if (item.field === 'residing_address') {
+        const a = item.after as AddressValue | null;
+        values.residingAddressDiffersFromPermanent = !!a;
+        values.residingAddressLine1 = a?.addressLine1 ?? '';
+        values.residingAddressLine2 = a?.addressLine2 ?? '';
+        values.residingCity = a?.city ?? '';
+        values.residingDistrict = a?.district ?? '';
+      } else if (item.field === 'blood_type') {
+        values.bloodType = text(item.after);
+      } else {
+        const entry = SCALAR_PII_FIELDS.find((f) => f.field === item.field);
+        if (entry) set(entry.key, text(item.after));
+      }
+    } else if (item.entityType === 'welfare_field') {
+      const entry = WELFARE_FIELDS.find((f) => f.field === item.field);
+      if (entry) set(entry.key, text(item.after));
+    } else if (item.entityType === 'nominee') {
+      values.nominees = applyRecordChange(values.nominees, item, (id, v: NomineeValue) => ({
+        id,
+        nameWithInitials: v.nameWithInitials,
+        nic: v.nic,
+        relationship: v.relationship,
+        proportionPercent: String(v.proportionPercent),
+      }));
+    } else if (item.entityType === 'dependent') {
+      values.dependents = applyRecordChange(values.dependents, item, (id, v: DependentValue) => ({
+        id,
+        fullName: v.fullName,
+        nic: v.nic ?? '',
+        dateOfBirth: v.dateOfBirth,
+        gender: v.gender,
+        relationship: v.relationship,
+        mobileNumber: v.mobileNumber ?? '',
+        school: v.school ?? '',
+      }));
+    } else if (item.entityType === 'emergency_contact_record') {
+      values.emergencyContacts = applyRecordChange(values.emergencyContacts, item, (id, v: EmergencyContactRecordValue) => ({
+        id,
+        name: v.name,
+        relationship: v.relationship,
+        contactNumber: v.contactNumber,
+      }));
+    } else if (item.entityType === 'education') {
+      values.education = applyRecordChange(values.education, item, (id, v: EducationValue) => ({
+        id,
+        qualificationLevel: v.qualificationLevel,
+        qualificationTitle: v.qualificationTitle,
+        awardingInstitution: v.awardingInstitution,
+        dateAwarded: v.dateAwarded ?? '',
+        isOngoing: !!v.isOngoing,
+        remarks: v.remarks ?? '',
+      }));
+    } else if (item.entityType === 'work_history') {
+      values.workHistory = applyRecordChange(values.workHistory, item, (id, v: WorkHistoryValue) => ({
+        id,
+        organization: v.organization,
+        positionHeld: v.positionHeld,
+        employmentType: v.employmentType ?? 'regular',
+        careerPath: v.careerPath ?? '',
+        startDate: v.startDate,
+        endDate: v.endDate ?? '',
+        remarks: v.remarks ?? '',
+      }));
+    }
+  }
+  return { values, basicChanges };
+}
+
+// ── Edit Employee modal -> Edit Full Profile hand-off (OCD-651) ──────────────
+
+const PENDING_BASIC_KEY = (userId: number) => `pendingBasicChanges:${userId}`;
+
+export function stashPendingBasicChanges(userId: number, changes: ProfileChangeItem[]) {
+  try {
+    if (changes.length) sessionStorage.setItem(PENDING_BASIC_KEY(userId), JSON.stringify(changes));
+    else sessionStorage.removeItem(PENDING_BASIC_KEY(userId));
+  } catch {
+    // sessionStorage unavailable - the changes simply won't be carried over.
+  }
+}
+
+export function readPendingBasicChanges(userId: number): ProfileChangeItem[] {
+  try {
+    const raw = sessionStorage.getItem(PENDING_BASIC_KEY(userId));
+    return raw ? (JSON.parse(raw) as ProfileChangeItem[]) : [];
+  } catch {
+    return [];
+  }
+}
+
+export function clearPendingBasicChanges(userId: number) {
+  try {
+    sessionStorage.removeItem(PENDING_BASIC_KEY(userId));
+  } catch {
+    // ignore
+  }
 }

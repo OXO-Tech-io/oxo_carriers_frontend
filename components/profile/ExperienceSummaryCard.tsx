@@ -14,13 +14,15 @@ import {
   type ExperienceDuration,
 } from '@/types/profile';
 
-// "2 yrs 4 mos" / "5 mos 12 days" / "18 days" / "None" - the largest two non-zero units.
+// Always years, months and days - "3 yrs 10 mos 10 days" / "1 yr 0 mos 0 days" / "None".
+// The backend counts anniversaries inclusively (start date = day 1), so 15 May 2025 -> 14 May 2026 is exactly 1 yr.
 export function formatDuration(d: ExperienceDuration): string {
-  const parts: string[] = [];
-  if (d.years) parts.push(`${d.years} ${d.years === 1 ? 'yr' : 'yrs'}`);
-  if (d.months) parts.push(`${d.months} ${d.months === 1 ? 'mo' : 'mos'}`);
-  if (d.days && parts.length < 2 && !d.years) parts.push(`${d.days} ${d.days === 1 ? 'day' : 'days'}`);
-  return parts.length ? parts.join(' ') : d.totalDays > 0 ? `${d.totalDays} days` : 'None';
+  if (d.totalDays <= 0) return 'None';
+  return [
+    `${d.years} ${d.years === 1 ? 'yr' : 'yrs'}`,
+    `${d.months} ${d.months === 1 ? 'mo' : 'mos'}`,
+    `${d.days} ${d.days === 1 ? 'day' : 'days'}`,
+  ].join(' ');
 }
 
 function formatMonthYear(ymd: string): string {
@@ -107,7 +109,7 @@ export function ExperienceSummaryCard({ userId }: ExperienceSummaryCardProps) {
           <h4 className="text-sm font-bold text-[var(--foreground)]">Work History Summary</h4>
           <p className="text-[11px] font-medium text-[var(--gray-400)] mt-1">
             Auto-calculated from your work history as of {format(new Date(summary.asOf + 'T00:00:00'), 'd MMM yyyy')}.
-            Overlapping roles are counted once and career breaks are never counted.
+            Both the start and end dates count as days worked, so a role is a full year on the day before its anniversary. Overlapping roles are counted once and career breaks are never counted.
           </p>
         </div>
         <SearchableSelect

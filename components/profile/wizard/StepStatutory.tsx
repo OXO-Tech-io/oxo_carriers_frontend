@@ -20,6 +20,7 @@ import {
   NIC_PATTERN,
   NIC_FORMAT_HINT,
   MOBILE_NUMBER_HINT,
+  EMAIL_PATTERN,
 } from '@/lib/validation/textValidation';
 
 interface StepProps {
@@ -32,6 +33,10 @@ interface StepProps {
   // employee's own record. The Create Employee wizard leaves this undefined,
   // since there's no "self" to exclude for a brand-new employee.
   currentEmployeeId?: string;
+  // OCD-647: when set, shows the editable Personal Email Address field (profile update
+  // forms only - Create Employee collects it on its Basic Info step). The value is the
+  // employee's user id, so the duplicate check can ignore their own current value.
+  personalEmailUserId?: number;
 }
 
 const NIC_CHECK_DEBOUNCE_MS = 500;
@@ -54,7 +59,7 @@ function calculateAge(dateOfBirth: string): number | null {
 // sync effect below (OCD-431).
 const SPOUSE_SYNCED_FIELDS = ['spouseName', 'spouseNic', 'spouseDateOfBirth', 'spouseContactNumber', 'spouseOccupation'] as const;
 
-export default function StepStatutory({ form, email, designation, currentEmployeeId }: StepProps) {
+export default function StepStatutory({ form, email, designation, currentEmployeeId, personalEmailUserId }: StepProps) {
   const {
     register,
     control,
@@ -365,6 +370,34 @@ export default function StepStatutory({ form, email, designation, currentEmploye
         <Field label="Email">
           <input value={email} disabled className={inputClass} />
         </Field>
+        {personalEmailUserId !== undefined && (
+          <Field label="Personal Email Address" error={errors.personalEmail?.message}>
+            <input
+              type="email"
+              {...register('personalEmail', {
+                pattern: { value: EMAIL_PATTERN, message: 'Enter a valid email address' },
+                validate: async (value) => {
+                  const personal = (value || '').trim();
+                  if (!personal) return true;
+                  if (personal.toLowerCase() === (email || '').trim().toLowerCase()) {
+                    return 'Personal Email Address must be different from the account email.';
+                  }
+                  try {
+                    const res = await api.get('/users/email-availability', {
+                      params: { email: personal, excludeUserId: personalEmailUserId },
+                    });
+                    if (res.data?.exists) return 'Email address already exists. Please use a different email address.';
+                  } catch {
+                    // Non-blocking - the server-side check is the real gate.
+                  }
+                  return true;
+                },
+              })}
+              placeholder="Personal contact email"
+              className={inputClass}
+            />
+          </Field>
+        )}
       </div>
 
       <div className="space-y-3">

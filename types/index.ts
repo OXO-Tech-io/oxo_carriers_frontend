@@ -77,6 +77,7 @@ export interface User {
   email: string;
   // OCD-449: personal contact email, distinct from the account/login email above.
   personal_email?: string | null;
+  device_id?: string | null;
   title?: UserTitle | null;
   first_name: string;
   last_name: string;
